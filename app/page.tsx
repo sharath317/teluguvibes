@@ -1,65 +1,139 @@
-import Image from "next/image";
+import { Suspense } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import { TrendingTicker } from '@/components/TrendingTicker';
+import { NewsCard, NewsCardSkeleton } from '@/components/NewsCard';
+import { DailyInfoSidebar } from '@/components/DailyInfoSidebar';
+import { AdSlot } from '@/components/AdSlot';
+import type { Post } from '@/types/database';
 
-export default function Home() {
+// Create a Supabase client for server-side data fetching
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+async function getPosts(): Promise<Post[]> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error('Error fetching posts:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export const revalidate = 60; // Revalidate every 60 seconds
+
+export default async function HomePage() {
+  const posts = await getPosts();
+  const trendingPosts = posts.filter(p => p.category === 'trending').slice(0, 5);
+  const featuredPost = posts[0];
+  const regularPosts = posts.slice(1);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      {/* Trending Ticker */}
+      <TrendingTicker initialPosts={trendingPosts.length > 0 ? trendingPosts : posts.slice(0, 5)} />
+
+      {/* Header Ad */}
+      <div className="container mx-auto px-4 py-4 flex justify-center">
+        <AdSlot slot="header" />
+      </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Main Feed - 2/3 */}
+          <div className="lg:col-span-2">
+            {posts.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <Suspense fallback={<NewsFeedSkeleton />}>
+                <NewsFeed featuredPost={featuredPost} posts={regularPosts} />
+              </Suspense>
+            )}
+          </div>
+
+          {/* Sidebar - 1/3 */}
+          <div className="space-y-4">
+            <DailyInfoSidebar />
+            <AdSlot slot="sidebar" />
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+    </>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="bg-[#141414] border border-[#262626] rounded-xl p-12 text-center">
+      <div className="text-6xl mb-4">📰</div>
+      <h2 className="text-xl font-bold text-white mb-2">వార్తలు ఇంకా లేవు</h2>
+      <p className="text-[#737373] mb-6">
+        మొదటి వార్తను అడ్మిన్ డాష్‌బోర్డ్ నుండి జోడించండి.
+      </p>
+      <a
+        href="/admin"
+        className="inline-block px-6 py-3 bg-[#eab308] text-black font-bold rounded-lg hover:bg-[#ca9a06] transition-colors"
+      >
+        అడ్మిన్ డాష్‌బోర్డ్ కు వెళ్ళండి
+      </a>
+    </div>
+  );
+}
+
+function NewsFeed({ featuredPost, posts }: { featuredPost: Post; posts: Post[] }) {
+  // Split posts for mid-article ad placement
+  const firstHalf = posts.slice(0, 3);
+  const secondHalf = posts.slice(3);
+
+  return (
+    <div className="space-y-6">
+      {/* Featured Post */}
+      {featuredPost && <NewsCard post={featuredPost} featured />}
+
+      {/* First batch of posts */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {firstHalf.map((post) => (
+          <NewsCard key={post.id} post={post} />
+        ))}
+      </div>
+
+      {/* Mid-article Ad */}
+      {posts.length > 3 && (
+        <div className="flex justify-center py-4">
+          <AdSlot slot="mid-article" />
         </div>
-      </main>
+      )}
+
+      {/* Second batch of posts */}
+      {secondHalf.length > 0 && (
+        <div className="grid md:grid-cols-2 gap-4">
+          {secondHalf.map((post) => (
+            <NewsCard key={post.id} post={post} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NewsFeedSkeleton() {
+  return (
+    <div className="space-y-6">
+      <NewsCardSkeleton featured />
+      <div className="grid md:grid-cols-2 gap-4">
+        <NewsCardSkeleton />
+        <NewsCardSkeleton />
+        <NewsCardSkeleton />
+      </div>
     </div>
   );
 }
