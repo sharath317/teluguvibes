@@ -37,7 +37,7 @@ export function DedicationsWidget({ position = 'bottom-left' }: DedicationsWidge
   // Auto-rotate dedications
   useEffect(() => {
     if (dedications.length <= 1 || isExpanded) return;
-    
+
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % dedications.length);
       triggerAnimation();
@@ -49,10 +49,10 @@ export function DedicationsWidget({ position = 'bottom-left' }: DedicationsWidge
   // Trigger particle animation
   const triggerAnimation = useCallback(() => {
     if (dedications.length === 0) return;
-    
+
     const dedication = dedications[currentIndex];
     const config = ANIMATION_CONFIG[dedication?.animation_type || 'flowers'];
-    
+
     if (config.particles.length === 0) return;
 
     const newParticles = Array.from({ length: 15 }, (_, i) => ({
@@ -67,7 +67,7 @@ export function DedicationsWidget({ position = 'bottom-left' }: DedicationsWidge
   }, [dedications, currentIndex]);
 
   const currentDedication = dedications[currentIndex];
-  const typeConfig = currentDedication 
+  const typeConfig = currentDedication
     ? DEDICATION_TYPE_LABELS[currentDedication.dedication_type]
     : null;
 
@@ -75,8 +75,8 @@ export function DedicationsWidget({ position = 'bottom-left' }: DedicationsWidge
     return (
       <button
         onClick={() => setShowSubmit(true)}
-        className={`fixed ${position === 'bottom-left' ? 'left-4' : 'right-4'} bottom-4 z-40 
-          px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full 
+        className={`fixed ${position === 'bottom-left' ? 'left-4' : 'right-4'} bottom-4 z-40
+          px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full
           shadow-lg hover:shadow-xl transition-all flex items-center gap-2`}
       >
         <Heart className="w-5 h-5" />
@@ -110,13 +110,13 @@ export function DedicationsWidget({ position = 'bottom-left' }: DedicationsWidge
         </div>
 
         {/* Widget Card */}
-        <div 
-          className={`bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 
+        <div
+          className={`bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900
             rounded-2xl shadow-2xl border border-gray-700 overflow-hidden
             ${currentDedication?.is_premium ? 'ring-2 ring-yellow-500' : ''}`}
         >
           {/* Header */}
-          <div 
+          <div
             className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-pink-500/20 to-purple-500/20 cursor-pointer"
             onClick={() => setIsExpanded(!isExpanded)}
           >
@@ -210,7 +210,7 @@ export function DedicationsWidget({ position = 'bottom-left' }: DedicationsWidge
               >
                 <ChevronLeft className="w-5 h-5 text-gray-400" />
               </button>
-              
+
               {/* Dots */}
               <div className="flex gap-1">
                 {dedications.slice(0, 5).map((_, i) => (
@@ -229,7 +229,7 @@ export function DedicationsWidget({ position = 'bottom-left' }: DedicationsWidge
                   <span className="text-gray-500 text-xs ml-1">+{dedications.length - 5}</span>
                 )}
               </div>
-              
+
               <button
                 onClick={() => {
                   setCurrentIndex((prev) => (prev + 1) % dedications.length);
@@ -490,4 +490,3 @@ function SubmitDedicationModal({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
-

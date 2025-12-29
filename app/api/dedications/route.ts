@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     // Basic profanity check (simple version)
     const badWords = ['abuse', 'hate', 'kill']; // Extend this list
-    const hasProhibited = badWords.some(word => 
+    const hasProhibited = badWords.some(word =>
       body.message.toLowerCase().includes(word) ||
       body.to_name.toLowerCase().includes(word)
     );
@@ -118,4 +118,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 }
-

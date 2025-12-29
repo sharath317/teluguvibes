@@ -33,7 +33,7 @@ export default function AdminDedicationsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'approved', is_premium: isPremium }),
       });
-      setDedications(dedications.map(d => 
+      setDedications(dedications.map(d =>
         d.id === id ? { ...d, status: 'approved', is_premium: isPremium } : d
       ));
     } catch (error) {
@@ -48,7 +48,7 @@ export default function AdminDedicationsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'rejected' }),
       });
-      setDedications(dedications.map(d => 
+      setDedications(dedications.map(d =>
         d.id === id ? { ...d, status: 'rejected' } : d
       ));
     } catch (error) {
@@ -258,4 +258,3 @@ function DedicationCard({
     </div>
   );
 }
-

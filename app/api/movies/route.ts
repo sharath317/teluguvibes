@@ -13,7 +13,7 @@ const supabase = createClient(
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  
+
   // Filters
   const genre = searchParams.get('genre');
   const actor = searchParams.get('actor');
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   const blockbuster = searchParams.get('blockbuster');
   const classic = searchParams.get('classic');
   const search = searchParams.get('search');
-  
+
   // Pagination & Sorting
   const sortBy = searchParams.get('sortBy') || 'rating';
   const sortOrder = searchParams.get('sortOrder') || 'desc';
@@ -108,4 +108,3 @@ export async function GET(request: NextRequest) {
     offset,
   });
 }
-

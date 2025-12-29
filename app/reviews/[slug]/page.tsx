@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { 
-  Star, Calendar, Clock, Film, User, Music, Camera, 
+import {
+  Star, Calendar, Clock, Film, User, Music, Camera,
   Clapperboard, ThumbsUp, ThumbsDown, Play, ExternalLink,
   Award, Eye, Heart, Share2
 } from 'lucide-react';
@@ -21,7 +21,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  
+
   const { data: movie } = await supabase
     .from('movies')
     .select('title_en, title_te, synopsis, poster_url, director, avg_rating')
@@ -399,7 +399,7 @@ function CrewCard({ icon, role, name }: { icon: React.ReactNode; role: string; n
 function RatingBar({ label, rating, icon }: { label: string; rating?: number; icon: React.ReactNode }) {
   if (!rating) return null;
   const percentage = (rating / 10) * 100;
-  
+
   return (
     <div className="bg-gray-900 rounded-xl p-4">
       <div className="flex items-center justify-between mb-2">
@@ -496,4 +496,3 @@ function ReviewSection({ title, content }: { title: string; content: string }) {
     </div>
   );
 }
-

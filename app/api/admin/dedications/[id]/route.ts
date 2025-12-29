@@ -23,7 +23,7 @@ export async function PUT(
 
   if (body.status) {
     updateData.status = body.status;
-    
+
     // If approving, set/update expiry
     if (body.status === 'approved') {
       const hours = body.display_duration_hours || 24;
@@ -77,4 +77,3 @@ export async function DELETE(
 
   return NextResponse.json({ success: true });
 }
-

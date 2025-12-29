@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
+import {
   Star, Filter, Search, ChevronDown, Film, Calendar,
   ThumbsUp, Eye, Award, Gem, Clock
 } from 'lucide-react';
@@ -38,7 +38,7 @@ export default function ReviewsPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      
+
       if (filters.genre) params.set('genre', filters.genre);
       if (filters.actor) params.set('actor', filters.actor);
       if (filters.director) params.set('director', filters.director);
@@ -54,7 +54,7 @@ export default function ReviewsPage() {
       if (filters.sortBy) params.set('sortBy', filters.sortBy);
       if (filters.sortOrder) params.set('sortOrder', filters.sortOrder);
       if (searchQuery) params.set('search', searchQuery);
-      
+
       params.set('limit', '30');
 
       const res = await fetch(`/api/movies?${params}`);
@@ -88,7 +88,7 @@ export default function ReviewsPage() {
             <h1 className="text-4xl font-bold text-white">మూవీ రివ్యూలు</h1>
           </div>
           <p className="text-gray-400 max-w-2xl">
-            In-depth Telugu movie reviews covering direction, screenplay, acting, music, 
+            In-depth Telugu movie reviews covering direction, screenplay, acting, music,
             and cinematography. Find your next watch based on our expert analysis.
           </p>
         </div>
@@ -227,10 +227,10 @@ export default function ReviewsPage() {
                   value={`${filters.sortBy}-${filters.sortOrder}`}
                   onChange={(e) => {
                     const [sortBy, sortOrder] = e.target.value.split('-');
-                    setFilters({ 
-                      ...filters, 
-                      sortBy: sortBy as any, 
-                      sortOrder: sortOrder as any 
+                    setFilters({
+                      ...filters,
+                      sortBy: sortBy as any,
+                      sortOrder: sortOrder as any
                     });
                   }}
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
@@ -393,4 +393,3 @@ function MovieCard({ movie }: { movie: Movie }) {
     </Link>
   );
 }
-

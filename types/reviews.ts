@@ -1,15 +1,15 @@
 // Movie Reviews & Dedications Types
 
-export type Genre = 
+export type Genre =
   | 'Action' | 'Drama' | 'Romance' | 'Comedy' | 'Thriller'
   | 'Horror' | 'Fantasy' | 'Crime' | 'Period' | 'Family'
   | 'Musical' | 'Devotional' | 'Biographical' | 'Sports';
 
-export type DedicationType = 
+export type DedicationType =
   | 'birthday' | 'anniversary' | 'achievement' | 'memorial'
   | 'congratulations' | 'thank_you' | 'love' | 'friendship' | 'general';
 
-export type AnimationType = 
+export type AnimationType =
   | 'flowers' | 'crackers' | 'confetti' | 'hearts' | 'stars'
   | 'balloons' | 'sparkles' | 'fireworks' | 'petals' | 'none';
 
@@ -253,4 +253,3 @@ export const DEDICATION_TYPE_LABELS: Record<DedicationType, {
     icon: '💝',
   },
 };
-
