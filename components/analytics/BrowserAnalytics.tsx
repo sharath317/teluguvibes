@@ -19,7 +19,7 @@ interface AnalyticsEvent {
 
 function getVisitorId(): string {
   if (typeof window === 'undefined') return '';
-  
+
   let visitorId = localStorage.getItem('tv_visitor_id');
   if (!visitorId) {
     visitorId = `v_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -30,7 +30,7 @@ function getVisitorId(): string {
 
 function getSessionId(): string {
   if (typeof window === 'undefined') return '';
-  
+
   let sessionId = sessionStorage.getItem('tv_session_id');
   if (!sessionId) {
     sessionId = `s_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -56,14 +56,14 @@ function getPreferences(): UserPreferences {
   if (typeof window === 'undefined') {
     return createDefaultPreferences();
   }
-  
+
   try {
     const stored = localStorage.getItem('tv_preferences');
     if (stored) {
       return JSON.parse(stored);
     }
   } catch {}
-  
+
   return createDefaultPreferences();
 }
 
@@ -82,14 +82,14 @@ function createDefaultPreferences(): UserPreferences {
 
 function updatePreferences(update: Partial<UserPreferences>): void {
   if (typeof window === 'undefined') return;
-  
+
   const current = getPreferences();
   const updated = {
     ...current,
     ...update,
     lastUpdated: Date.now(),
   };
-  
+
   localStorage.setItem('tv_preferences', JSON.stringify(updated));
 }
 
@@ -108,7 +108,7 @@ function queueEvent(type: string, data: Record<string, any>): void {
     },
     timestamp: Date.now(),
   });
-  
+
   // Batch and send using requestIdleCallback
   if (!flushTimeout && eventQueue.length >= 5) {
     flushTimeout = setTimeout(flushEvents, 2000);
@@ -117,11 +117,11 @@ function queueEvent(type: string, data: Record<string, any>): void {
 
 async function flushEvents(): Promise<void> {
   if (eventQueue.length === 0) return;
-  
+
   const events = [...eventQueue];
   eventQueue.length = 0;
   flushTimeout = null;
-  
+
   // Use requestIdleCallback for non-critical work
   if ('requestIdleCallback' in window) {
     (window as any).requestIdleCallback(() => sendEvents(events), { timeout: 5000 });
@@ -187,10 +187,10 @@ export function BrowserAnalytics({ postId, category, contentLength }: BrowserAna
     if (category) {
       const prefs = getPreferences();
       prefs.categories[category] = (prefs.categories[category] || 0) + 1;
-      
+
       const hour = new Date().getHours();
       prefs.timeSlots[hour] = (prefs.timeSlots[hour] || 0) + 1;
-      
+
       updatePreferences(prefs);
     }
 
@@ -204,7 +204,7 @@ export function BrowserAnalytics({ postId, category, contentLength }: BrowserAna
     const handleScroll = () => {
       const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
       const scrollPercent = Math.round((window.scrollY / scrollHeight) * 100);
-      
+
       if (scrollPercent > maxScrollDepth.current) {
         maxScrollDepth.current = scrollPercent;
       }
@@ -219,19 +219,19 @@ export function BrowserAnalytics({ postId, category, contentLength }: BrowserAna
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         const timeOnPage = Math.round((Date.now() - startTime.current) / 1000);
-        
+
         queueEvent('page_leave', {
           path: pathname,
           postId,
           timeOnPage,
           scrollDepth: maxScrollDepth.current,
         });
-        
+
         // Update reading patterns
         if (postId && timeOnPage > 5) {
           const prefs = getPreferences();
           const { avgScrollDepth, avgTimeOnPage } = prefs.readingPatterns;
-          
+
           // Rolling average
           prefs.readingPatterns.avgScrollDepth = Math.round(
             (avgScrollDepth * 0.8) + (maxScrollDepth.current * 0.2)
@@ -239,7 +239,7 @@ export function BrowserAnalytics({ postId, category, contentLength }: BrowserAna
           prefs.readingPatterns.avgTimeOnPage = Math.round(
             (avgTimeOnPage * 0.8) + (timeOnPage * 0.2)
           );
-          
+
           // Determine preferred length
           if (contentLength) {
             if (maxScrollDepth.current > 80 && contentLength > 500) {
@@ -250,10 +250,10 @@ export function BrowserAnalytics({ postId, category, contentLength }: BrowserAna
               prefs.readingPatterns.preferredLength = 'medium';
             }
           }
-          
+
           updatePreferences(prefs);
         }
-        
+
         flushEvents();
       }
     };
@@ -261,7 +261,7 @@ export function BrowserAnalytics({ postId, category, contentLength }: BrowserAna
     // Flush on page hide
     window.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pagehide', () => flushEvents());
-    
+
     return () => {
       window.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -287,7 +287,7 @@ export function useEngagementTracker(elementId: string, postId?: string) {
             viewStartTime.current = Date.now();
           } else if (viewStartTime.current) {
             const viewTime = Date.now() - viewStartTime.current;
-            
+
             if (viewTime > 2000) { // At least 2 seconds
               queueEvent('element_engagement', {
                 elementId,
@@ -296,7 +296,7 @@ export function useEngagementTracker(elementId: string, postId?: string) {
                 visibleRatio: entry.intersectionRatio,
               });
             }
-            
+
             viewStartTime.current = null;
           }
         }
@@ -371,7 +371,7 @@ export async function shareContent(options: {
       }
     }
   }
-  
+
   // Fallback: Copy to clipboard
   try {
     await navigator.clipboard.writeText(options.url);
@@ -412,4 +412,3 @@ export function getOptimalPublishHours(): number[] {
     .slice(0, 3)
     .map(([hour]) => parseInt(hour));
 }
-

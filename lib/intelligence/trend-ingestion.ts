@@ -30,7 +30,7 @@ interface TrendSignal {
 export async function ingestTMDBTrends(): Promise<TrendSignal[]> {
   const signals: TrendSignal[] = [];
   const tmdbKey = process.env.TMDB_API_KEY;
-  
+
   if (!tmdbKey) return signals;
 
   try {
@@ -68,7 +68,7 @@ export async function ingestTMDBTrends(): Promise<TrendSignal[]> {
     // Telugu movie releases
     const now = new Date();
     const threeMonthsAgo = new Date(now.setMonth(now.getMonth() - 3));
-    
+
     const teluguRes = await fetch(
       `https://api.themoviedb.org/3/discover/movie?api_key=${tmdbKey}&with_original_language=te&primary_release_date.gte=${threeMonthsAgo.toISOString().split('T')[0]}&sort_by=popularity.desc`
     );
@@ -98,7 +98,7 @@ export async function ingestTMDBTrends(): Promise<TrendSignal[]> {
 export async function ingestYouTubeTrends(): Promise<TrendSignal[]> {
   const signals: TrendSignal[] = [];
   const ytKey = process.env.YOUTUBE_API_KEY;
-  
+
   if (!ytKey) return signals;
 
   try {
@@ -140,7 +140,7 @@ export async function ingestYouTubeTrends(): Promise<TrendSignal[]> {
 
 export async function ingestNewsTrends(): Promise<TrendSignal[]> {
   const signals: TrendSignal[] = [];
-  
+
   // GNews
   const gnewsKey = process.env.GNEWS_API_KEY;
   if (gnewsKey) {
@@ -153,7 +153,7 @@ export async function ingestNewsTrends(): Promise<TrendSignal[]> {
       for (const article of (data.articles || [])) {
         // Extract key topic
         const title = article.title || '';
-        
+
         signals.push({
           source: 'news_api',
           keyword: title.slice(0, 100),
@@ -256,7 +256,7 @@ export async function ingestAllTrends(): Promise<{
   bySource: Record<string, number>;
 }> {
   console.log('Starting trend ingestion...');
-  
+
   const [tmdbSignals, ytSignals, newsSignals, internalSignals] = await Promise.all([
     ingestTMDBTrends(),
     ingestYouTubeTrends(),
@@ -271,28 +271,25 @@ export async function ingestAllTrends(): Promise<{
     ...internalSignals,
   ];
 
-  // Store signals
+  // Store signals (only use columns that exist in the table)
   const signalsToInsert = allSignals.map(s => ({
     source: s.source,
     keyword: s.keyword,
-    keyword_te: s.keyword_te,
-    raw_score: s.raw_score,
     normalized_score: s.normalized_score || 0,
     category: s.category,
     entity_type: s.entity_type,
-    entity_id: s.entity_id,
-    sentiment: s.sentiment,
     raw_data: s.raw_data,
-    signal_timestamp: new Date().toISOString(),
   }));
 
   if (signalsToInsert.length > 0) {
     const { error } = await supabase
       .from('trend_signals')
       .insert(signalsToInsert);
-    
+
     if (error) {
       console.error('Error storing signals:', error);
+    } else {
+      console.log(`Stored ${signalsToInsert.length} signals`);
     }
   }
 
@@ -305,7 +302,7 @@ export async function ingestAllTrends(): Promise<{
   }
 
   console.log(`Ingested ${allSignals.length} signals`);
-  
+
   return { total: allSignals.length, bySource };
 }
 
@@ -314,10 +311,10 @@ export async function ingestAllTrends(): Promise<{
 async function clusterTopics(signals: TrendSignal[]): Promise<void> {
   // Group by similar keywords
   const clusters = new Map<string, TrendSignal[]>();
-  
+
   for (const signal of signals) {
     const normalizedKey = normalizeKeyword(signal.keyword);
-    
+
     // Find existing cluster
     let foundCluster = false;
     for (const [clusterKey, clusterSignals] of clusters) {
@@ -327,33 +324,35 @@ async function clusterTopics(signals: TrendSignal[]): Promise<void> {
         break;
       }
     }
-    
+
     if (!foundCluster) {
       clusters.set(normalizedKey, [signal]);
     }
   }
 
-  // Update cluster table
+  // Update cluster table - use insert (not upsert since no unique constraint)
   for (const [clusterName, clusterSignals] of clusters) {
-    if (clusterSignals.length < 2) continue; // Skip single-signal clusters
-    
+    // Include single-signal clusters too for better tracking
     const avgScore = clusterSignals.reduce((sum, s) => sum + (s.normalized_score || 0), 0) / clusterSignals.length;
-    const peakScore = Math.max(...clusterSignals.map(s => s.normalized_score || 0));
-    
-    await supabase
+
+    const { error } = await supabase
       .from('topic_clusters')
-      .upsert({
+      .insert({
         cluster_name: clusterName,
         primary_keyword: clusterSignals[0].keyword,
         keywords: [...new Set(clusterSignals.map(s => s.keyword))],
         total_signals: clusterSignals.length,
         avg_score: avgScore,
-        peak_score: peakScore,
+        saturation_score: 0,
+        is_saturated: false,
         category: clusterSignals[0].category,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'cluster_name',
       });
+    
+    if (error) {
+      console.error('Cluster insert error:', error);
+    } else {
+      console.log(`Created cluster: ${clusterName} with ${clusterSignals.length} signals`);
+    }
   }
 }
 
@@ -378,17 +377,16 @@ function similarity(a: string, b: string): number {
 function detectSentiment(text: string): number {
   const positive = ['hit', 'blockbuster', 'success', 'amazing', 'superb', 'love'];
   const negative = ['flop', 'fail', 'disaster', 'bad', 'worst', 'controversy'];
-  
+
   const lowerText = text.toLowerCase();
   let score = 0;
-  
+
   for (const word of positive) {
     if (lowerText.includes(word)) score += 0.2;
   }
   for (const word of negative) {
     if (lowerText.includes(word)) score -= 0.2;
   }
-  
+
   return Math.max(-1, Math.min(1, score));
 }
-

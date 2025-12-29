@@ -63,7 +63,7 @@ export async function detectNewTeluguMovies(): Promise<any[]> {
     // Get recently released Telugu movies
     const now = new Date();
     const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
-    
+
     const res = await fetch(
       `https://api.themoviedb.org/3/discover/movie?api_key=${tmdbKey}&with_original_language=te&primary_release_date.gte=${thirtyDaysAgo.toISOString().split('T')[0]}&sort_by=popularity.desc`
     );
@@ -83,7 +83,7 @@ export async function detectNewTeluguMovies(): Promise<any[]> {
           `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${tmdbKey}&append_to_response=credits,videos`
         );
         const details = await detailRes.json();
-        
+
         movies.push({
           ...movie,
           ...details,
@@ -111,7 +111,7 @@ async function getTrailerEngagement(movieTitle: string): Promise<any> {
 
     if (searchData.items?.length > 0) {
       const videoId = searchData.items[0].id.videoId;
-      
+
       // Get video stats
       const statsRes = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoId}&key=${ytKey}`
@@ -125,7 +125,7 @@ async function getTrailerEngagement(movieTitle: string): Promise<any> {
           viewCount: parseInt(stats.viewCount || '0'),
           likeCount: parseInt(stats.likeCount || '0'),
           commentCount: parseInt(stats.commentCount || '0'),
-          engagementRate: stats.viewCount > 0 
+          engagementRate: stats.viewCount > 0
             ? ((parseInt(stats.likeCount || '0') + parseInt(stats.commentCount || '0')) / parseInt(stats.viewCount)) * 100
             : 0,
         };
@@ -256,7 +256,7 @@ Be fair, balanced, and insightful. Focus on Telugu cinema context.`;
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
-    
+
     // Extract JSON
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -285,7 +285,7 @@ export async function runReviewPipeline(): Promise<{
 
   for (const movie of newMovies) {
     try {
-      // 2. Insert movie into database
+      // 2. Insert movie into database (only use columns that exist)
       const { data: insertedMovie, error: movieError } = await supabase
         .from('movies')
         .insert({
@@ -295,23 +295,15 @@ export async function runReviewPipeline(): Promise<{
           tmdb_id: movie.id,
           release_date: movie.release_date,
           release_year: movie.release_date ? parseInt(movie.release_date.split('-')[0]) : null,
-          runtime_minutes: movie.runtime,
           genres: movie.genres?.map((g: any) => g.name) || [],
           poster_url: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,
-          poster_source: 'tmdb',
-          backdrop_url: movie.backdrop_path ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` : null,
           synopsis: movie.overview,
           director: movie.credits?.crew?.find((c: any) => c.job === 'Director')?.name,
           cast_members: movie.credits?.cast?.slice(0, 10).map((c: any) => ({
             name: c.name,
             character: c.character,
-            profile_path: c.profile_path,
           })),
-          hero: movie.credits?.cast?.find((c: any) => c.order === 0)?.name,
-          heroine: movie.credits?.cast?.find((c: any) => c.order === 1 && c.gender === 1)?.name,
-          tmdb_rating: movie.vote_average,
-          data_quality_score: 0.6,
-          last_synced_at: new Date().toISOString(),
+          our_rating: movie.vote_average,
         })
         .select()
         .single();
@@ -336,15 +328,19 @@ export async function runReviewPipeline(): Promise<{
       });
 
       if (review && insertedMovie) {
-        // 5. Store review as draft
+        // 5. Store review as draft (only use columns that exist)
         const { error: reviewError } = await supabase
           .from('movie_reviews')
           .insert({
             movie_id: insertedMovie.id,
-            reviewer_type: 'ai',
             reviewer_name: 'TeluguVibes AI',
+            overall_rating: review.overall_rating || 7,
+            direction_rating: review.direction_rating,
+            acting_rating: review.acting_rating,
+            music_rating: review.music_rating,
+            summary: review.summary,
+            verdict: review.verdict,
             status: 'draft',
-            ...review,
           });
 
         if (reviewError) {
@@ -398,15 +394,15 @@ export async function learnFromReviewPerformance(): Promise<void> {
   for (const review of reviews) {
     const genres = (review as any).movies?.genres || [];
     const primaryGenre = genres[0] || 'Unknown';
-    
+
     const stats = genreStats.get(primaryGenre) || { highPerformers: [], lowPerformers: [] };
-    
+
     if ((review.views || 0) > 100) {
       stats.highPerformers.push(review);
     } else {
       stats.lowPerformers.push(review);
     }
-    
+
     genreStats.set(primaryGenre, stats);
   }
 
@@ -468,7 +464,7 @@ function determineStarPower(cast: any[]): string {
 export async function trackOTTReleases(): Promise<void> {
   // This would integrate with OTT platform APIs or scrape announcements
   // For now, we'll check TMDB for streaming availability
-  
+
   const tmdbKey = process.env.TMDB_API_KEY;
   if (!tmdbKey) return;
 
@@ -519,4 +515,3 @@ export async function trackOTTReleases(): Promise<void> {
     }
   }
 }
-

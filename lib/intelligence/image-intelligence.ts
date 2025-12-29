@@ -62,7 +62,7 @@ async function fetchTMDBImage(
         `https://api.themoviedb.org/3/movie/${tmdbId}/images?api_key=${tmdbKey}`
       );
       const data = await res.json();
-      
+
       if (data.posters?.length > 0) {
         const poster = data.posters[0];
         return {
@@ -85,7 +85,7 @@ async function fetchTMDBImage(
     if (searchData.results?.length > 0) {
       const result = searchData.results[0];
       const imagePath = entityType === 'movie' ? result.poster_path : result.profile_path;
-      
+
       if (imagePath) {
         return {
           url: `https://image.tmdb.org/t/p/w780${imagePath}`,
@@ -112,7 +112,7 @@ async function fetchWikimediaImage(query: string): Promise<ImageSource | null> {
 
     if (searchData.query?.search?.length > 0) {
       const title = searchData.query.search[0].title;
-      
+
       // Get image info
       const infoUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url|extmetadata|size&format=json&origin=*`;
       const infoRes = await fetch(infoUrl);
@@ -122,11 +122,11 @@ async function fetchWikimediaImage(query: string): Promise<ImageSource | null> {
       if (pages) {
         const page = Object.values(pages)[0] as any;
         const imageinfo = page.imageinfo?.[0];
-        
+
         if (imageinfo) {
           const meta = imageinfo.extmetadata || {};
           const license = meta.LicenseShortName?.value || 'CC';
-          
+
           return {
             url: imageinfo.url,
             source: 'wikimedia',
@@ -151,10 +151,10 @@ async function fetchWikipediaImage(query: string): Promise<ImageSource | null> {
   try {
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query.replace(/ /g, '_'))}`;
     const res = await fetch(url);
-    
+
     if (res.ok) {
       const data = await res.json();
-      
+
       if (data.thumbnail?.source) {
         return {
           url: data.originalimage?.source || data.thumbnail.source,
@@ -270,7 +270,7 @@ export async function searchImages(
     const scored = validImages.map(img => {
       const sourcePriority = PRIORITY_SOURCES.find(s => s.source === img.source);
       const perfScore = sourcePerformance.get(img.source) || 0.5;
-      
+
       return {
         image: img,
         score: (sourcePriority?.trust || 0.5) * 0.6 + perfScore * 0.4,
@@ -299,7 +299,7 @@ async function getSourcePerformance(): Promise<Map<string, number>> {
 
   if (data) {
     const sourceStats = new Map<string, { total: number; count: number }>();
-    
+
     for (const img of data) {
       const stats = sourceStats.get(img.source) || { total: 0, count: 0 };
       stats.total += img.avg_engagement || 0;
@@ -405,7 +405,7 @@ export async function updateImageEngagement(): Promise<void> {
 
   for (const [imageId, stats] of imageStats) {
     const avgEngagement = stats.count > 0 ? stats.engagement / stats.count : 0;
-    
+
     await supabase
       .from('image_registry')
       .update({
@@ -527,4 +527,3 @@ export async function getSmartImage(
 
   return { image: result, source, confidence };
 }
-

@@ -453,4 +453,3 @@ function RecommendationCard({ title, description, reason, action, type }: {
     </div>
   );
 }
-

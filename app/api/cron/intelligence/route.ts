@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   console.log('Starting intelligence cron job...');
   const startTime = Date.now();
-  
+
   const results: Record<string, any> = {};
   const errors: string[] = [];
 
@@ -100,4 +100,3 @@ export async function GET(request: NextRequest) {
     timestamp: new Date().toISOString(),
   });
 }
-

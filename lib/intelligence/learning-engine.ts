@@ -55,7 +55,7 @@ export async function checkTopicSaturation(topic: string): Promise<{
     .order('created_at', { ascending: false });
 
   const postCount = recentPosts?.length || 0;
-  
+
   // Get performance of similar posts
   let avgPerformance = 50;
   if (recentPosts && recentPosts.length > 0) {
@@ -64,7 +64,7 @@ export async function checkTopicSaturation(topic: string): Promise<{
       .from('content_performance')
       .select('overall_performance')
       .in('post_id', postIds);
-    
+
     if (performances && performances.length > 0) {
       avgPerformance = performances.reduce((sum, p) => sum + (p.overall_performance || 0), 0) / performances.length;
     }
@@ -72,7 +72,7 @@ export async function checkTopicSaturation(topic: string): Promise<{
 
   // Calculate saturation (0-1)
   const saturationScore = Math.min(1, postCount * 0.15 + (avgPerformance < 30 ? 0.3 : 0));
-  
+
   return {
     isSaturated: saturationScore > 0.7,
     saturationScore,
@@ -98,7 +98,7 @@ export async function updateAudiencePreferences(): Promise<void> {
     .gte('updated_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
   const categoryStats = new Map<string, { views: number; engagement: number; time: number; count: number }>();
-  
+
   for (const p of (categoryPerf || [])) {
     const cat = (p as any).posts?.category;
     if (cat) {
@@ -135,7 +135,7 @@ export async function updateAudiencePreferences(): Promise<void> {
     .gte('created_at', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString());
 
   const hourStats = new Map<number, { views: number; avgTime: number[] }>();
-  
+
   for (const pv of (timeData || [])) {
     const hour = new Date(pv.created_at).getHours();
     const stats = hourStats.get(hour) || { views: 0, avgTime: [] };
@@ -166,11 +166,11 @@ export async function updateAudiencePreferences(): Promise<void> {
 
 function calculatePreferenceScore(stats: { views: number; engagement: number; time: number; count: number }): number {
   if (stats.count === 0) return 0;
-  
+
   const avgViews = stats.views / stats.count;
   const avgEngagement = stats.engagement / stats.count;
   const avgTime = stats.time / stats.count;
-  
+
   return Math.min(100, (avgViews / 100) * 0.4 + avgEngagement * 0.4 + (avgTime / 60) * 0.2);
 }
 
@@ -182,7 +182,7 @@ export async function getGenerationContext(
 ): Promise<GenerationRecommendation> {
   // Check saturation
   const saturation = await checkTopicSaturation(topic);
-  
+
   // Get category preferences
   const { data: catPref } = await supabase
     .from('audience_preferences')
@@ -242,7 +242,7 @@ export async function getGenerationContext(
 
   // Determine if we should generate
   const shouldGenerate = !saturation.isSaturated || saturation.avgPerformance > 60;
-  
+
   let reason = '';
   if (saturation.isSaturated && saturation.avgPerformance < 60) {
     reason = `Topic "${topic}" is saturated (${saturation.saturationScore.toFixed(2)}) with low performance (${saturation.avgPerformance.toFixed(0)})`;
@@ -436,22 +436,22 @@ export async function learnFromPerformance(): Promise<PerformanceLearning[]> {
 
 function analyzeTitlePatterns(titles: string[]): { pattern: string; frequency: number }[] {
   const patterns: Map<string, number> = new Map();
-  
+
   // Common starting patterns
   const starters = ['Breaking:', 'WATCH:', 'EXCLUSIVE:', 'విజయం:', 'సంచలనం:'];
-  
+
   for (const title of titles) {
     for (const starter of starters) {
       if (title.toLowerCase().includes(starter.toLowerCase())) {
         patterns.set(starter, (patterns.get(starter) || 0) + 1);
       }
     }
-    
+
     // Check for question marks (engagement)
     if (title.includes('?')) {
       patterns.set('question_format', (patterns.get('question_format') || 0) + 1);
     }
-    
+
     // Check for numbers
     if (/\d+/.test(title)) {
       patterns.set('contains_numbers', (patterns.get('contains_numbers') || 0) + 1);
@@ -499,7 +499,7 @@ export async function updateEntityPopularity(): Promise<void> {
       .eq('entity_name', celeb.name_en)
       .single();
 
-    const trendDirection = existing 
+    const trendDirection = existing
       ? currentScore > existing.current_score ? 'up' : currentScore < existing.current_score ? 'down' : 'stable'
       : 'new';
 
@@ -541,4 +541,3 @@ export async function runLearningCycle(): Promise<{
     popularityUpdated: true,
   };
 }
-
