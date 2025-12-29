@@ -185,17 +185,17 @@ function buildSearchQueries(title: string, content: string, category: string): s
 async function searchTMDBPerson(personName: string): Promise<ImageResult | null> {
   const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
   if (!apiKey) return null;
-  
+
   try {
     const response = await fetch(
       `https://api.themoviedb.org/3/search/person?api_key=${apiKey}&query=${encodeURIComponent(personName)}&language=en-US`
     );
-    
+
     if (!response.ok) return null;
-    
+
     const data = await response.json();
     const person = data.results?.[0];
-    
+
     if (person && person.profile_path) {
       console.log(`   👤 Found TMDB person: ${person.name}`);
       return {
@@ -267,6 +267,22 @@ const TELUGU_NAME_MAP: Record<string, string> = {
   'విరాట్ కోహ్లీ': 'Virat Kohli',
   'ధోనీ': 'MS Dhoni',
   'రోహిత్ శర్మ': 'Rohit Sharma',
+  // Directors & Producers
+  'రామ్‌గోపాల్ వర్మ': 'Ram Gopal Varma',
+  'రామ్ గోపాల్ వర్మ': 'Ram Gopal Varma',
+  'ఆర్జీవీ': 'Ram Gopal Varma',
+  'వర్మ': 'Ram Gopal Varma',
+  // Politicians & Public figures
+  'శివాజీ': 'Sivaji',
+  // More actors
+  'బాలకృష్ణ': 'Nandamuri Balakrishna',
+  'మోహన్ బాబు': 'Mohan Babu',
+  'మంచు విష్ణు': 'Manchu Vishnu',
+  'మంచు మనోజ్': 'Manchu Manoj',
+  'నాగ శౌర్య': 'Naga Shaurya',
+  'సునీల్': 'Sunil',
+  'బ్రహ్మానందం': 'Brahmanandam',
+  'అలీ': 'Ali',
 };
 
 // Known Telugu celebrities for quick matching
@@ -276,12 +292,16 @@ const TELUGU_CELEBRITIES = [
   'Vijay Deverakonda', 'Nani', 'Ravi Teja', 'Pawan Kalyan', 'Chiranjeevi',
   'Nagarjuna', 'Venkatesh', 'Rana Daggubati', 'Varun Tej', 'Naga Chaitanya',
   'Sharwanand', 'Siddharth', 'Nithin', 'Sudheer Babu', 'Naveen Polishetty',
+  'Nandamuri Balakrishna', 'Mohan Babu', 'Manchu Vishnu', 'Manchu Manoj',
+  'Naga Shaurya', 'Sunil', 'Brahmanandam', 'Ali', 'Sivaji',
   // Actresses  
   'Samantha', 'Rashmika Mandanna', 'Pooja Hegde', 'Anushka Shetty', 'Kajal Aggarwal',
   'Tamanna', 'Rakul Preet', 'Keerthy Suresh', 'Sai Pallavi', 'Shruti Haasan',
   'Kiara Advani', 'Sreeleela', 'Nayanthara', 'Trisha', 'Hansika', 'Malavika Mohanan',
-  // Directors
+  // Directors & Producers
   'SS Rajamouli', 'Trivikram', 'Sukumar', 'Koratala Siva', 'Prashanth Neel',
+  'Ram Gopal Varma', 'RGV', 'Puri Jagannadh', 'Boyapati Srinu', 'Harish Shankar',
+  'Anil Ravipudi', 'Vamshi Paidipally', 'Raghavendra Rao', 'Dil Raju',
   // Cricket  
   'Virat Kohli', 'MS Dhoni', 'Rohit Sharma', 'Hardik Pandya', 'KL Rahul',
 ];
@@ -297,9 +317,9 @@ function extractCelebrityName(text: string): string | null {
       return englishName;
     }
   }
-  
+
   const lowerText = text.toLowerCase();
-  
+
   // Check English celebrity names
   for (const celeb of TELUGU_CELEBRITIES) {
     // Check for exact match or partial match
@@ -317,12 +337,12 @@ function extractCelebrityName(text: string): string | null {
       return celeb;
     }
   }
-  
+
   // Special handling for "Shirish" / "శిరీష్" - common variations
   if (lowerText.includes('shirish') || text.includes('శిరీష్')) {
     return 'Allu Sirish';
   }
-  
+
   // Try to find capitalized names that look like person names
   const namePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g;
   const matches = text.match(namePattern);
@@ -330,7 +350,7 @@ function extractCelebrityName(text: string): string | null {
     // Return the first multi-word capitalized name
     return matches[0];
   }
-  
+
   return null;
 }
 
