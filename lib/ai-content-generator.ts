@@ -140,39 +140,43 @@ OUTPUT FORMAT (JSON only, no other text):
 Generate a detailed, comprehensive Telugu article now:`;
 
   try {
-    // Try gemini-1.5-flash first, fallback to gemini-pro
-    const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro'];
+    // Use stable Gemini models
+    const models = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro'];
     let response: Response | null = null;
+    let lastError = '';
 
     for (const model of models) {
-      response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.8,
-              maxOutputTokens: 2048,
-            },
-          }),
-        }
-      );
+      try {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: 0.8,
+                maxOutputTokens: 2048,
+              },
+            }),
+          }
+        );
 
-      if (response.ok) {
-        console.log(`   Using Gemini model: ${model}`);
-        break;
+        if (response.ok) {
+          console.log(`   Using Gemini model: ${model}`);
+          break;
+        } else {
+          lastError = `${model}: ${response.status}`;
+          response = null;
+        }
+      } catch (err) {
+        lastError = `${model}: ${err}`;
+        response = null;
       }
     }
 
     if (!response) {
-      console.error('No Gemini model available');
-      return null;
-    }
-
-    if (!response.ok) {
-      console.error('Gemini API error:', response.status);
+      console.error(`Gemini API error: ${lastError}`);
       return null;
     }
 
@@ -331,30 +335,52 @@ Return ONLY valid JSON:
       if (titleMatch) {
         let bodyContent = '';
 
-        // Find body content - look for "body":" and extract until ","tags" or end
-        const bodyStartIdx = text.indexOf('"body"');
-        if (bodyStartIdx > -1) {
-          // Find the opening quote after "body":
-          const colonIdx = text.indexOf(':', bodyStartIdx);
-          if (colonIdx > -1) {
-            const openQuoteIdx = text.indexOf('"', colonIdx);
-            if (openQuoteIdx > -1) {
-              // Find the closing pattern - either ","tags" or "}
-              let endIdx = text.indexOf('","tags"', openQuoteIdx + 1);
-              if (endIdx === -1) {
-                endIdx = text.lastIndexOf('"}');
-              }
-              if (endIdx === -1) {
-                endIdx = text.lastIndexOf('"');
-              }
+        // Method 1: Find body content between "body":" and next JSON key
+        const bodyRegex = /"body"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"(?:tags|summary)|"\s*\})/;
+        const bodyRegexMatch = text.match(bodyRegex);
 
-              if (endIdx > openQuoteIdx) {
-                bodyContent = text.substring(openQuoteIdx + 1, endIdx);
-                // Unescape
-                bodyContent = bodyContent
-                  .replace(/\\n/g, '\n')
-                  .replace(/\\"/g, '"')
-                  .replace(/\\\\/g, '\\');
+        if (bodyRegexMatch) {
+          bodyContent = bodyRegexMatch[1]
+            .replace(/\\n/g, '\n')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
+        }
+
+        // Method 2: Character-by-character extraction if regex fails
+        if (!bodyContent || bodyContent.length < 50) {
+          const bodyStartIdx = text.indexOf('"body"');
+          if (bodyStartIdx > -1) {
+            const colonIdx = text.indexOf(':', bodyStartIdx);
+            if (colonIdx > -1) {
+              let openQuoteIdx = text.indexOf('"', colonIdx);
+              if (openQuoteIdx > -1) {
+                openQuoteIdx++; // Move past the opening quote
+                let endIdx = openQuoteIdx;
+                let depth = 0;
+                let escaped = false;
+
+                // Find the closing quote (not escaped)
+                for (let i = openQuoteIdx; i < text.length; i++) {
+                  if (escaped) {
+                    escaped = false;
+                    continue;
+                  }
+                  if (text[i] === '\\') {
+                    escaped = true;
+                    continue;
+                  }
+                  if (text[i] === '"') {
+                    endIdx = i;
+                    break;
+                  }
+                }
+
+                if (endIdx > openQuoteIdx) {
+                  bodyContent = text.substring(openQuoteIdx, endIdx)
+                    .replace(/\\n/g, '\n')
+                    .replace(/\\"/g, '"')
+                    .replace(/\\\\/g, '\\');
+                }
               }
             }
           }
@@ -363,19 +389,38 @@ Return ONLY valid JSON:
         console.log(`   ✅ Manual extraction - title: ${titleMatch[1].substring(0, 30)}...`);
         console.log(`   Body extracted: ${bodyContent.length} chars`);
 
-        // If body extraction failed, use fallback
+        // Method 3: If still failed, extract everything after title
         if (!bodyContent || bodyContent.length < 50) {
-          console.log(`   Using fallback body extraction...`);
-          // Remove JSON wrapper and use the whole text
-          bodyContent = text
-            .replace(/^\s*\{/, '')
-            .replace(/\}\s*$/, '')
-            .replace(/"title"\s*:\s*"[^"]+"\s*,?\s*/, '')
-            .replace(/"body"\s*:\s*"/, '')
-            .replace(/"\s*,?\s*"tags"\s*:\s*\[[^\]]*\]/, '')
-            .replace(/\\n/g, '\n')
-            .replace(/\\"/g, '"')
-            .trim();
+          console.log(`   Using aggressive fallback extraction...`);
+
+          // Find content between body": " and the last occurrence of tags or end
+          const aggressiveMatch = text.match(/"body"\s*:\s*"([\s\S]+)/);
+          if (aggressiveMatch) {
+            bodyContent = aggressiveMatch[1]
+              // Remove trailing JSON syntax
+              .replace(/"\s*,?\s*"tags"\s*:\s*\[[\s\S]*\]\s*\}?\s*$/, '')
+              .replace(/"\s*,?\s*"summary"\s*:\s*"[\s\S]*$/, '')
+              .replace(/"\s*\}\s*$/, '')
+              .replace(/^"/, '')  // Remove leading quote if present
+              .replace(/"$/, '')  // Remove trailing quote
+              .replace(/\\n/g, '\n')
+              .replace(/\\"/g, '"')
+              .replace(/\\\\/g, '\\')
+              .trim();
+          }
+
+          console.log(`   Aggressive extraction: ${bodyContent.length} chars`);
+        }
+
+        // Final fallback: Generate template content
+        if (!bodyContent || bodyContent.length < 50) {
+          console.log(`   Using template fallback for body`);
+          bodyContent = generateWithTemplate({
+            originalTitle: titleMatch[1],
+            originalContent: context.originalContent,
+            category: context.category,
+            similarPosts: [],
+          }).body;
         }
 
         return {

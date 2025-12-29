@@ -1,147 +1,238 @@
-# తెలుగు వార్తలు - Telugu Entertainment Portal
+# 🎬 TeluguVibes
 
-A premium Telugu Entertainment Portal built with Next.js 15, Tailwind CSS, and Supabase.
+> **Premium Telugu Entertainment & Culture Portal**
 
-## Features
+TeluguVibes is a premium Telugu entertainment and culture portal built with Next.js 15, designed to serve the 80+ million Telugu-speaking audience worldwide. It combines AI-assisted editorial workflows, licensed media, and historic cultural intelligence to deliver viral, evergreen, and community-driven content at scale—legally, efficiently, and sustainably.
 
-- 🎬 **Cinematic Dark Theme** - #0a0a0a background with #eab308 gold accents
-- 📰 **Viral News Layout** - Sticky trending ticker + card-based feed
-- 💬 **Real-time Comments** - Supabase real-time with profanity filter
-- 🥇 **Gold Prices Sidebar** - Live Hyderabad gold/silver prices
-- 🔐 **Admin Dashboard** - Protected with NextAuth.js (Google/GitHub OAuth)
-- 📈 **Google Trends Integration** - Import trending topics as drafts
-- 🔍 **SEO Optimized** - Dynamic OpenGraph tags for every post
-- 💰 **AdSense Ready** - Reserved ad slots (728x90, 300x600, 300x250)
+![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)
+![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green?logo=supabase)
+![Tailwind](https://img.shields.io/badge/Tailwind-CSS-blue?logo=tailwindcss)
+![License](https://img.shields.io/badge/License-Private-red)
 
-## Tech Stack
+---
 
-- **Framework**: Next.js 15 (App Router)
-- **Styling**: Tailwind CSS
-- **Database**: Supabase (PostgreSQL)
-- **Auth**: NextAuth.js v5 (Google/GitHub OAuth)
-- **Icons**: Lucide React
-- **Profanity Filter**: bad-words
-- **RSS Parsing**: rss-parser
+## ✨ Features
 
-## Getting Started
+### 📰 Viral News Engine
+- Auto-imports trending topics from NewsData.io & GNews
+- AI rewrites content into original Telugu articles (300-500 words)
+- Smart image pipeline (TMDB, Unsplash, Pexels, Wikimedia)
+- One-click publish from admin drafts
 
-### 1. Clone and Install
+### 🔥 Hot Media Section
+- Trending actress/anchor photos & videos
+- Legal social embeds (Instagram, YouTube, Twitter, Facebook)
+- Masonry grid with lightbox viewer
+- Celebrity tagging & categorization
+
+### 🎂 Historic Celebrity Intelligence
+- Auto-generates "On This Day" birthday/anniversary posts
+- Wikidata + TMDB integration for Telugu celebrities
+- AI-written tribute articles in Telugu
+- Evergreen content recycling for SEO
+
+### 💬 Community Features
+- Real-time comments (Supabase Realtime)
+- Profanity filtering & moderation
+- Rate limiting & spam protection
+- Positive comment highlighting
+
+### 🛡️ Legal & AdSense Safe
+- No illegal scraping - uses official APIs only
+- Social embeds via oEmbed (platform-approved)
+- Licensed images from Wikimedia/Unsplash/Pexels/TMDB
+- Admin moderation required for all content
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+
+- Supabase account
+- API keys (see Environment Variables)
+
+### Installation
 
 ```bash
-cd ~/Projects/telugu-portal
+# Clone the repository
+git clone https://github.com/sharath317/teluguvibes.git
+cd teluguvibes
+
+# Install dependencies
 npm install
-```
 
-### 2. Setup Supabase
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your API keys
 
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Run the SQL schema from `supabase-schema.sql` in the SQL Editor
-3. Enable Realtime for the `comments` table
+# Run database migrations
+# Copy SQL files to Supabase SQL Editor:
+# - supabase-schema.sql (core tables)
+# - supabase-celebrity-schema.sql (celebrity system)
+# - supabase-media-schema.sql (hot media system)
 
-### 3. Setup Google OAuth
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create a new project or select existing
-3. Enable Google+ API
-4. Create OAuth 2.0 credentials
-5. Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
-
-### 4. Configure Environment Variables
-
-Create `.env.local`:
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-
-# NextAuth
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=generate_with_openssl_rand_base64_32
-AUTH_SECRET=same_as_nextauth_secret
-
-# Google OAuth
-AUTH_GOOGLE_ID=your_google_client_id
-AUTH_GOOGLE_SECRET=your_google_client_secret
-
-# Optional: GitHub OAuth
-AUTH_GITHUB_ID=your_github_client_id
-AUTH_GITHUB_SECRET=your_github_client_secret
-
-# Gold API (https://www.goldapi.io/)
-GOLD_API_KEY=your_gold_api_key
-
-# Admin Access (comma-separated emails)
-ADMIN_EMAILS=admin@example.com
-```
-
-### 5. Run Development Server
-
-```bash
+# Start development server
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
 
-## Project Structure
+---
+
+## 🔐 Environment Variables
+
+Create `.env.local` with:
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Authentication (Google OAuth)
+AUTH_SECRET=your_nextauth_secret
+AUTH_GOOGLE_ID=your_google_client_id
+AUTH_GOOGLE_SECRET=your_google_client_secret
+
+# AI Content Generation
+GROQ_API_KEY=your_groq_api_key
+
+# News APIs
+NEWSDATA_API_KEY=your_newsdata_key
+GNEWS_API_KEY=your_gnews_key
+
+# Image APIs
+UNSPLASH_ACCESS_KEY=your_unsplash_key
+PEXELS_API_KEY=your_pexels_key
+TMDB_API_KEY=your_tmdb_key
+
+# Optional
+GOLD_API_KEY=your_goldapi_key
+FACEBOOK_ACCESS_TOKEN=your_facebook_token
+```
+
+---
+
+## 📁 Project Structure
 
 ```
 telugu-portal/
-├── app/
-│   ├── layout.tsx              # Root layout with header/footer
-│   ├── page.tsx                # Home - viral news feed
-│   ├── post/[slug]/page.tsx    # Post detail with SEO
-│   ├── category/[cat]/page.tsx # Category pages
-│   ├── admin/                  # Protected admin area
-│   │   ├── layout.tsx
-│   │   ├── page.tsx            # Dashboard
-│   │   ├── posts/              # Post management
-│   │   └── drafts/             # Trend drafts
-│   ├── auth/                   # Auth pages
-│   └── api/                    # API routes
-├── components/
-│   ├── TrendingTicker.tsx      # Sticky news ticker
-│   ├── NewsCard.tsx            # News card component
-│   ├── CommentSection.tsx      # Real-time comments
-│   ├── DailyInfoSidebar.tsx    # Gold/Weather widgets
-│   └── AdSlot.tsx              # AdSense placeholders
-├── lib/
-│   ├── supabase.ts             # Supabase clients
-│   ├── auth.ts                 # NextAuth config
-│   ├── profanity-filter.ts     # Comment filter
-│   └── trends.ts               # Google Trends parser
-└── types/
-    └── database.ts             # TypeScript types
+├── app/                    # Next.js App Router
+│   ├── admin/              # Admin dashboard
+│   │   ├── celebrities/    # Celebrity management
+│   │   ├── drafts/         # AI-generated drafts
+│   │   ├── media/          # Hot media manager
+│   │   └── posts/          # Content management
+│   ├── category/[cat]/     # Category pages
+│   ├── hot/                # Hot media section
+│   ├── post/[slug]/        # Article pages
+│   └── page.tsx            # Homepage
+├── components/             # React components
+│   ├── media/              # Embed renderers, cards
+│   └── ...                 # UI components
+├── lib/                    # Business logic
+│   ├── celebrity/          # Celebrity data pipeline
+│   ├── media/              # Embed & image fetchers
+│   └── ...                 # AI, news, validation
+├── types/                  # TypeScript definitions
+└── public/                 # Static assets
 ```
 
-## Categories
+---
 
-- **గాసిప్** (Gossip) - Celebrity news
-- **స్పోర్ట్స్** (Sports) - Cricket, Football, Kabaddi
-- **రాజకీయాలు** (Politics) - Telangana/AP politics
-- **వినోదం** (Entertainment) - Movies, TV, Music
-- **ట్రెండింగ్** (Trending) - Viral topics
+## 🗄️ Database Schema
 
-## Admin Features
+| Table | Purpose |
+|-------|---------|
+| `posts` | News articles & content |
+| `comments` | User comments |
+| `categories` | Content categories |
+| `celebrities` | Telugu celebrity profiles |
+| `celebrity_events` | Birthdays, anniversaries |
+| `celebrity_works` | Filmography |
+| `historic_posts` | Auto-generated tribute posts |
+| `media_entities` | Actresses, anchors, influencers |
+| `media_posts` | Photos, videos, social embeds |
+| `media_collections` | Curated galleries |
 
-1. **Dashboard** - View stats (posts, views, comments)
-2. **Posts** - Create, edit, delete posts
-3. **Drafts** - Import Google Trends and approve with one click
+---
 
-## AdSense Integration
+## 🌐 Routes
 
-Replace the placeholder AdSlot components with actual AdSense code:
+| Route | Description |
+|-------|-------------|
+| `/` | Homepage with trending feed |
+| `/hot` | Hot photos & videos |
+| `/category/[cat]` | Category filtered content |
+| `/post/[slug]` | Article detail page |
+| `/about` | About TeluguVibes |
+| `/contact` | Contact form |
+| `/privacy` | Privacy policy |
+| `/admin` | Admin dashboard (protected) |
+| `/admin/media` | Hot media manager |
+| `/admin/celebrities` | Celebrity manager |
 
-```tsx
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-<ins class="adsbygoogle"
-     data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-     data-ad-slot="XXXXXXXXXX"
-     data-ad-format="auto"></ins>
-<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Database**: Supabase (PostgreSQL + Realtime)
+- **Styling**: Tailwind CSS
+- **Auth**: NextAuth.js v5 (Google OAuth)
+- **AI**: Groq (Llama), Google Gemini
+- **APIs**: NewsData.io, GNews, TMDB, Unsplash, Pexels
+- **Deployment**: Vercel
+
+---
+
+## 📈 Monetization
+
+- **AdSense slots**: Header, sidebar, mid-article, mobile sticky
+- **Sponsored content**: Movie promotions
+- **Affiliate marketing**: Movie tickets, merchandise
+- **Future**: Premium membership
+
+---
+
+## 🚢 Deployment
+
+### Vercel (Recommended)
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+
+# Set environment variables in Vercel dashboard
 ```
 
-## License
+### Manual
 
-MIT
+```bash
+npm run build
+npm start
+```
+
+---
+
+## 📄 License
+
+Private repository. All rights reserved.
+
+---
+
+## 👨‍💻 Author
+
+Built with ❤️ for the Telugu community.
+
+---
+
+## 🙏 Acknowledgments
+
+- Telugu film industry for endless entertainment
+- Open source community for amazing tools
+- AI providers for content generation capabilities

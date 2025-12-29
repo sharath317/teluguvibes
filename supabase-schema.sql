@@ -84,3 +84,4 @@ BEGIN
   UPDATE posts SET views = views + 1 WHERE slug = post_slug;
 END;
 $$ language 'plpgsql';
+

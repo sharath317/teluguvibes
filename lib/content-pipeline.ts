@@ -4,7 +4,7 @@
  * 1. Content Intelligence (Pre-Analysis)
  * 2. Structured Content Generation
  * 3. Post-Generation Validation
- * 
+ *
  * Plus: Smart Image + Category Rules
  */
 
@@ -158,7 +158,7 @@ export async function processContent(input: PipelineInput): Promise<PipelineOutp
   if (!structured) {
     errors.push('Failed to generate structured content');
     console.log('   ❌ Generation failed');
-    
+
     return {
       success: false,
       status: 'rejected',
@@ -209,7 +209,7 @@ export async function processContent(input: PipelineInput): Promise<PipelineOutp
   console.log('─────────────────────────────────');
 
   let imageResult;
-  
+
   if (analysis.primaryEntity.type === 'celebrity') {
     imageResult = await getCelebrityImage(analysis.primaryEntity.name);
   } else if (analysis.primaryEntity.type === 'movie') {
@@ -251,7 +251,7 @@ export async function processContent(input: PipelineInput): Promise<PipelineOutp
   if (insertError) {
     errors.push(`Database error: ${insertError.message}`);
     console.log(`   ❌ Insert failed: ${insertError.message}`);
-    
+
     return {
       success: false,
       status: 'rejected',
@@ -384,7 +384,7 @@ export async function batchProcessContent(
   useQuickMode: boolean = true
 ): Promise<{ success: number; failed: number; results: PipelineOutput[] }> {
   console.log(`\n📦 [BatchPipeline] Processing ${inputs.length} articles...`);
-  
+
   const results: PipelineOutput[] = [];
   let success = 0;
   let failed = 0;
@@ -394,9 +394,9 @@ export async function batchProcessContent(
       const result = useQuickMode
         ? await quickProcessContent(input)
         : await processContent(input);
-      
+
       results.push(result);
-      
+
       if (result.success) {
         success++;
       } else {

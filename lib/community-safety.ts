@@ -122,7 +122,7 @@ export async function checkRateLimit(
   }
 
   const entryWindowStart = new Date(existing.window_start);
-  
+
   if (entryWindowStart < windowStart) {
     // Window expired, reset
     await supabase
@@ -142,7 +142,7 @@ export async function checkRateLimit(
 
   // Window still active
   const newCount = existing.request_count + 1;
-  
+
   if (newCount > config.maxRequests) {
     const resetIn = Math.ceil(
       (entryWindowStart.getTime() + config.windowMinutes * 60 * 1000 - Date.now()) / 1000
@@ -408,7 +408,7 @@ export async function reportComment(
 
   // In production, you'd save this to a reports table
   console.log(`Comment ${commentId} reported: ${reason}`);
-  
+
   return true;
 }
 

@@ -42,3 +42,4 @@ export interface TrendingTopic {
   traffic: string;
   url: string;
 }
+

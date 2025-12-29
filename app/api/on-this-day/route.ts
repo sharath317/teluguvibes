@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     if (type === 'upcoming') {
       const days = parseInt(searchParams.get('days') || '7');
       const events = await getUpcomingBirthdays(days);
-      
+
       return NextResponse.json({
         success: true,
         type: 'upcoming_birthdays',
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     // Generate nostalgia posts for today
     if (type === 'generate') {
       const result = await generateTodaysNostalgiaPosts();
-      
+
       return NextResponse.json({
         success: true,
         type: 'generated',
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
     );
 
     const today = new Date();
-    
+
     return NextResponse.json({
       success: true,
       date: {

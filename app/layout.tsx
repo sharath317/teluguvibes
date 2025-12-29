@@ -56,6 +56,12 @@ export default function RootLayout({
 
               {/* Navigation */}
               <nav className="hidden md:flex items-center gap-6">
+                <Link
+                  href="/hot"
+                  className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold rounded-full text-sm hover:opacity-90 transition-opacity"
+                >
+                  🔥 హాట్
+                </Link>
                 <NavLink href="/category/gossip">గాసిప్</NavLink>
                 <NavLink href="/category/sports">స్పోర్ట్స్</NavLink>
                 <NavLink href="/category/politics">రాజకీయాలు</NavLink>

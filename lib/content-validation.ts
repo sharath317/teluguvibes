@@ -83,9 +83,9 @@ function checkTeluguQuality(text: string): { passed: boolean; percentage: number
   const teluguRegex = /[\u0C00-\u0C7F]/g;
   const teluguChars = (text.match(teluguRegex) || []).length;
   const totalChars = text.replace(/\s/g, '').length;
-  
+
   const percentage = totalChars > 0 ? (teluguChars / totalChars) * 100 : 0;
-  
+
   // Pass if >50% Telugu (allowing for English names)
   return {
     passed: percentage >= 50,
@@ -98,14 +98,14 @@ function checkTeluguQuality(text: string): { passed: boolean; percentage: number
  */
 function checkToxicity(text: string): { passed: boolean; flaggedTerms: string[] } {
   const flagged: string[] = [];
-  
+
   for (const pattern of TOXICITY_PATTERNS) {
     const matches = text.match(pattern);
     if (matches) {
       flagged.push(matches[0]);
     }
   }
-  
+
   return {
     passed: flagged.length === 0,
     flaggedTerms: flagged,
@@ -117,7 +117,7 @@ function checkToxicity(text: string): { passed: boolean; flaggedTerms: string[] 
  */
 function checkSensitiveContent(text: string): { passed: boolean; flags: string[] } {
   const flags: string[] = [];
-  
+
   for (const [category, patterns] of Object.entries(SENSITIVE_PATTERNS)) {
     for (const pattern of patterns) {
       if (pattern.test(text)) {
@@ -126,7 +126,7 @@ function checkSensitiveContent(text: string): { passed: boolean; flags: string[]
       }
     }
   }
-  
+
   return {
     passed: flags.length === 0,
     flags: [...new Set(flags)],
@@ -139,19 +139,19 @@ function checkSensitiveContent(text: string): { passed: boolean; flags: string[]
 function checkDuplicate(text: string, postId?: string): { passed: boolean; similarity: number } {
   // Create content hash
   const hash = crypto.createHash('md5').update(text.toLowerCase().replace(/\s/g, '')).digest('hex');
-  
+
   // Check if similar hash exists
   for (const [existingId, existingHash] of contentHashes.entries()) {
     if (existingId !== postId && existingHash === hash) {
       return { passed: false, similarity: 100 };
     }
   }
-  
+
   // Store hash for future checks
   if (postId) {
     contentHashes.set(postId, hash);
   }
-  
+
   return { passed: true, similarity: 0 };
 }
 
@@ -160,29 +160,29 @@ function checkDuplicate(text: string, postId?: string): { passed: boolean; simil
  */
 function checkClickbait(title: string): { passed: boolean; score: number } {
   let clickbaitScore = 0;
-  
+
   for (const pattern of CLICKBAIT_PATTERNS) {
     if (pattern.test(title)) {
       clickbaitScore += 20;
     }
   }
-  
+
   // Check for excessive caps
   const capsRatio = (title.match(/[A-Z]/g) || []).length / title.length;
   if (capsRatio > 0.5) {
     clickbaitScore += 20;
   }
-  
+
   // Check for excessive punctuation
   if (/[!?]{2,}/.test(title)) {
     clickbaitScore += 15;
   }
-  
+
   // Check for numbers at start (listicle patterns)
   if (/^\d+\s/.test(title)) {
     clickbaitScore += 10;
   }
-  
+
   return {
     passed: clickbaitScore < 50,
     score: Math.min(clickbaitScore, 100),
@@ -241,10 +241,10 @@ Return JSON only:
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content;
-    
+
     const jsonMatch = text?.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return { passed: true, issues: [] };
-    
+
     const result = JSON.parse(jsonMatch[0]);
     return {
       passed: result.safe === true,
@@ -266,7 +266,7 @@ export async function validateContent(
   minWordCount: number = 200
 ): Promise<ValidationResult> {
   console.log(`\n🔍 [Validation] Checking content quality...`);
-  
+
   const fullText = `${title} ${body}`;
   const reasons: string[] = [];
   let score = 100;
@@ -352,7 +352,7 @@ export function quickValidate(title: string, body: string): boolean {
   const wordCount = body.split(/\s+/).length;
   const teluguCheck = checkTeluguQuality(body);
   const toxicityCheck = checkToxicity(`${title} ${body}`);
-  
+
   return wordCount >= 100 && teluguCheck.percentage >= 30 && toxicityCheck.passed;
 }
 
@@ -361,7 +361,7 @@ export function quickValidate(title: string, body: string): boolean {
  */
 export function addDisclaimer(body: string, category: string, flags: string[]): string {
   let disclaimer = '';
-  
+
   if (flags.includes('health')) {
     disclaimer = '\n\n⚠️ **గమనిక:** ఈ సమాచారం కేవలం అవగాహన కోసం మాత్రమే. వైద్య సలహా కోసం డాక్టర్‌ను సంప్రదించండి.';
   } else if (flags.includes('political')) {
@@ -369,7 +369,7 @@ export function addDisclaimer(body: string, category: string, flags: string[]): 
   } else if (flags.includes('rumor')) {
     disclaimer = '\n\n📝 **గమనిక:** ఈ సమాచారం అధికారికంగా ధృవీకరించబడలేదు.';
   }
-  
+
   return body + disclaimer;
 }
 

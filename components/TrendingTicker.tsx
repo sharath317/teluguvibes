@@ -66,3 +66,4 @@ export function TrendingTicker({ initialPosts = [] }: TrendingTickerProps) {
     </div>
   );
 }
+

@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     if (mode === 'batch' && Array.isArray(articles)) {
       const useQuick = body.quick !== false; // Default to quick mode for batch
       const result = await batchProcessContent(articles, useQuick);
-      
+
       return NextResponse.json({
         success: true,
         mode: 'batch',

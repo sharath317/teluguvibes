@@ -12,7 +12,7 @@ export default function PrivacyPage() {
         <h1 className="text-3xl md:text-4xl font-bold text-[#eab308] mb-8">
           Privacy Policy
         </h1>
-        
+
         <div className="prose prose-invert max-w-none space-y-8 text-[#ededed]">
           <p className="text-[#737373]">
             Last updated: {new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -21,8 +21,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-4">1. Introduction</h2>
             <p className="text-[#a3a3a3] leading-relaxed">
-              Welcome to TeluguVibes (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your 
-              personal information and your right to privacy. This Privacy Policy explains how we collect, 
+              Welcome to TeluguVibes (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your
+              personal information and your right to privacy. This Privacy Policy explains how we collect,
               use, disclose, and safeguard your information when you visit our website.
             </p>
           </section>
@@ -57,9 +57,9 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-4">4. Cookies and Tracking</h2>
             <p className="text-[#a3a3a3] leading-relaxed">
-              We use cookies and similar tracking technologies to track activity on our website and 
-              hold certain information. Cookies are files with a small amount of data which may include 
-              an anonymous unique identifier. You can instruct your browser to refuse all cookies or 
+              We use cookies and similar tracking technologies to track activity on our website and
+              hold certain information. Cookies are files with a small amount of data which may include
+              an anonymous unique identifier. You can instruct your browser to refuse all cookies or
               to indicate when a cookie is being sent.
             </p>
           </section>
@@ -80,8 +80,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-4">6. Data Security</h2>
             <p className="text-[#a3a3a3] leading-relaxed">
-              The security of your data is important to us. We use commercially acceptable means to 
-              protect your personal information, but remember that no method of transmission over the 
+              The security of your data is important to us. We use commercially acceptable means to
+              protect your personal information, but remember that no method of transmission over the
               Internet or method of electronic storage is 100% secure.
             </p>
           </section>
@@ -103,8 +103,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-4">8. Children&apos;s Privacy</h2>
             <p className="text-[#a3a3a3] leading-relaxed">
-              Our service is not intended for children under 13 years of age. We do not knowingly 
-              collect personal information from children under 13. If you are a parent or guardian 
+              Our service is not intended for children under 13 years of age. We do not knowingly
+              collect personal information from children under 13. If you are a parent or guardian
               and you are aware that your child has provided us with personal data, please contact us.
             </p>
           </section>
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-4">9. Changes to This Policy</h2>
             <p className="text-[#a3a3a3] leading-relaxed">
-              We may update our Privacy Policy from time to time. We will notify you of any changes by 
+              We may update our Privacy Policy from time to time. We will notify you of any changes by
               posting the new Privacy Policy on this page and updating the &quot;Last updated&quot; date.
             </p>
           </section>

@@ -216,12 +216,12 @@ export async function generateStructuredArticle(
   for (const sectionType of analysis.recommendedSections) {
     console.log(`   ✍️ Generating ${sectionType}...`);
     const section = await generateSection(sectionType, context);
-    
+
     if (section) {
       sections.push(section);
       console.log(`   ✅ ${sectionType}: ${section.wordCount} words`);
     }
-    
+
     // Small delay to avoid rate limiting
     await new Promise(resolve => setTimeout(resolve, 200));
   }
@@ -337,9 +337,9 @@ export async function generateArticleWithStructure(
   category: string
 ): Promise<{ title: string; body: string; wordCount: number } | null> {
   const structured = await generateStructuredArticle(originalTitle, originalContent, category);
-  
+
   if (!structured) return null;
-  
+
   return {
     title: structured.title,
     body: structuredToBody(structured),

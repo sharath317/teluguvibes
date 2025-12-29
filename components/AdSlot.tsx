@@ -1,5 +1,12 @@
 'use client';
 
+// ============================================
+// 🔧 AD CONFIGURATION
+// Set to true when you have AdSense approved
+// ============================================
+const ADS_ENABLED = false;
+// ============================================
+
 interface AdSlotProps {
   slot: 'header' | 'sidebar' | 'mid-article';
   className?: string;
@@ -24,6 +31,11 @@ const slotConfig = {
 };
 
 export function AdSlot({ slot, className = '' }: AdSlotProps) {
+  // Return nothing if ads are disabled
+  if (!ADS_ENABLED) {
+    return null;
+  }
+
   const config = slotConfig[slot];
 
   return (

@@ -6,7 +6,12 @@ import {
   FileText,
   TrendingUp,
   LogOut,
-  Settings
+  Settings,
+  Users,
+  Calendar,
+  Sparkles,
+  Flame,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export default async function AdminLayout({
@@ -66,9 +71,41 @@ export default async function AdminLayout({
             <NavItem href="/admin/drafts" icon={TrendingUp}>
               Trending Drafts
             </NavItem>
-            <NavItem href="/admin/settings" icon={Settings}>
-              Settings
+
+            {/* Hot Media Section */}
+            <div className="pt-4 mt-4 border-t border-[#262626]">
+              <span className="px-3 text-xs font-medium text-[#737373] uppercase tracking-wider">
+                Hot Media
+              </span>
+            </div>
+            <NavItem href="/admin/media" icon={Flame}>
+              Media Manager
             </NavItem>
+            <NavItem href="/admin/media/entities" icon={ImageIcon}>
+              Entities
+            </NavItem>
+
+            {/* Celebrity Section */}
+            <div className="pt-4 mt-4 border-t border-[#262626]">
+              <span className="px-3 text-xs font-medium text-[#737373] uppercase tracking-wider">
+                Celebrities
+              </span>
+            </div>
+            <NavItem href="/admin/celebrities" icon={Users}>
+              All Celebrities
+            </NavItem>
+            <NavItem href="/admin/celebrities/calendar" icon={Calendar}>
+              Events Calendar
+            </NavItem>
+            <NavItem href="/admin/historic-drafts" icon={Sparkles}>
+              Historic Drafts
+            </NavItem>
+
+            <div className="pt-4 mt-4 border-t border-[#262626]">
+              <NavItem href="/admin/settings" icon={Settings}>
+                Settings
+              </NavItem>
+            </div>
           </nav>
 
           <div className="mt-8 pt-4 border-t border-[#262626]">

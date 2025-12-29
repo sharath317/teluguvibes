@@ -125,11 +125,11 @@ async function fetchFromTMDB(query: string): Promise<ImageResult | null> {
     const movieResponse = await fetch(
       `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=te-IN`
     );
-    
+
     if (movieResponse.ok) {
       const movieData = await movieResponse.json();
       const movie = movieData.results?.[0];
-      
+
       if (movie?.poster_path) {
         return {
           url: `https://image.tmdb.org/t/p/w780${movie.poster_path}`,
@@ -144,11 +144,11 @@ async function fetchFromTMDB(query: string): Promise<ImageResult | null> {
     const personResponse = await fetch(
       `https://api.themoviedb.org/3/search/person?api_key=${apiKey}&query=${encodeURIComponent(query)}`
     );
-    
+
     if (personResponse.ok) {
       const personData = await personResponse.json();
       const person = personData.results?.[0];
-      
+
       if (person?.profile_path) {
         return {
           url: `https://image.tmdb.org/t/p/w500${person.profile_path}`,
@@ -269,10 +269,10 @@ async function fetchAIImage(query: string, category: string): Promise<ImageResul
   // - DALL-E
   // - Stable Diffusion
   // - Midjourney API
-  
+
   // For now, use a placeholder generator
   const seed = hashQuery(query).substring(0, 8);
-  
+
   const styles: Record<string, string> = {
     love: 'romantic,soft+lighting,indian+aesthetic',
     dedications: 'celebration,festive,wishes',
@@ -280,7 +280,7 @@ async function fetchAIImage(query: string, category: string): Promise<ImageResul
   };
 
   const style = styles[category] || 'aesthetic,modern';
-  
+
   return {
     url: `https://picsum.photos/seed/${seed}/1200/675`,
     source: 'ai_placeholder',
@@ -347,7 +347,7 @@ export async function getSmartImage(
   // 3. Try each source in priority order
   for (const source of sources) {
     console.log(`   🔍 Trying: ${source}`);
-    
+
     let result: ImageResult | null = null;
 
     switch (source) {
@@ -367,13 +367,13 @@ export async function getSmartImage(
 
     if (result) {
       const validation = validateImage(result);
-      
+
       if (validation.isValid) {
         console.log(`   ✅ Found: ${source} (${validation.width}x${validation.height})`);
-        
+
         // Save to cache
         await saveToCache(queryHash, enhancedQuery, result);
-        
+
         return result;
       } else {
         console.log(`   ⚠️ Validation failed: ${validation.issues.join(', ')}`);
@@ -383,7 +383,7 @@ export async function getSmartImage(
 
   // 4. Ultimate fallback
   console.log(`   ⚠️ Using fallback`);
-  
+
   const fallback: ImageResult = {
     url: `https://picsum.photos/seed/${queryHash.substring(0, 8)}/1200/675`,
     source: 'fallback',
@@ -392,7 +392,7 @@ export async function getSmartImage(
   };
 
   await saveToCache(queryHash, enhancedQuery, fallback);
-  
+
   return fallback;
 }
 
@@ -428,7 +428,7 @@ export async function getBatchImages(
   for (const { query, category } of queries) {
     const result = await getSmartImage(query, category);
     results.set(query, result);
-    
+
     // Small delay to avoid rate limiting
     await new Promise(resolve => setTimeout(resolve, 100));
   }

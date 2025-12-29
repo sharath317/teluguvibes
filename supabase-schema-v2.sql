@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS categories (
 
 -- Insert default categories
 INSERT INTO categories (slug, name_te, name_en, icon, content_type, risk_level, image_style, ai_rules, display_order)
-VALUES 
-  ('entertainment', 'వినోదం', 'Entertainment', '🎬', 'news', 'low', 'tmdb', 
+VALUES
+  ('entertainment', 'వినోదం', 'Entertainment', '🎬', 'news', 'low', 'tmdb',
    '{"sections": ["hook", "context", "main_story", "social_buzz", "filmography", "closing"], "word_count": 350, "tone": "engaging"}', 1),
   ('gossip', 'గాసిప్స్', 'Gossip', '💫', 'news', 'medium', 'stock',
    '{"sections": ["hook", "context", "main_story", "social_buzz", "closing"], "word_count": 250, "tone": "casual"}', 2),
@@ -53,7 +53,7 @@ ON CONFLICT (slug) DO NOTHING;
 -- 2. POSTS TABLE (Updated with category FK)
 -- =====================================================
 -- First add category_id column if not exists
-DO $$ 
+DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'category_id') THEN
     ALTER TABLE posts ADD COLUMN category_id UUID REFERENCES categories(id);
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS post_analysis (
   keywords TEXT[] DEFAULT '{}',
   related_topics TEXT[] DEFAULT '{}',
   analyzed_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   UNIQUE(post_id)
 );
 
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS content_validation (
   recommendation TEXT CHECK (recommendation IN ('publish', 'review', 'reject')),
   reasons TEXT[] DEFAULT '{}',
   validated_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   UNIQUE(post_id)
 );
 
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS on_this_day_events (
   is_active BOOLEAN DEFAULT true,
   last_used_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   UNIQUE(month, day, event_type, entity_name)
 );
 
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS post_performance (
   comments INTEGER DEFAULT 0,
   avg_time_on_page INTEGER DEFAULT 0,  -- seconds
   bounce_rate DECIMAL(5,2) DEFAULT 0,
-  
+
   UNIQUE(post_id, date)
 );
 
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS evergreen_posts (
   last_recycled_at TIMESTAMPTZ,
   next_suggested_recycle DATE,
   is_recyclable BOOLEAN DEFAULT true,
-  
+
   UNIQUE(post_id)
 );
 
@@ -177,18 +177,18 @@ CREATE TABLE IF NOT EXISTS dedications (
 -- =====================================================
 -- 9. COMMENT SAFETY (Shadow-ban, Rate Limiting)
 -- =====================================================
-DO $$ 
+DO $$
 BEGIN
   -- Add shadow_banned column if not exists
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'is_shadow_banned') THEN
     ALTER TABLE comments ADD COLUMN is_shadow_banned BOOLEAN DEFAULT false;
   END IF;
-  
+
   -- Add is_pinned column if not exists
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'is_pinned') THEN
     ALTER TABLE comments ADD COLUMN is_pinned BOOLEAN DEFAULT false;
   END IF;
-  
+
   -- Add ip_address column if not exists
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'ip_address') THEN
     ALTER TABLE comments ADD COLUMN ip_address TEXT;
@@ -202,7 +202,7 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   action_type TEXT NOT NULL,  -- 'comment', 'create_post', 'dedication'
   window_start TIMESTAMPTZ DEFAULT NOW(),
   request_count INTEGER DEFAULT 1,
-  
+
   UNIQUE(identifier, action_type)
 );
 
@@ -233,7 +233,7 @@ CREATE TABLE IF NOT EXISTS content_hashes (
   content_hash TEXT NOT NULL,
   title_hash TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   UNIQUE(content_hash)
 );
 
@@ -266,28 +266,28 @@ DECLARE
   window_start_time TIMESTAMPTZ;
 BEGIN
   window_start_time := NOW() - (p_window_minutes || ' minutes')::INTERVAL;
-  
+
   -- Delete old entries
-  DELETE FROM rate_limits 
-  WHERE identifier = p_identifier 
-    AND action_type = p_action_type 
+  DELETE FROM rate_limits
+  WHERE identifier = p_identifier
+    AND action_type = p_action_type
     AND window_start < window_start_time;
-  
+
   -- Get or create entry
   INSERT INTO rate_limits (identifier, action_type, window_start, request_count)
   VALUES (p_identifier, p_action_type, NOW(), 1)
-  ON CONFLICT (identifier, action_type) 
-  DO UPDATE SET 
-    request_count = CASE 
+  ON CONFLICT (identifier, action_type)
+  DO UPDATE SET
+    request_count = CASE
       WHEN rate_limits.window_start < window_start_time THEN 1
       ELSE rate_limits.request_count + 1
     END,
-    window_start = CASE 
+    window_start = CASE
       WHEN rate_limits.window_start < window_start_time THEN NOW()
       ELSE rate_limits.window_start
     END
   RETURNING request_count INTO current_count;
-  
+
   RETURN current_count <= p_max_requests;
 END;
 $$ LANGUAGE plpgsql;
@@ -298,8 +298,8 @@ RETURNS SETOF on_this_day_events AS $$
 BEGIN
   RETURN QUERY
   SELECT * FROM on_this_day_events
-  WHERE month = p_month 
-    AND day = p_day 
+  WHERE month = p_month
+    AND day = p_day
     AND is_active = true
   ORDER BY event_type, year_occurred DESC;
 END;
@@ -327,7 +327,7 @@ $$ LANGUAGE plpgsql;
 
 -- Top performing posts for potential recycling
 CREATE OR REPLACE VIEW v_top_evergreen_candidates AS
-SELECT 
+SELECT
   p.id,
   p.title,
   p.category,
@@ -345,7 +345,7 @@ ORDER BY total_views DESC;
 
 -- Categories with their post counts
 CREATE OR REPLACE VIEW v_category_stats AS
-SELECT 
+SELECT
   c.slug,
   c.name_en,
   c.name_te,
@@ -371,12 +371,12 @@ VALUES
   (4, 8, 'birthday', 'Allu Arjun', 'అల్లు అర్జున్', 1982, 'Stylish star of Tollywood'),
   (3, 27, 'birthday', 'Ram Charan', 'రామ్ చరణ్', 1985, 'Mega Power Star'),
   (8, 22, 'birthday', 'Chiranjeevi', 'చిరంజీవి', 1955, 'Megastar of Telugu cinema'),
-  
+
   -- Movie Release Anniversaries
   (7, 10, 'movie_release', 'Baahubali: The Beginning', 'బాహుబలి', 2015, 'Record-breaking Telugu epic film'),
   (4, 28, 'movie_release', 'Baahubali 2: The Conclusion', 'బాహుబలి 2', 2017, 'Highest-grossing Indian film at that time'),
   (3, 25, 'movie_release', 'RRR', 'ఆర్ఆర్ఆర్', 2022, 'SS Rajamouli epic with global success'),
-  
+
   -- Cricket Events
   (4, 2, 'sports', 'India Wins World Cup', 'ప్రపంచ కప్ విజయం', 2011, 'India wins Cricket World Cup 2011'),
   (6, 23, 'sports', 'IPL Started', 'ఐపీఎల్ ప్రారంభం', 2008, 'First IPL tournament began')

@@ -79,7 +79,7 @@ export async function generateNostalgiaContent(
 ): Promise<GeneratedContent | null> {
   const currentYear = new Date().getFullYear();
   const yearsAgo = event.year_occurred ? currentYear - event.year_occurred : null;
-  
+
   switch (event.event_type) {
     case 'birthday':
       return generateBirthdayContent(event, yearsAgo);
@@ -103,7 +103,7 @@ function generateBirthdayContent(
 ): GeneratedContent {
   const name = event.entity_name_te || event.entity_name;
   const age = yearsAgo;
-  
+
   return {
     title: `🎂 ${name} పుట్టినరోజు: ${age ? `${age} ఏళ్ల` : ''} సెలబ్రేషన్!`,
     body: `[ఆటో-జెనరేట్ చేయబడుతుంది]
@@ -132,7 +132,7 @@ function generateMovieAnniversaryContent(
   yearsAgo: number | null
 ): GeneratedContent {
   const name = event.entity_name_te || event.entity_name;
-  
+
   return {
     title: `🎬 ${name}: ${yearsAgo ? `${yearsAgo} సంవత్సరాల` : ''} చరిత్ర!`,
     body: `[ఆటో-జెనరేట్ చేయబడుతుంది]
@@ -164,7 +164,7 @@ function generateSportsMemoryContent(
   yearsAgo: number | null
 ): GeneratedContent {
   const name = event.entity_name_te || event.entity_name;
-  
+
   return {
     title: `🏏 ఆన్ దిస్ డే: ${name}${yearsAgo ? ` - ${yearsAgo} ఏళ్ల క్రితం` : ''}`,
     body: `[ఆటో-జెనరేట్ చేయబడుతుంది]
@@ -193,7 +193,7 @@ function generateTributeContent(
   yearsAgo: number | null
 ): GeneratedContent {
   const name = event.entity_name_te || event.entity_name;
-  
+
   return {
     title: `🙏 ${name}: స్మారక దినం${yearsAgo ? ` - ${yearsAgo} సంవత్సరాలు` : ''}`,
     body: `[ఆటో-జెనరేట్ చేయబడుతుంది]
@@ -222,7 +222,7 @@ function generateGeneralHistoricalContent(
   yearsAgo: number | null
 ): GeneratedContent {
   const name = event.entity_name_te || event.entity_name;
-  
+
   return {
     title: `📅 ఆన్ దిస్ డే: ${name}`,
     body: `[ఆటో-జెనరేట్ చేయబడుతుంది]
@@ -299,12 +299,12 @@ Return JSON:
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content;
-    
+
     const jsonMatch = text?.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return generateNostalgiaContent(event);
-    
+
     const result = JSON.parse(jsonMatch[0]);
-    
+
     return {
       title: result.title,
       body: result.body,
@@ -322,24 +322,24 @@ Return JSON:
  */
 export async function generateTodaysNostalgiaPosts(): Promise<{ generated: number; events: string[] }> {
   console.log('\n📅 [OnThisDay] Generating nostalgic content...');
-  
+
   const events = await getOnThisDayEvents();
-  
+
   if (events.length === 0) {
     console.log('   No events found for today.');
     return { generated: 0, events: [] };
   }
-  
+
   console.log(`   Found ${events.length} events for today.`);
-  
+
   const generated: string[] = [];
-  
+
   for (const event of events.slice(0, 5)) { // Limit to 5 per day
     console.log(`   📝 Generating: ${event.entity_name}`);
-    
+
     const content = await generateEnhancedNostalgiaContent(event);
     if (!content) continue;
-    
+
     // Save as draft
     const { error } = await supabase.from('posts').insert({
       title: content.title,
@@ -349,19 +349,19 @@ export async function generateTodaysNostalgiaPosts(): Promise<{ generated: numbe
       status: 'draft',
       image_urls: [],
     });
-    
+
     if (!error) {
       generated.push(event.entity_name);
       console.log(`   ✅ Generated: ${event.entity_name}`);
     }
-    
+
     // Update last_used_at
     await supabase
       .from('on_this_day_events')
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', event.id);
   }
-  
+
   return { generated: generated.length, events: generated };
 }
 
@@ -371,19 +371,19 @@ export async function generateTodaysNostalgiaPosts(): Promise<{ generated: numbe
 export async function getUpcomingBirthdays(days: number = 7): Promise<OnThisDayEvent[]> {
   const today = new Date();
   const events: OnThisDayEvent[] = [];
-  
+
   for (let i = 0; i < days; i++) {
     const checkDate = new Date(today);
     checkDate.setDate(today.getDate() + i);
-    
+
     const dayEvents = await getOnThisDayEvents(
       checkDate.getMonth() + 1,
       checkDate.getDate()
     );
-    
+
     events.push(...dayEvents.filter(e => e.event_type === 'birthday'));
   }
-  
+
   return events;
 }
 
