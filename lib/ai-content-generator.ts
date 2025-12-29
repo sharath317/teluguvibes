@@ -84,60 +84,49 @@ async function generateWithGemini(context: ArticleContext): Promise<GeneratedCon
       ).join('\n\n')}`
     : '';
 
-  const prompt = `You are a senior Telugu entertainment journalist writing for a popular portal with millions of readers.
-Your task is to create a comprehensive, engaging Telugu article from the following news.
+  const prompt = `You are a factual Telugu news reporter. Write a SHORT, ACCURATE news article.
 
-ORIGINAL NEWS:
+NEWS TOPIC:
 Title: ${context.originalTitle}
 Content: ${context.originalContent}
 Category: ${context.category}
-${similarPostsContext}
 
-STRICT REQUIREMENTS:
+CRITICAL RULES:
 
-1. **LENGTH: MINIMUM 350-500 words** - This is critical. Short articles will be rejected.
+1. **ONLY WRITE WHAT YOU KNOW IS TRUE**
+   - DO NOT fabricate dates, events, or details
+   - DO NOT make up quotes or statements
+   - DO NOT invent storylines or facts
+   - If you don't know something, don't include it
 
-2. **LANGUAGE**: Write entirely in Telugu (తెలుగు) using conversational, engaging style.
+2. **LENGTH: 100-200 words ONLY**
+   - Keep it concise and factual
+   - Quality over quantity
+   - No filler content or repetition
 
-3. **STRUCTURE** (follow this exactly):
-   - **Opening Hook** (2-3 sentences): Start with an attention-grabbing statement
-   - **Main News** (1 paragraph): Cover the core news/update
-   - **Background Context** (1-2 paragraphs): Add relevant history/context
-   - **Celebrity/Movie Details** (1-2 paragraphs): Include biographical info, filmography, recent works
-   - **Social Media Buzz** (1 paragraph): Mention fan reactions, trending hashtags, viral moments
-   - **Industry Impact** (1 paragraph): How this affects the industry/fans
-   - **Closing** (2-3 sentences): Future outlook or call to action
+3. **STRUCTURE**:
+   - Opening line: State the main news clearly
+   - 1-2 paragraphs: Explain what happened
+   - Closing: What's next or reader engagement
 
-4. **ENRICH WITH DETAILS**:
-   - If about an ACTOR/ACTRESS: Include their recent hits, upcoming projects, awards, fan following
-   - If about a MOVIE: Include director, producer, cast, music director, box office expectations
-   - If about CRICKET: Include player stats, recent performance, team dynamics
-   - If about POLITICS: Include party position, constituency, recent statements
-   - Add relevant numbers, dates, names to make it informative
+4. **LANGUAGE**: Simple, conversational Telugu (తెలుగు)
 
-5. **SOCIAL MEDIA CONTEXT**:
-   - Mention how fans are reacting
-   - Reference viral moments or trending topics
-   - Include fan theories or expectations
-   - Mention celebrity social media activity if relevant
+5. **DO NOT**:
+   - Repeat the same information multiple times
+   - Add unverified "background" details
+   - Write generic social media reaction paragraphs
+   - Make up statistics or numbers
+   - Write more than 200 words
 
-6. **TONE**: Enthusiastic but professional. Make readers feel excited about the news.
-
-7. **DO NOT**:
-   - Copy the original text
-   - Write less than 350 words
-   - Use formal/literary Telugu
-   - Leave any section vague or generic
-
-OUTPUT FORMAT (JSON only, no other text):
+OUTPUT FORMAT (JSON only):
 {
-  "title": "Catchy, SEO-friendly Telugu title (include main keywords)",
-  "body": "Full 350-500 word article in Telugu. Use \\n\\n between paragraphs. Be detailed and informative.",
-  "summary": "2-3 line compelling summary in Telugu for social sharing",
-  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+  "title": "Clear Telugu headline summarizing the news",
+  "body": "100-200 word factual article in Telugu. Use \\n\\n between paragraphs.",
+  "summary": "One line summary",
+  "tags": ["tag1", "tag2", "tag3"]
 }
 
-Generate a detailed, comprehensive Telugu article now:`;
+Write a SHORT, FACTUAL article:`;
 
   try {
     // Use stable Gemini models
@@ -232,33 +221,32 @@ async function generateWithGroq(context: ArticleContext): Promise<GeneratedConte
       ).join('\n')}`
     : '';
 
-  const prompt = `You are a Telugu entertainment journalist. Write a COMPREHENSIVE article in Telugu.
+  const prompt = `You are a factual Telugu news reporter. Write a SHORT, ACCURATE article.
 
-NEWS:
+NEWS TOPIC:
 "${context.originalTitle}"
-${context.originalContent.substring(0, 800)}
+${context.originalContent.substring(0, 500)}
 
-STRICT REQUIREMENTS:
-1. Write MINIMUM 400 Telugu words (mandatory!)
-2. Use conversational Telugu (తెలుగు)
+CRITICAL RULES:
+1. ONLY write verified facts - DO NOT fabricate anything
+2. Keep it SHORT: 100-150 words maximum
+3. Use simple Telugu (తెలుగు)
+4. NO repetition or filler content
+5. If you don't know details, don't make them up
 
-ARTICLE STRUCTURE:
-- OPENING HOOK (2-3 exciting sentences)
-- MAIN NEWS (1 paragraph with details)
-- BACKGROUND (1-2 paragraphs - history, context)
-- CELEBRITY INFO (1-2 paragraphs - filmography, recent hits, achievements)
-- SOCIAL MEDIA BUZZ (1 paragraph - fan reactions, trending hashtags)
-- INDUSTRY IMPACT (1 paragraph - expectations, reactions)
-- CLOSING (2-3 sentences - future outlook)
+STRUCTURE:
+- Opening: State the main news (1-2 sentences)
+- Body: Explain what happened (2-3 sentences)  
+- Closing: What readers should know (1 sentence)
 
-ENRICHMENTS:
-- ACTOR: Recent 3-4 hit movies, awards, fan following
-- MOVIE: Director, cast, music director, budget
-- CRICKET: Player stats, records, recent scores
-- Add specific numbers, dates, names
+DO NOT:
+- Invent dates, quotes, or events
+- Write more than 150 words
+- Add fake "social media reaction" paragraphs
+- Repeat the same information
 
 Return ONLY valid JSON:
-{"title":"Telugu title","body":"Full 400+ word Telugu article","tags":["tag1","tag2","tag3"]}`;
+{"title":"Clear Telugu headline","body":"100-150 word factual Telugu article","tags":["tag1","tag2","tag3"]}`;
 
   try {
     // Try different models - some may not be available
