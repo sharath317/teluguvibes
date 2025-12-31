@@ -8,6 +8,7 @@ import { ingestAllTrends } from '@/lib/intelligence/trend-ingestion';
 import { runLearningCycle, updateAudiencePreferences } from '@/lib/intelligence/learning-engine';
 import { updateImageEngagement } from '@/lib/intelligence/image-intelligence';
 import { runReviewPipeline, learnFromReviewPerformance, trackOTTReleases } from '@/lib/intelligence/review-pipeline';
+import { ingestViralContent } from '@/lib/viral-content';
 
 export const maxDuration = 300; // 5 minutes
 export const dynamic = 'force-dynamic';
@@ -83,6 +84,15 @@ export async function GET(request: NextRequest) {
     } catch (e) {
       errors.push(`OTT tracking: ${e}`);
       results.ottTracking = { error: String(e) };
+    }
+
+    // 7. Viral Content Ingestion (YouTube Trending, Reddit Hot, Twitter)
+    console.log('Step 7: Ingesting viral content for Hot page...');
+    try {
+      results.viralContent = await ingestViralContent();
+    } catch (e) {
+      errors.push(`Viral content ingestion: ${e}`);
+      results.viralContent = { error: String(e) };
     }
 
   } catch (error) {

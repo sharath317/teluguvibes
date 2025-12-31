@@ -25,6 +25,13 @@ export type MediaSource =
 
 export type MediaCategory =
   | 'photoshoot'
+  | 'glamour'           // Glamour photos
+  | 'magazine'          // Magazine covers & editorial
+  | 'beach_vacation'    // Beach/vacation photos
+  | 'red_carpet'        // Red carpet events
+  | 'gym_fitness'       // Gym/workout posts
+  | 'saree_traditional' // Traditional glamour in sarees
+  | 'western_glam'      // Western outfit glamour
   | 'event'
   | 'movie_promotion'
   | 'traditional'

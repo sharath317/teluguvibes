@@ -16,6 +16,14 @@ const categoryLabels: Record<Category, string> = {
   trending: 'ట్రెండింగ్',
 };
 
+const categoryColors: Record<Category, string> = {
+  gossip: '#ec4899',
+  sports: '#3b82f6',
+  politics: '#ef4444',
+  entertainment: '#a855f7',
+  trending: '#f59e0b',
+};
+
 function formatTimeAgo(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
@@ -34,15 +42,18 @@ function formatTimeAgo(dateString: string): string {
 }
 
 export function NewsCard({ post, featured = false }: NewsCardProps) {
-  // Use picsum.photos as fallback with unique seed based on post id
   const imageUrl = post.image_url || post.image_urls?.[0] || `https://picsum.photos/seed/${post.id}/800/600`;
 
   return (
     <Link href={`/post/${post.slug}`}>
       <article
-        className={`news-card bg-[#141414] rounded-xl overflow-hidden border border-[#262626] hover:border-[#eab308]/50 ${
+        className={`news-card rounded-xl overflow-hidden transition-all hover:shadow-lg ${
           featured ? 'col-span-2 row-span-2' : ''
         }`}
+        style={{
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-primary)'
+        }}
       >
         {/* Image */}
         <div className={`relative ${featured ? 'aspect-video' : 'aspect-[16/10]'}`}>
@@ -54,31 +65,41 @@ export function NewsCard({ post, featured = false }: NewsCardProps) {
             sizes={featured ? '(max-width: 768px) 100vw, 66vw' : '(max-width: 768px) 100vw, 33vw'}
           />
           {/* Category Badge */}
-          <div className="absolute top-3 left-3">
-            <span className={`badge-${post.category} px-3 py-1 rounded-full text-xs font-bold text-white`}>
+          <div className="absolute top-2 left-2">
+            <span 
+              className="px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase"
+              style={{ backgroundColor: categoryColors[post.category] }}
+            >
               {categoryLabels[post.category]}
             </span>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="p-3">
           <h3
-            className={`font-bold text-white line-clamp-2 hover:text-[#eab308] transition-colors ${
-              featured ? 'text-xl md:text-2xl' : 'text-base'
+            className={`font-bold line-clamp-2 transition-colors ${
+              featured ? 'text-lg md:text-xl' : 'text-sm'
             }`}
+            style={{ color: 'var(--text-primary)' }}
           >
             {post.title}
           </h3>
 
-          {featured && (
-            <p className="mt-2 text-[#737373] text-sm line-clamp-2">
+          {featured && post.telugu_body && (
+            <p 
+              className="mt-1.5 text-xs line-clamp-2"
+              style={{ color: 'var(--text-secondary)' }}
+            >
               {post.telugu_body.substring(0, 150)}...
             </p>
           )}
 
           {/* Meta */}
-          <div className="flex items-center gap-4 mt-3 text-xs text-[#737373]">
+          <div 
+            className="flex items-center gap-3 mt-2 text-[10px]"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {formatTimeAgo(post.created_at)}
@@ -97,18 +118,42 @@ export function NewsCard({ post, featured = false }: NewsCardProps) {
 export function NewsCardSkeleton({ featured = false }: { featured?: boolean }) {
   return (
     <div
-      className={`bg-[#141414] rounded-xl overflow-hidden border border-[#262626] animate-pulse ${
+      className={`rounded-xl overflow-hidden animate-pulse ${
         featured ? 'col-span-2 row-span-2' : ''
       }`}
+      style={{
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-primary)'
+      }}
     >
-      <div className={`bg-[#262626] ${featured ? 'aspect-video' : 'aspect-[16/10]'}`} />
-      <div className="p-4 space-y-3">
-        <div className="h-4 bg-[#262626] rounded w-3/4" />
-        <div className="h-4 bg-[#262626] rounded w-1/2" />
-        {featured && <div className="h-3 bg-[#262626] rounded w-full" />}
-        <div className="flex gap-4">
-          <div className="h-3 bg-[#262626] rounded w-20" />
-          <div className="h-3 bg-[#262626] rounded w-16" />
+      <div 
+        className={featured ? 'aspect-video' : 'aspect-[16/10]'}
+        style={{ background: 'var(--bg-tertiary)' }}
+      />
+      <div className="p-3 space-y-2">
+        <div 
+          className="h-4 rounded w-3/4"
+          style={{ background: 'var(--bg-tertiary)' }}
+        />
+        <div 
+          className="h-4 rounded w-1/2"
+          style={{ background: 'var(--bg-tertiary)' }}
+        />
+        {featured && (
+          <div 
+            className="h-3 rounded w-full"
+            style={{ background: 'var(--bg-tertiary)' }}
+          />
+        )}
+        <div className="flex gap-3 pt-1">
+          <div 
+            className="h-3 rounded w-16"
+            style={{ background: 'var(--bg-tertiary)' }}
+          />
+          <div 
+            className="h-3 rounded w-12"
+            style={{ background: 'var(--bg-tertiary)' }}
+          />
         </div>
       </div>
     </div>

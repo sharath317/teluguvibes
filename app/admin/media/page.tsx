@@ -339,8 +339,38 @@ export default function AdminMediaPage() {
   );
 }
 
+// Pre-populated top Telugu actresses/anchors for quick selection
+const TOP_ACTRESSES = [
+  { name: 'Samantha', instagram: 'samantharuthprabhuoffl' },
+  { name: 'Rashmika', instagram: 'rashmika_mandanna' },
+  { name: 'Pooja Hegde', instagram: 'hegabordepooja' },
+  { name: 'Kajal Aggarwal', instagram: 'kaaboraggarwal' },
+  { name: 'Tamanna', instagram: 'taaborannahspeaks' },
+  { name: 'Anupama', instagram: 'aboranupama' },
+  { name: 'Sreemukhi', instagram: 'saborabormukhi' },
+  { name: 'Anasuya', instagram: 'aboranasuyakaarakada' },
+  { name: 'Nidhhi Agerwal', instagram: 'nidaborhhiagerwal' },
+  { name: 'Keerthy Suresh', instagram: 'kaboreerthy.suresh' },
+  { name: 'Nabha Natesh', instagram: 'naborabhhanatesh' },
+  { name: 'Shriya Saran', instagram: 'shraboriyasaran1109' },
+];
+
+// Quick category buttons for glamour content
+const QUICK_CATEGORIES = [
+  { id: 'glamour', label: '💫 Glamour', color: 'from-pink-500 to-rose-500' },
+  { id: 'photoshoot', label: '📸 Photoshoot', color: 'from-orange-500 to-amber-500' },
+  { id: 'magazine', label: '📰 Magazine', color: 'from-purple-500 to-violet-500' },
+  { id: 'beach_vacation', label: '🏖️ Beach', color: 'from-cyan-500 to-blue-500' },
+  { id: 'red_carpet', label: '👗 Red Carpet', color: 'from-red-500 to-pink-500' },
+  { id: 'gym_fitness', label: '💪 Fitness', color: 'from-green-500 to-emerald-500' },
+  { id: 'saree_traditional', label: '🪷 Saree', color: 'from-amber-500 to-yellow-500' },
+  { id: 'western_glam', label: '👠 Western', color: 'from-indigo-500 to-purple-500' },
+  { id: 'movie_promotion', label: '🎬 Promo', color: 'from-fuchsia-500 to-pink-500' },
+  { id: 'event', label: '🎉 Event', color: 'from-yellow-500 to-orange-500' },
+];
+
 /**
- * Add Media Modal with URL preview
+ * Add Media Modal with URL preview and quick actress/category selection
  */
 function AddMediaModal({
   entities,
@@ -354,11 +384,12 @@ function AddMediaModal({
   const [url, setUrl] = useState('');
   const [entityId, setEntityId] = useState('');
   const [caption, setCaption] = useState('');
-  const [category, setCategory] = useState('general');
+  const [category, setCategory] = useState('glamour');
   const [tags, setTags] = useState('');
   const [preview, setPreview] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showQuickActress, setShowQuickActress] = useState(true);
 
   async function handlePreview() {
     if (!url) return;
@@ -471,9 +502,41 @@ function AddMediaModal({
             </div>
           )}
 
-          {/* Entity Selection */}
+          {/* Quick Actress Selection */}
+          {showQuickActress && (
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                🔥 Quick Select Actress
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {TOP_ACTRESSES.map((actress) => (
+                  <button
+                    key={actress.name}
+                    type="button"
+                    onClick={() => {
+                      // Find matching entity
+                      const match = entities.find(e => 
+                        e.name_en.toLowerCase().includes(actress.name.toLowerCase()) ||
+                        e.instagram_handle === actress.instagram
+                      );
+                      if (match) {
+                        setEntityId(match.id);
+                      }
+                      // Add to tags
+                      setTags(prev => prev ? `${prev}, ${actress.name}` : actress.name);
+                    }}
+                    className="px-3 py-1.5 bg-gradient-to-r from-pink-500/20 to-rose-500/20 text-pink-400 border border-pink-500/30 rounded-full text-xs font-medium hover:bg-pink-500/30 transition-colors"
+                  >
+                    {actress.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Entity Selection Dropdown */}
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Tag Celebrity (Optional)</label>
+            <label className="block text-sm text-gray-400 mb-2">Tag Celebrity</label>
             <select
               value={entityId}
               onChange={(e) => setEntityId(e.target.value)}
@@ -488,34 +551,39 @@ function AddMediaModal({
             </select>
           </div>
 
+          {/* Quick Category Buttons */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">
+              📂 Category (Quick Select)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setCategory(cat.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    category === cat.id
+                      ? `bg-gradient-to-r ${cat.color} text-white`
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Caption */}
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Caption</label>
+            <label className="block text-sm text-gray-400 mb-2">Caption (Telugu/English)</label>
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              placeholder="Add a caption..."
+              placeholder="Add a caption... (e.g., 'Latest photoshoot 🔥' or 'సమంత కొత్త ఫోటోషూట్')"
               rows={3}
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none resize-none"
             />
-          </div>
-
-          {/* Category */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
-            >
-              <option value="general">General</option>
-              <option value="photoshoot">Photoshoot</option>
-              <option value="event">Event</option>
-              <option value="movie_promotion">Movie Promotion</option>
-              <option value="traditional">Traditional</option>
-              <option value="fitness">Fitness</option>
-              <option value="behind_the_scenes">Behind the Scenes</option>
-            </select>
           </div>
 
           {/* Tags */}
@@ -525,9 +593,21 @@ function AddMediaModal({
               type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              placeholder="hot, saree, photoshoot"
+              placeholder="hot, glamour, saree, photoshoot"
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none"
             />
+            <div className="flex flex-wrap gap-1 mt-2">
+              {['hot', 'glamour', 'saree', 'bikini', 'fitness', 'traditional', 'western', 'photoshoot', 'magazine'].map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setTags(prev => prev ? `${prev}, ${tag}` : tag)}
+                  className="px-2 py-0.5 bg-gray-800 text-gray-400 text-xs rounded hover:bg-gray-700"
+                >
+                  +{tag}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

@@ -37,7 +37,13 @@ export async function GET(request: NextRequest) {
   }
 
   if (type && type !== 'all') {
-    query = query.eq('media_type', type);
+    // Support multiple types (comma-separated)
+    const types = type.split(',').map(t => t.trim());
+    if (types.length > 1) {
+      query = query.in('media_type', types);
+    } else {
+      query = query.eq('media_type', types[0]);
+    }
   }
 
   if (category && category !== 'all') {
