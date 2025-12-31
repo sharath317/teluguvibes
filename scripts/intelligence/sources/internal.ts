@@ -120,3 +120,6 @@ export function calculateCompleteness(record: any, entityType: string): number {
 
   return Math.round((filledCount / fields.length) * 100);
 }
+
+
+

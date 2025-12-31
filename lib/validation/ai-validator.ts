@@ -553,3 +553,6 @@ export function getValidator(): AIValidator {
 export async function validateEntity(entity: ValidatableEntity): Promise<ValidationResult> {
   return getValidator().validate(entity);
 }
+
+
+

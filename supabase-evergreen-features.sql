@@ -310,3 +310,6 @@ SELECT
 FROM interview_insights ii
 LEFT JOIN celebrities c ON ii.celebrity_id = c.id
 GROUP BY ii.celebrity_id, c.name_en;
+
+
+

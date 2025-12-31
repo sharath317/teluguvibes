@@ -755,3 +755,6 @@ export async function getNowPlayingTeluguMovies(): Promise<TMDBMovie[]> {
 
   return data?.results || [];
 }
+
+
+

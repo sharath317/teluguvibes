@@ -265,3 +265,6 @@ function generateDeathAnniversarySummary(celeb: any, yearsAgo: number): string {
 function generateMovieAnniversarySummary(movie: any, yearsAgo: number): string {
   return `క్లాసిక్ చిత్రం "${movie.title_te || movie.title_en}" విడుదలై ${yearsAgo} సంవత్సరాలు పూర్తయ్యాయి. ఈ సినిమా తెలుగు సినీ చరిత్రలో ఒక మైలురాయిగా నిలిచింది.`;
 }
+
+
+

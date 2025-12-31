@@ -395,3 +395,6 @@ export async function fetchCelebrityBirthdays(): Promise<void> {
   // For now, it's a placeholder for manual data entry
   console.log('Celebrity birthday sync: Use manual entry or Wikipedia API integration');
 }
+
+
+

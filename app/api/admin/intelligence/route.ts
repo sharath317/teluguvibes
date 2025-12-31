@@ -343,3 +343,6 @@ async function handleRerunIntelligence(postId: string) {
     imageOptions: entity.imageCandidates?.length || 0,
   });
 }
+
+
+

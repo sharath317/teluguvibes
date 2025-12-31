@@ -260,3 +260,6 @@ export function WhatTheySaidAbout({
 }
 
 export default CelebrityInsights;
+
+
+

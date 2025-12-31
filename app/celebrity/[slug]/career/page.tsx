@@ -351,3 +351,6 @@ function MovieCard({ movie }: { movie: CareerMovie }) {
     </div>
   );
 }
+
+
+

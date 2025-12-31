@@ -410,3 +410,6 @@ export default function NewCelebrityPage() {
     </div>
   );
 }
+
+
+

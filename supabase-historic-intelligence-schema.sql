@@ -727,3 +727,6 @@ FROM kg_persons p
 WHERE p.death_date IS NOT NULL
   AND p.is_canonical = true
 ON CONFLICT DO NOTHING;
+
+
+

@@ -248,3 +248,6 @@ COMMENT ON TABLE challenges IS 'Fan challenges and weekly games';
 COMMENT ON TABLE challenge_questions IS 'Questions for challenges';
 COMMENT ON TABLE challenge_attempts IS 'User participation in challenges';
 COMMENT ON TABLE user_badges IS 'Badges earned by users';
+
+
+

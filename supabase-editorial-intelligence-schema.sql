@@ -468,3 +468,6 @@ CREATE TRIGGER trigger_summary_gates
   AFTER INSERT OR UPDATE ON answer_summaries
   FOR EACH ROW
   EXECUTE FUNCTION trigger_check_gates();
+
+
+

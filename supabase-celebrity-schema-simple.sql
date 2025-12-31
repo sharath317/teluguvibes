@@ -215,3 +215,6 @@ DROP TRIGGER IF EXISTS trigger_historic_posts_updated_at ON historic_posts;
 CREATE TRIGGER trigger_historic_posts_updated_at
   BEFORE UPDATE ON historic_posts FOR EACH ROW
   EXECUTE FUNCTION update_celebrity_updated_at();
+
+
+

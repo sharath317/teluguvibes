@@ -1085,3 +1085,6 @@ CREATE TRIGGER trigger_movies_updated_at
 CREATE TRIGGER trigger_celebrities_updated_at
   BEFORE UPDATE ON celebrities FOR EACH ROW
   EXECUTE FUNCTION update_updated_at();
+
+
+

@@ -549,3 +549,6 @@ INSERT INTO image_source_performance (source, reliability_score, priority_rank, 
   ('user_upload', 50, 8, true),
   ('embed_only', 70, 9, true)
 ON CONFLICT (source) DO NOTHING;
+
+
+

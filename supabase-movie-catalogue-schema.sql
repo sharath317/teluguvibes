@@ -943,3 +943,6 @@ INSERT INTO catalogue_movies (
    ARRAY['Action', 'Crime', 'Drama'], false, 'manual')
 
 ON CONFLICT (slug) DO NOTHING;
+
+
+

@@ -121,3 +121,6 @@ export function getOllamaProvider(config?: Partial<AIConfig>): OllamaProvider {
   }
   return ollamaInstance;
 }
+
+
+

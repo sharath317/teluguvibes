@@ -195,3 +195,6 @@ export default function NewPostPage() {
     </div>
   );
 }
+
+
+

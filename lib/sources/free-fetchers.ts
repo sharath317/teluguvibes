@@ -313,3 +313,6 @@ export const FreeFetchers = {
   cricket: fetchCricketMatches,
   image: fetchWikipediaImage,
 };
+
+
+

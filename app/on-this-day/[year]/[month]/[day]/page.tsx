@@ -210,3 +210,6 @@ function EventTypeBadge({ type }: { type: string }) {
     </span>
   );
 }
+
+
+

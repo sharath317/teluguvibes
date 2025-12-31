@@ -63,3 +63,6 @@ export const DEFAULT_AI_CONFIG: AIConfig = {
   temperature: 0.7,
   maxTokens: 2000,
 };
+
+
+

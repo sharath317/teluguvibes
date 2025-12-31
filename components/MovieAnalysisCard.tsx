@@ -203,3 +203,6 @@ export function RecentAnalysesWidget() {
 }
 
 export default MovieAnalysisCard;
+
+
+

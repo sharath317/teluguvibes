@@ -86,3 +86,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to generate citations' }, { status: 500 });
   }
 }
+
+
+

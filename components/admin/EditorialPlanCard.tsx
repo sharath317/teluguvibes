@@ -283,3 +283,6 @@ export function EditorialPlanBadge({ plan }: { plan: EditorialPlan }) {
 }
 
 export default EditorialPlanCard;
+
+
+

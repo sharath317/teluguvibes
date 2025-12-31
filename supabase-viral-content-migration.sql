@@ -156,3 +156,6 @@ COMMENT ON COLUMN media_posts.external_likes IS 'Like count from external platfo
 COMMENT ON COLUMN media_posts.external_shares IS 'Share/comment count from external platform';
 COMMENT ON COLUMN media_posts.viral_source IS 'Source of viral content (youtube_trending, reddit_tollywood, twitter_viral, etc.)';
 COMMENT ON COLUMN media_posts.fetched_at IS 'Timestamp when content was fetched from external source';
+
+
+

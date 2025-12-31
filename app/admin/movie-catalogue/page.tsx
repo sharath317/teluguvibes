@@ -620,3 +620,6 @@ function getVerdictBadgeColor(verdict: string): string {
   };
   return colors[verdict] || 'bg-gray-500/20 text-gray-400';
 }
+
+
+

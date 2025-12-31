@@ -537,3 +537,6 @@ VALUES
    '{remake} vs {original}: Which Version Wins?',
    'ఒరిజినల్ vs రీమేక్: ఏది బెటర్?')
 ON CONFLICT DO NOTHING;
+
+
+

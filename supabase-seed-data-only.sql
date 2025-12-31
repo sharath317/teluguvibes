@@ -136,3 +136,6 @@ SELECT 'Data seeded successfully!' as result,
   (SELECT COUNT(*) FROM celebrities) as celebrities_count,
   (SELECT COUNT(*) FROM movies) as movies_count,
   (SELECT COUNT(*) FROM stories WHERE status = 'published') as stories_count;
+
+
+

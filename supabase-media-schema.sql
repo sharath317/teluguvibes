@@ -297,3 +297,6 @@ VALUES
   ('Krithi Shetty', 'కృతి శెట్టి', 'actress', 'krithi.shetty_official', 84, true),
   ('Nabha Natesh', 'నభా నటేష్', 'actress', 'nababorhanatesh', 78, true)
 ON CONFLICT (name_en, entity_type) DO NOTHING;
+
+
+

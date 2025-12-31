@@ -426,3 +426,6 @@ export function renderSchemaScript(
   const data = Array.isArray(schema) ? schema : [schema];
   return JSON.stringify(data.length === 1 ? data[0] : data);
 }
+
+
+

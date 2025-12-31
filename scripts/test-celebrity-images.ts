@@ -180,3 +180,6 @@ async function testCelebrityImages() {
 
 // Run the test
 testCelebrityImages();
+
+
+

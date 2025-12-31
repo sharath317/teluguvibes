@@ -96,3 +96,6 @@ export interface LeaderboardEntry {
 // Browser storage keys
 export const CHALLENGE_STORAGE_KEY = 'teluguvibes_challenges';
 export const PROGRESS_STORAGE_KEY = 'teluguvibes_challenge_progress';
+
+
+

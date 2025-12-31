@@ -211,3 +211,6 @@ WHERE NOT EXISTS (SELECT 1 FROM stories WHERE title_en = 'Friendship is Priceles
 
 -- Success message
 SELECT 'Seed data inserted successfully!' as result;
+
+
+

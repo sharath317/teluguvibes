@@ -175,3 +175,6 @@ export class WikipediaFetcher extends BaseFetcher<WikiEntity> {
     return match ? parseInt(match[0]) : undefined;
   }
 }
+
+
+

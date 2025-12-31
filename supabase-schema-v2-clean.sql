@@ -151,3 +151,6 @@ CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(is_active, displa
 CREATE INDEX IF NOT EXISTS idx_on_this_day ON on_this_day_events(month, day);
 CREATE INDEX IF NOT EXISTS idx_rate_limits_lookup ON rate_limits(identifier, action_type);
 CREATE INDEX IF NOT EXISTS idx_image_cache_query ON image_cache(query_hash);
+
+
+

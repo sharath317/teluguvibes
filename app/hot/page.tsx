@@ -366,7 +366,7 @@ function SocialItem({ post, onClick }: { post: MediaPost; onClick: () => void })
           </div>
         )}
       </div>
-      
+
       {/* Content */}
       <div className="flex-1 min-w-0">
         <h4

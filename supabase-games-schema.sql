@@ -350,3 +350,6 @@ SELECT
 FROM game_leaderboard
 WHERE rank_position <= 10
 ORDER BY game_type, rank_position;
+
+
+

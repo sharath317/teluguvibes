@@ -134,3 +134,6 @@ ON CONFLICT DO NOTHING;
 -- SELECT name_en, entity_type, instagram_handle, popularity_score FROM media_entities ORDER BY popularity_score DESC;
 
 COMMENT ON TABLE media_entities IS 'Hot Media entities for glamour content - actresses, anchors, models';
+
+
+

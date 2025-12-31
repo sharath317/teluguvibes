@@ -355,3 +355,6 @@ WHERE (is_actor OR is_actress)
   AND debut_year < 1980
   AND data_quality_score > 0.5
 ORDER BY popularity_score DESC;
+
+
+

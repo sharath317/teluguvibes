@@ -245,3 +245,6 @@ DROP TRIGGER IF EXISTS trigger_editorial_performance ON posts;
 CREATE TRIGGER trigger_editorial_performance
   AFTER INSERT OR UPDATE ON posts
   FOR EACH ROW EXECUTE FUNCTION update_editorial_performance();
+
+
+

@@ -359,3 +359,6 @@ BEGIN
     PERFORM generate_celebrity_events(celeb_id);
   END LOOP;
 END $$;
+
+
+

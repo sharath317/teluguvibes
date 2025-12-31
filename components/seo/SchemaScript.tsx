@@ -23,3 +23,6 @@ export function SchemaScript({ schema }: SchemaScriptProps) {
 }
 
 export default SchemaScript;
+
+
+
