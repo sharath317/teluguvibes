@@ -54,3 +54,28 @@ export {
   runPipeline,
   processAndValidate,
 } from './pipeline';
+
+// Quality Gates
+export {
+  checkQualityGates,
+  canPublishPost,
+  getPublishBlockReasons,
+  getAutoFixableIssues,
+} from './quality-gates';
+
+// Fact Validation
+export {
+  crossValidateFacts,
+  quickFactCheck,
+  getSuggestedCorrections,
+} from './fact-validator';
+
+// Learning Engine
+export {
+  checkTopicSaturation,
+  updateAudiencePreferences,
+  getGenerationContext,
+  learnFromPerformance,
+  updateEntityPopularity,
+  runLearningCycle,
+} from './learning-engine';

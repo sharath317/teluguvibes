@@ -15,7 +15,30 @@ import type {
   SafetyValidation,
   GLAM_CATEGORIES,
 } from '@/types/media';
-import { validateSafety } from './safety-validator';
+import { checkContentSafety, type SafetyCheckInput } from './safety-checker';
+
+// Create a wrapper for consistency with the old API
+function validateSafety(
+  title: string,
+  caption?: string,
+  authorName?: string,
+  tags?: string[]
+): ReturnType<typeof checkContentSafety> {
+  const input: SafetyCheckInput = {
+    text: `${title} ${caption || ''} ${(tags || []).join(' ')}`,
+    entityName: authorName,
+    isEmbed: false,
+  };
+  const result = checkContentSafety(input);
+  
+  // Map the result to include isBlocked and blockReason for compatibility
+  return {
+    ...result,
+    isBlocked: result.risk === 'blocked',
+    blockReason: result.blockedReason,
+    isApproved: result.autoApproveEligible,
+  };
+}
 
 // Initialize Groq client
 const groq = new Groq({

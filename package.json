@@ -24,7 +24,18 @@
     "intel:refine:dry": "npx tsx scripts/intelligence/cli-extended.ts refine --dry-run",
     "intel:validate": "npx tsx scripts/intelligence/cli-extended.ts validate",
     "intel:images": "npx tsx scripts/intelligence/cli-extended.ts images --recheck-licenses",
-    "intel:admin": "npx tsx scripts/intelligence/cli-extended.ts admin"
+    "intel:admin": "npx tsx scripts/intelligence/cli-extended.ts admin",
+    "safe-reset": "npx tsx scripts/safe-reset.ts",
+    "safe-reset:dry": "npx tsx scripts/safe-reset.ts --dry-run",
+    "safe-reset:full": "npx tsx scripts/safe-reset.ts --full --preserve-analytics --preserve-learnings",
+    "hot:pipeline": "npx tsx scripts/run-hot-pipeline.ts",
+    "hot:discover": "npx tsx scripts/discover-new-celebs.ts",
+    "hot:ingest": "npx tsx scripts/hot-ingest.ts",
+    "hot:ingest:dry": "npx tsx scripts/hot-ingest.ts --dry",
+    "hot:ingest:smart": "npx tsx scripts/hot-ingest.ts --smart",
+    "hot:ingest:full": "npx tsx scripts/hot-ingest.ts --full",
+    "hot:ingest:refresh": "npx tsx scripts/hot-ingest.ts --refresh",
+    "hot:reset": "npx tsx scripts/hot-ingest.ts --reset"
   },
   "dependencies": {
     "@auth/core": "^0.41.0",

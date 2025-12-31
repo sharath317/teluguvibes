@@ -1,6 +1,14 @@
 // Hot Media API - CRUD operations for glamour content
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createClient } from '@supabase/supabase-js';
+
+// Use service role for fetching all data (bypasses RLS)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+function getSupabase() {
+  return createClient(supabaseUrl, supabaseKey);
+}
 import { fetchMediaFromUrl, validateUrl } from '@/lib/hot-media/embed-validator';
 import { analyzeGlamContent, suggestCategory, suggestTags } from '@/lib/hot-media/ai-caption-generator';
 import { checkContentSafety, getSafetyBadge } from '@/lib/hot-media/safety-checker';
@@ -18,13 +26,13 @@ export async function GET(request: NextRequest) {
   const platform = searchParams.get('platform');
   const featured = searchParams.get('featured');
   const hot = searchParams.get('hot');
-  const limit = parseInt(searchParams.get('limit') || '20');
+  const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 500);
   const offset = parseInt(searchParams.get('offset') || '0');
   const sortBy = searchParams.get('sort') || 'trending_score';
   const sortOrder = searchParams.get('order') || 'desc';
   
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = getSupabase();
     
     let query = supabase
       .from('hot_media')
@@ -32,7 +40,7 @@ export async function GET(request: NextRequest) {
       .eq('is_blocked', false);
     
     // Apply filters
-    if (status) query = query.eq('status', status);
+    if (status && status !== 'all') query = query.eq('status', status);
     if (category && category !== 'all') query = query.eq('category', category);
     if (entityId) query = query.eq('entity_id', entityId);
     if (platform) query = query.eq('platform', platform);
@@ -89,7 +97,7 @@ export async function POST(request: NextRequest) {
     // Get entity info if entity_id provided
     let entityInfo = { name: entity_name || 'Celebrity', type: 'actress' };
     if (entity_id) {
-      const supabase = await createServerSupabaseClient();
+      const supabase = getSupabase();
       const { data: entity } = await supabase
         .from('media_entities')
         .select('name_en, entity_type')
@@ -147,7 +155,7 @@ export async function POST(request: NextRequest) {
     };
     
     // Insert into database
-    const supabase = await createServerSupabaseClient();
+    const supabase = getSupabase();
     const { data, error } = await supabase
       .from('hot_media')
       .insert(mediaRecord)
