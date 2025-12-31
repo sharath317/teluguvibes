@@ -269,7 +269,20 @@ export async function getEnhancedImage(topic: string): Promise<{ url: string; so
     }
   }
 
-  // 2. PRIORITY 2: For movie topics, try TMDB FIRST (better posters)
+  // 2. PRIORITY 2: Wikipedia search (with strict validation)
+  // Wikipedia is preferred over TMDB for better quality images
+  for (const term of searchTerms) {
+    // Only search Wikipedia for English terms that look like names
+    if (/^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/.test(term)) {
+      const wikiImage = await searchWikipediaForAnyEntity(term);
+      if (wikiImage) {
+        console.log(`      ✅ Wikipedia: ${wikiImage.title}`);
+        return { url: wikiImage.url, source: 'Wikipedia' };
+      }
+    }
+  }
+
+  // 3. PRIORITY 3: TMDB for movies (fallback after Wikipedia)
   if (isMovieTopic && tmdbKey) {
     // Try to find the movie from our database
     const movie = findMovie(topic);
@@ -320,8 +333,8 @@ export async function getEnhancedImage(topic: string): Promise<{ url: string; so
     }
   }
 
-  // 3. PRIORITY 3: TMDB for person (actor/actress) if not a movie topic
-  if (tmdbKey && !isMovieTopic) {
+  // 4. PRIORITY 4: TMDB for person (actor/actress) - fallback
+  if (tmdbKey) {
     for (const searchTerm of searchTerms) {
       if (!searchTerm || searchTerm.length < 3) continue;
       try {
@@ -345,19 +358,7 @@ export async function getEnhancedImage(topic: string): Promise<{ url: string; so
     }
   }
 
-  // 4. PRIORITY 4: Wikipedia search (with strict validation)
-  for (const term of searchTerms) {
-    // Only search Wikipedia for English terms that look like names
-    if (/^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/.test(term)) {
-      const wikiImage = await searchWikipediaForAnyEntity(term);
-      if (wikiImage) {
-        console.log(`      ✅ Wikipedia: ${wikiImage.title}`);
-        return { url: wikiImage.url, source: 'Wikipedia' };
-      }
-    }
-  }
-
-  // 4. PRIORITY 4: Try Wikipedia category-based images
+  // 5. PRIORITY 5: Try Wikipedia category-based images
   const { category, wikiTerms } = detectCategoryWithWikiTerm(topic);
   console.log(`      📂 Category: ${category}`);
 
@@ -369,7 +370,7 @@ export async function getEnhancedImage(topic: string): Promise<{ url: string; so
     }
   }
 
-  // 5. FALLBACK: Unsplash (only if Wikipedia category search also failed)
+  // 6. FALLBACK: Unsplash (only if all above failed)
   const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
   if (unsplashKey) {
     try {
@@ -414,7 +415,7 @@ export async function getEnhancedImage(topic: string): Promise<{ url: string; so
     }
   }
 
-  // 6. LAST RESORT: Use category-appropriate default images
+  // 7. LAST RESORT: Use category-appropriate default images
   console.log(`      📷 Using default fallback image`);
 
   // Determine category from topic

@@ -96,7 +96,7 @@ extractTags(topic)     → ["Prabhas", "Rebel Star", "Raja Saab"]
 1. **Ollama AI (Local)** - If running on `localhost:11434`
    - Model: `llama3:8b` or `mistral:7b`
    - Validates Telugu output quality
-   
+
 2. **Template Fallback** - If AI unavailable or fails validation
    - Uses actual movie names from database
    - Rich Telugu content with director/heroine info
@@ -104,11 +104,11 @@ extractTags(topic)     → ["Prabhas", "Rebel Star", "Raja Saab"]
 
 **Movie Content Example:**
 ```
-తెలుగు సినీ ప్రేక్షకులు ఎంతో ఆత్రంగా ఎదురుచూస్తున్న క్షణం వచ్చేసింది! 
-Rebel Star ప్రభాస్ 'రాజా సాబ్' సినిమాతో మరోసారి తన అభిమానులను థ్రిల్ చేయడానికి 
+తెలుగు సినీ ప్రేక్షకులు ఎంతో ఆత్రంగా ఎదురుచూస్తున్న క్షణం వచ్చేసింది!
+Rebel Star ప్రభాస్ 'రాజా సాబ్' సినిమాతో మరోసారి తన అభిమానులను థ్రిల్ చేయడానికి
 సిద్ధమవుతున్నారు...
 
-మారుతీ దర్శకత్వంలో వస్తున్న 'రాజా సాబ్' భారీ స్కేల్‌లో తయారవుతోంది. 
+మారుతీ దర్శకత్వంలో వస్తున్న 'రాజా సాబ్' భారీ స్కేల్‌లో తయారవుతోంది.
 నిధి అగర్వాల్ హీరోయిన్‌గా నటిస్తున్నారు...
 ```
 
@@ -123,8 +123,8 @@ Rebel Star ప్రభాస్ 'రాజా సాబ్' సినిమా�
 | Priority | Source | When Used |
 |----------|--------|-----------|
 | 1 | Entity Database | Known actors/actresses (verified Wikipedia title) |
-| 2 | TMDB | Movie topics (movie posters) |
-| 3 | Wikipedia Search | English capitalized names (strict validation) |
+| 2 | Wikipedia Search | English capitalized names (strict validation) |
+| 3 | TMDB | Movie topics (movie posters) - fallback |
 | 4 | Category Fallback | Based on topic category |
 
 **Image Validation:**
@@ -227,7 +227,7 @@ Only validated drafts are saved:
 
 **Symptoms:** Posts failing validation with "Telugu percentage too low"
 
-**Solution:** 
+**Solution:**
 1. Check if Ollama is running: `curl http://localhost:11434/api/tags`
 2. If not, start it: `ollama serve`
 3. Or let it fall back to templates (which have high Telugu %)

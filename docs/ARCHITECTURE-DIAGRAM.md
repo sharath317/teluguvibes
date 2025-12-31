@@ -1,6 +1,6 @@
 # TeluguVibes Architecture & Pipeline Documentation
 
-> **Last Updated:** January 2025  
+> **Last Updated:** January 2025
 > **Version:** 2.0 - Unified Content Pipeline
 
 ---
@@ -182,19 +182,19 @@
 │                       Not found? ↓                                                       │
 │                                                                                          │
 │   ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│   │ 2️⃣ TMDB (For Movies)                                                            │   │
-│   │    If movie topic detected → TMDB movie poster                                  │   │
-│   │    Example: "Raja Saab movie" → TMDB poster ✅                                  │   │
+│   │ 2️⃣ WIKIPEDIA SEARCH (Strict Validation)                                         │   │
+│   │    - Only English capitalized names                                             │   │
+│   │    - Must have pageid (real page)                                               │   │
+│   │    - Filtered by isGenericWikipediaImage()                                      │   │
+│   │    Blocked: Symposium_scene, Jackee, SVG logos, flags, etc.                     │   │
 │   └─────────────────────────────────────────────────────────────────────────────────┘   │
 │                              │                                                           │
 │                       Not found? ↓                                                       │
 │                                                                                          │
 │   ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│   │ 3️⃣ WIKIPEDIA SEARCH (Strict Validation)                                         │   │
-│   │    - Only English capitalized names                                             │   │
-│   │    - Must have pageid (real page)                                               │   │
-│   │    - Filtered by isGenericWikipediaImage()                                      │   │
-│   │    Blocked: Symposium_scene, Jackee, SVG logos, flags, etc.                     │   │
+│   │ 3️⃣ TMDB (For Movies - Fallback)                                                 │   │
+│   │    If movie topic detected → TMDB movie poster                                  │   │
+│   │    Example: "Raja Saab movie" → TMDB poster ✅                                  │   │
 │   └─────────────────────────────────────────────────────────────────────────────────┘   │
 │                              │                                                           │
 │                       Not found? ↓                                                       │
