@@ -1,12 +1,60 @@
 {
   "crons": [
     {
-      "path": "/api/cron/on-this-day",
+      "path": "/api/cron/evergreen",
       "schedule": "0 5 * * *"
     },
     {
       "path": "/api/cron/intelligence",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/historic-intelligence",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/refine-content",
+      "schedule": "0 3 * * 0"
     }
-  ]
+  ],
+  "headers": [
+    {
+      "source": "/api/ticker",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, s-maxage=300, stale-while-revalidate=600"
+        }
+      ]
+    },
+    {
+      "source": "/api/challenges",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, s-maxage=60, stale-while-revalidate=120"
+        }
+      ]
+    }
+  ],
+  "images": {
+    "remotePatterns": [
+      {
+        "protocol": "https",
+        "hostname": "image.tmdb.org"
+      },
+      {
+        "protocol": "https",
+        "hostname": "upload.wikimedia.org"
+      },
+      {
+        "protocol": "https",
+        "hostname": "images.unsplash.com"
+      },
+      {
+        "protocol": "https",
+        "hostname": "images.pexels.com"
+      }
+    ]
+  }
 }

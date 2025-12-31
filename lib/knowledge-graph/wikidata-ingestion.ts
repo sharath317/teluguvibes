@@ -23,9 +23,9 @@ const WIKIDATA_ENDPOINT = 'https://query.wikidata.org/sparql';
  * - Works in Telugu cinema (Q1135107) OR has Telugu films
  */
 export const SPARQL_TELUGU_ACTORS = `
-SELECT DISTINCT 
-  ?person 
-  ?personLabel 
+SELECT DISTINCT
+  ?person
+  ?personLabel
   ?personLabelTe
   ?genderLabel
   ?birthDate
@@ -37,7 +37,7 @@ SELECT DISTINCT
 WHERE {
   # Find people who are actors/actresses
   ?person wdt:P106 ?occupation .
-  VALUES ?occupation { 
+  VALUES ?occupation {
     wd:Q33999      # actor
     wd:Q10800557   # film actor
     wd:Q3455803    # film director
@@ -45,7 +45,7 @@ WHERE {
     wd:Q28389      # screenwriter
     wd:Q183945     # film producer
   }
-  
+
   # Filter by Telugu cinema industry OR has worked in Telugu films
   {
     ?person wdt:P2031 wd:Q1135107 .  # work period (start) in Telugu cinema
@@ -61,7 +61,7 @@ WHERE {
     ?person wdt:P19 ?birthPlace .
     ?birthPlace wdt:P131* wd:Q677037 # located in: Telangana
   }
-  
+
   # Get labels
   OPTIONAL { ?person rdfs:label ?personLabelTe FILTER(LANG(?personLabelTe) = "te") }
   OPTIONAL { ?person wdt:P21 ?gender }
@@ -70,7 +70,7 @@ WHERE {
   OPTIONAL { ?person wdt:P19 ?birthPlace }
   OPTIONAL { ?person wdt:P18 ?image }
   OPTIONAL { ?person wdt:P345 ?imdbId }
-  
+
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
 LIMIT 2000
@@ -80,9 +80,9 @@ LIMIT 2000
  * SPARQL Query: Fetch Telugu film directors specifically
  */
 export const SPARQL_TELUGU_DIRECTORS = `
-SELECT DISTINCT 
-  ?person 
-  ?personLabel 
+SELECT DISTINCT
+  ?person
+  ?personLabel
   ?personLabelTe
   ?genderLabel
   ?birthDate
@@ -92,7 +92,7 @@ SELECT DISTINCT
 WHERE {
   ?person wdt:P106 wd:Q2526255 .    # film director
   ?person wdt:P27 wd:Q668 .          # Indian
-  
+
   # Born in Telugu states or works in Hyderabad
   {
     ?person wdt:P19 ?birthPlace .
@@ -103,14 +103,14 @@ WHERE {
   } UNION {
     ?person wdt:P937 wd:Q1352 .      # works in Hyderabad
   }
-  
+
   OPTIONAL { ?person rdfs:label ?personLabelTe FILTER(LANG(?personLabelTe) = "te") }
   OPTIONAL { ?person wdt:P21 ?gender }
   OPTIONAL { ?person wdt:P569 ?birthDate }
   OPTIONAL { ?person wdt:P570 ?deathDate }
   OPTIONAL { ?person wdt:P18 ?image }
   OPTIONAL { ?person wdt:P345 ?imdbId }
-  
+
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
 LIMIT 500
@@ -120,15 +120,15 @@ LIMIT 500
  * SPARQL Query: Fetch filmography for a person
  */
 export const SPARQL_FILMOGRAPHY = (wikidataId: string) => `
-SELECT DISTINCT 
-  ?film 
-  ?filmLabel 
+SELECT DISTINCT
+  ?film
+  ?filmLabel
   ?filmLabelTe
   ?releaseDate
   ?roleLabel
 WHERE {
   wd:${wikidataId} wdt:P106 ?occupation .
-  
+
   {
     ?film wdt:P161 wd:${wikidataId} .  # cast member
     BIND("actor" AS ?role)
@@ -139,12 +139,12 @@ WHERE {
     ?film wdt:P162 wd:${wikidataId} .  # producer
     BIND("producer" AS ?role)
   }
-  
+
   ?film wdt:P31 wd:Q11424 .            # is a film
-  
+
   OPTIONAL { ?film rdfs:label ?filmLabelTe FILTER(LANG(?filmLabelTe) = "te") }
   OPTIONAL { ?film wdt:P577 ?releaseDate }
-  
+
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
 ORDER BY DESC(?releaseDate)
@@ -155,9 +155,9 @@ LIMIT 100
  * SPARQL Query: Fetch legendary actors (pre-1980 debut)
  */
 export const SPARQL_LEGENDARY_ACTORS = `
-SELECT DISTINCT 
-  ?person 
-  ?personLabel 
+SELECT DISTINCT
+  ?person
+  ?personLabel
   ?personLabelTe
   ?genderLabel
   ?birthDate
@@ -168,12 +168,12 @@ SELECT DISTINCT
 WHERE {
   ?person wdt:P106 ?occupation .
   VALUES ?occupation { wd:Q33999 wd:Q10800557 }
-  
+
   ?person wdt:P27 wd:Q668 .           # Indian
   ?person wdt:P569 ?birthDate .
-  
+
   FILTER(YEAR(?birthDate) < 1965)     # Born before 1965 = debut before 1985
-  
+
   # Telugu region
   {
     ?person wdt:P19 ?birthPlace .
@@ -182,13 +182,13 @@ WHERE {
     ?person wdt:P19 ?birthPlace .
     ?birthPlace wdt:P131* wd:Q677037 .
   }
-  
+
   OPTIONAL { ?person rdfs:label ?personLabelTe FILTER(LANG(?personLabelTe) = "te") }
   OPTIONAL { ?person wdt:P21 ?gender }
   OPTIONAL { ?person wdt:P570 ?deathDate }
   OPTIONAL { ?person wdt:P18 ?image }
   OPTIONAL { ?person wdt:P345 ?imdbId }
-  
+
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
 ORDER BY ?birthYear
@@ -271,7 +271,7 @@ function extractWikidataId(uri: string): string {
  */
 function parseDate(dateStr: string | undefined): { date: string | null; year: number | null } {
   if (!dateStr) return { date: null, year: null };
-  
+
   try {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) {
@@ -298,7 +298,7 @@ function determineRoleFlags(gender: string | undefined, occupation: string | und
 } {
   const occ = occupation?.toLowerCase() || '';
   const gen = gender?.toLowerCase() || '';
-  
+
   return {
     is_actor: gen === 'male' && (occ.includes('actor') || occ.includes('film actor')),
     is_actress: gen === 'female' && (occ.includes('actor') || occ.includes('actress')),
@@ -314,7 +314,7 @@ function transformPerson(result: WikidataResult): PersonEntity {
   const birthParsed = parseDate(result.birthDate?.value);
   const deathParsed = parseDate(result.deathDate?.value);
   const roleFlags = determineRoleFlags(result.genderLabel?.value, result.occupationLabel?.value);
-  
+
   return {
     wikidata_id: wikidataId,
     name_en: result.personLabel.value,
@@ -353,9 +353,9 @@ function generateDedupeKey(person: PersonEntity): string {
     .replace(/[^a-z\s]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
-  
+
   const birthYear = person.birth_year || 'unknown';
-  
+
   return `${normalizedName}|${birthYear}`;
 }
 
@@ -364,22 +364,22 @@ function generateDedupeKey(person: PersonEntity): string {
  */
 async function findPotentialDuplicates(person: PersonEntity): Promise<string[]> {
   const normalizedName = person.name_en.toLowerCase().trim();
-  
+
   // Search by similar name
   const { data: nameMatches } = await supabase
     .from('kg_persons')
     .select('id, wikidata_id, name_en, birth_year')
     .or(`name_en.ilike.%${normalizedName}%,aliases.cs.{${normalizedName}}`);
-  
+
   if (!nameMatches || nameMatches.length === 0) return [];
-  
+
   // Filter by birth year if available
   if (person.birth_year) {
     return nameMatches
       .filter(m => m.birth_year === person.birth_year || !m.birth_year)
       .map(m => m.id);
   }
-  
+
   return nameMatches.map(m => m.id);
 }
 
@@ -395,7 +395,7 @@ async function mergeDuplicates(canonicalId: string, duplicateIds: string[]): Pro
       canonical_id: canonicalId,
     })
     .in('id', duplicateIds);
-  
+
   // Add to merge history
   await supabase
     .from('kg_persons')
@@ -450,7 +450,7 @@ export async function ingestTeluguActors(): Promise<{
     for (const result of results) {
       try {
         const person = transformPerson(result);
-        
+
         // Skip if already processed in this batch
         if (seenIds.has(person.wikidata_id)) {
           duplicates++;
@@ -521,7 +521,7 @@ export async function ingestTeluguActors(): Promise<{
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : String(e);
     errors.push(`Fatal error: ${errorMsg}`);
-    
+
     await supabase
       .from('kg_ingestion_log')
       .update({
@@ -557,7 +557,7 @@ export async function ingestLegendaryActors(): Promise<{
     for (const result of results) {
       try {
         const person = transformPerson(result);
-        
+
         const { error } = await supabase
           .from('kg_persons')
           .upsert(person, { onConflict: 'wikidata_id' });
@@ -585,13 +585,13 @@ export async function enrichFilmography(personId: string, wikidataId: string): P
   try {
     const query = SPARQL_FILMOGRAPHY(wikidataId);
     const results = await executeSparql(query);
-    
+
     let inserted = 0;
-    
+
     for (const result of results) {
       const filmWikidataId = extractWikidataId(result.film.value);
       const dateParsed = parseDate(result.releaseDate?.value);
-      
+
       const { error } = await supabase
         .from('kg_filmography')
         .upsert({
@@ -610,13 +610,13 @@ export async function enrichFilmography(personId: string, wikidataId: string): P
 
       if (!error) inserted++;
     }
-    
+
     // Update filmography count
     await supabase
       .from('kg_persons')
       .update({ filmography_count: inserted })
       .eq('id', personId);
-    
+
     return inserted;
   } catch (e) {
     console.error(`Filmography enrichment failed for ${wikidataId}:`, e);
@@ -633,17 +633,17 @@ export async function runFullIngestion(): Promise<{
   directors: { fetched: number; inserted: number };
 }> {
   console.log('Starting full Telugu Cinema Knowledge Graph ingestion...');
-  
+
   // Ingest actors
   const actorResult = await ingestTeluguActors();
   console.log(`Actors: ${actorResult.inserted} inserted, ${actorResult.updated} updated`);
-  
+
   // Ingest legendary actors
   const legendaryResult = await ingestLegendaryActors();
   console.log(`Legendary: ${legendaryResult.inserted} inserted`);
-  
+
   // TODO: Ingest directors separately
-  
+
   return {
     actors: {
       fetched: actorResult.fetched,
@@ -660,4 +660,3 @@ export async function runFullIngestion(): Promise<{
     },
   };
 }
-

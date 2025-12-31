@@ -6,6 +6,7 @@ export interface Post {
   title: string;
   slug: string;
   telugu_body: string;
+  image_url?: string;
   image_urls: string[];
   category: Category;
   status: PostStatus;

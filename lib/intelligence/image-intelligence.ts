@@ -1,529 +1,406 @@
 /**
- * TeluguVibes Image Intelligence Layer
- * Legal, Performant, Self-Learning Image System
+ * IMAGE INTELLIGENCE SYSTEM
+ *
+ * Fetches, scores, and selects the best image for content.
+ * Priority: TMDB → Wikimedia → Wikipedia → Unsplash → AI
  */
 
-import { createClient } from '@supabase/supabase-js';
+import type { ImageCandidate, ImageSource, ImageSelectionResult } from './types';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// ============================================================
+// IMAGE FETCHERS
+// ============================================================
 
-// ===== TYPES =====
-
-interface ImageSource {
-  url: string;
-  source: 'tmdb' | 'wikimedia' | 'wikipedia' | 'unsplash' | 'pexels' | 'official_kit' | 'ai_generated';
-  license?: string;
-  author?: string;
-  width?: number;
-  height?: number;
+interface ImageFetchContext {
+  topic: string;
+  entityType: 'post' | 'celebrity' | 'movie' | 'review';
+  category?: string;
+  emotion?: string;
+  tmdbId?: number;
+  wikidataId?: string;
+  celebrityName?: string;
+  movieTitle?: string;
 }
 
-interface ImageSearchResult {
-  images: ImageSource[];
-  recommended: ImageSource | null;
-  reason: string;
-}
+/**
+ * Fetch images from TMDB (movies & celebrities)
+ */
+async function fetchFromTMDB(context: ImageFetchContext): Promise<ImageCandidate[]> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) return [];
 
-interface ImagePerformance {
-  imageId: string;
-  engagementLift: number;
-  ctr: number;
-  impressions: number;
-}
-
-// ===== LEGAL IMAGE SOURCES =====
-
-const PRIORITY_SOURCES = [
-  { source: 'tmdb', trust: 0.95, legal: true },
-  { source: 'wikimedia', trust: 0.90, legal: true },
-  { source: 'wikipedia', trust: 0.85, legal: true },
-  { source: 'official_kit', trust: 0.80, legal: true },
-  { source: 'unsplash', trust: 0.75, legal: true },
-  { source: 'pexels', trust: 0.75, legal: true },
-  { source: 'ai_generated', trust: 0.60, legal: true },
-];
-
-// ===== TMDB IMAGES =====
-
-async function fetchTMDBImage(
-  entityType: 'movie' | 'person',
-  query: string,
-  tmdbId?: number
-): Promise<ImageSource | null> {
-  const tmdbKey = process.env.TMDB_API_KEY;
-  if (!tmdbKey) return null;
+  const candidates: ImageCandidate[] = [];
 
   try {
-    if (tmdbId && entityType === 'movie') {
-      const res = await fetch(
-        `https://api.themoviedb.org/3/movie/${tmdbId}/images?api_key=${tmdbKey}`
-      );
-      const data = await res.json();
+    if (context.tmdbId && context.entityType === 'movie') {
+      // Fetch movie images
+      const url = `https://api.themoviedb.org/3/movie/${context.tmdbId}/images?api_key=${apiKey}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
 
-      if (data.posters?.length > 0) {
-        const poster = data.posters[0];
-        return {
-          url: `https://image.tmdb.org/t/p/w780${poster.file_path}`,
-          source: 'tmdb',
-          license: 'TMDB Terms of Use',
-          width: poster.width,
-          height: poster.height,
-        };
+        // Add posters
+        for (const poster of (data.posters || []).slice(0, 3)) {
+          candidates.push({
+            url: `https://image.tmdb.org/t/p/w500${poster.file_path}`,
+            source: 'tmdb',
+            score: 85 + (poster.vote_average || 0) * 1.5,
+            metadata: {
+              width: poster.width,
+              height: poster.height,
+              aspectRatio: poster.aspect_ratio,
+              license: 'TMDB Terms of Use',
+              sourceUrl: `https://www.themoviedb.org/movie/${context.tmdbId}`,
+            },
+            validationStatus: 'valid',
+          });
+        }
+
+        // Add backdrops
+        for (const backdrop of (data.backdrops || []).slice(0, 2)) {
+          candidates.push({
+            url: `https://image.tmdb.org/t/p/w1280${backdrop.file_path}`,
+            source: 'tmdb',
+            score: 80 + (backdrop.vote_average || 0) * 1.5,
+            metadata: {
+              width: backdrop.width,
+              height: backdrop.height,
+              aspectRatio: backdrop.aspect_ratio,
+              license: 'TMDB Terms of Use',
+              sourceUrl: `https://www.themoviedb.org/movie/${context.tmdbId}`,
+            },
+            validationStatus: 'valid',
+          });
+        }
       }
     }
 
-    // Search by name
-    const searchType = entityType === 'movie' ? 'movie' : 'person';
-    const searchRes = await fetch(
-      `https://api.themoviedb.org/3/search/${searchType}?api_key=${tmdbKey}&query=${encodeURIComponent(query)}`
-    );
-    const searchData = await searchRes.json();
+    if (context.tmdbId && context.entityType === 'celebrity') {
+      // Fetch person images
+      const url = `https://api.themoviedb.org/3/person/${context.tmdbId}/images?api_key=${apiKey}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
 
-    if (searchData.results?.length > 0) {
-      const result = searchData.results[0];
-      const imagePath = entityType === 'movie' ? result.poster_path : result.profile_path;
-
-      if (imagePath) {
-        return {
-          url: `https://image.tmdb.org/t/p/w780${imagePath}`,
-          source: 'tmdb',
-          license: 'TMDB Terms of Use',
-        };
+        for (const profile of (data.profiles || []).slice(0, 3)) {
+          candidates.push({
+            url: `https://image.tmdb.org/t/p/w500${profile.file_path}`,
+            source: 'tmdb',
+            score: 90 + (profile.vote_average || 0),
+            metadata: {
+              width: profile.width,
+              height: profile.height,
+              aspectRatio: profile.aspect_ratio,
+              hasFace: true,
+              license: 'TMDB Terms of Use',
+              sourceUrl: `https://www.themoviedb.org/person/${context.tmdbId}`,
+            },
+            validationStatus: 'valid',
+          });
+        }
       }
     }
-  } catch (error) {
-    console.error('TMDB image fetch error:', error);
-  }
 
-  return null;
-}
+    // Search by name if no ID
+    if (!context.tmdbId && (context.celebrityName || context.movieTitle)) {
+      const query = context.celebrityName || context.movieTitle;
+      const type = context.celebrityName ? 'person' : 'movie';
+      const searchUrl = `https://api.themoviedb.org/3/search/${type}?api_key=${apiKey}&query=${encodeURIComponent(query!)}`;
 
-// ===== WIKIMEDIA COMMONS =====
+      const response = await fetch(searchUrl);
+      if (response.ok) {
+        const data = await response.json();
+        const result = data.results?.[0];
 
-async function fetchWikimediaImage(query: string): Promise<ImageSource | null> {
-  try {
-    // Search Wikimedia Commons
-    const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=6&format=json&origin=*`;
-    const searchRes = await fetch(searchUrl);
-    const searchData = await searchRes.json();
-
-    if (searchData.query?.search?.length > 0) {
-      const title = searchData.query.search[0].title;
-
-      // Get image info
-      const infoUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url|extmetadata|size&format=json&origin=*`;
-      const infoRes = await fetch(infoUrl);
-      const infoData = await infoRes.json();
-
-      const pages = infoData.query?.pages;
-      if (pages) {
-        const page = Object.values(pages)[0] as any;
-        const imageinfo = page.imageinfo?.[0];
-
-        if (imageinfo) {
-          const meta = imageinfo.extmetadata || {};
-          const license = meta.LicenseShortName?.value || 'CC';
-
-          return {
-            url: imageinfo.url,
-            source: 'wikimedia',
-            license,
-            author: meta.Artist?.value?.replace(/<[^>]*>/g, '') || 'Wikimedia Commons',
-            width: imageinfo.width,
-            height: imageinfo.height,
-          };
+        if (result) {
+          const imagePath = result.profile_path || result.poster_path;
+          if (imagePath) {
+            candidates.push({
+              url: `https://image.tmdb.org/t/p/w500${imagePath}`,
+              source: 'tmdb',
+              score: 85,
+              metadata: {
+                hasFace: !!result.profile_path,
+                license: 'TMDB Terms of Use',
+              },
+              validationStatus: 'valid',
+            });
+          }
         }
       }
     }
   } catch (error) {
-    console.error('Wikimedia image fetch error:', error);
+    console.warn('TMDB image fetch failed:', error);
   }
 
-  return null;
+  return candidates;
 }
 
-// ===== WIKIPEDIA PAGE IMAGE =====
+/**
+ * Fetch images from Wikimedia Commons
+ */
+async function fetchFromWikimedia(context: ImageFetchContext): Promise<ImageCandidate[]> {
+  const candidates: ImageCandidate[] = [];
 
-async function fetchWikipediaImage(query: string): Promise<ImageSource | null> {
   try {
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query.replace(/ /g, '_'))}`;
-    const res = await fetch(url);
+    const searchTerm = context.celebrityName || context.movieTitle || context.topic;
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchTerm)}&srnamespace=6&format=json&origin=*`;
 
-    if (res.ok) {
-      const data = await res.json();
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+
+      for (const result of (data.query?.search || []).slice(0, 3)) {
+        // Get image info
+        const title = result.title;
+        const infoUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url|size|extmetadata&format=json&origin=*`;
+
+        const infoResponse = await fetch(infoUrl);
+        if (infoResponse.ok) {
+          const infoData = await infoResponse.json();
+          const pages = infoData.query?.pages || {};
+          const page = Object.values(pages)[0] as Record<string, unknown>;
+          const imageInfo = (page?.imageinfo as Record<string, unknown>[])?.[0];
+
+          if (imageInfo?.url) {
+            const extMeta = imageInfo.extmetadata as Record<string, { value?: string }> | undefined;
+            candidates.push({
+              url: imageInfo.url as string,
+              source: 'wikimedia',
+              score: 75,
+              metadata: {
+                width: imageInfo.width as number,
+                height: imageInfo.height as number,
+                license: extMeta?.LicenseShortName?.value || 'Wikimedia Commons',
+                author: extMeta?.Artist?.value?.replace(/<[^>]*>/g, '') || 'Unknown',
+                sourceUrl: `https://commons.wikimedia.org/wiki/${title}`,
+              },
+              validationStatus: 'valid',
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Wikimedia image fetch failed:', error);
+  }
+
+  return candidates;
+}
+
+/**
+ * Fetch images from Wikipedia
+ */
+async function fetchFromWikipedia(context: ImageFetchContext): Promise<ImageCandidate[]> {
+  const candidates: ImageCandidate[] = [];
+
+  try {
+    const searchTerm = context.celebrityName || context.movieTitle || context.topic;
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchTerm.replace(/ /g, '_'))}`;
+
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+
+      if (data.originalimage?.source) {
+        candidates.push({
+          url: data.originalimage.source,
+          source: 'wikipedia',
+          score: 70,
+          metadata: {
+            width: data.originalimage.width,
+            height: data.originalimage.height,
+            license: 'Wikipedia (check individual license)',
+            sourceUrl: data.content_urls?.desktop?.page,
+          },
+          validationStatus: 'needs_review', // Wikipedia images need license check
+        });
+      }
 
       if (data.thumbnail?.source) {
-        return {
-          url: data.originalimage?.source || data.thumbnail.source,
+        candidates.push({
+          url: data.thumbnail.source,
           source: 'wikipedia',
-          license: 'Wikipedia/Fair Use',
-          width: data.thumbnail.width,
-          height: data.thumbnail.height,
-        };
+          score: 65,
+          metadata: {
+            width: data.thumbnail.width,
+            height: data.thumbnail.height,
+            license: 'Wikipedia (check individual license)',
+            sourceUrl: data.content_urls?.desktop?.page,
+          },
+          validationStatus: 'needs_review',
+        });
       }
     }
   } catch (error) {
-    console.error('Wikipedia image fetch error:', error);
+    console.warn('Wikipedia image fetch failed:', error);
   }
 
-  return null;
+  return candidates;
 }
 
-// ===== UNSPLASH (Generic) =====
+/**
+ * Fetch images from Unsplash
+ */
+async function fetchFromUnsplash(context: ImageFetchContext): Promise<ImageCandidate[]> {
+  const apiKey = process.env.UNSPLASH_ACCESS_KEY;
+  if (!apiKey) return [];
 
-async function fetchUnsplashImage(query: string): Promise<ImageSource | null> {
-  const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
-  if (!unsplashKey) return null;
+  const candidates: ImageCandidate[] = [];
 
   try {
-    const res = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=1`,
-      {
-        headers: {
-          Authorization: `Client-ID ${unsplashKey}`,
-        },
-      }
-    );
-    const data = await res.json();
+    // Build search query based on context
+    let query = context.topic;
+    if (context.category === 'sports') query = 'cricket stadium india';
+    if (context.category === 'politics') query = 'indian government parliament';
+    if (context.entityType === 'movie') query = 'cinema movie theater';
 
-    if (data.results?.length > 0) {
-      const photo = data.results[0];
-      return {
-        url: photo.urls.regular,
-        source: 'unsplash',
-        license: 'Unsplash License',
-        author: photo.user.name,
-        width: photo.width,
-        height: photo.height,
-      };
+    const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=3&client_id=${apiKey}`;
+
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+
+      for (const photo of data.results || []) {
+        candidates.push({
+          url: photo.urls.regular,
+          source: 'unsplash',
+          score: 60, // Lower priority for generic images
+          metadata: {
+            width: photo.width,
+            height: photo.height,
+            aspectRatio: photo.width / photo.height,
+            license: 'Unsplash License',
+            author: photo.user.name,
+            sourceUrl: photo.links.html,
+          },
+          validationStatus: 'valid',
+        });
+      }
     }
   } catch (error) {
-    console.error('Unsplash image fetch error:', error);
+    console.warn('Unsplash image fetch failed:', error);
   }
 
-  return null;
+  return candidates;
 }
 
-// ===== MAIN SEARCH FUNCTION =====
+// ============================================================
+// IMAGE SCORING
+// ============================================================
 
-export async function searchImages(
-  query: string,
-  entityType: 'movie' | 'celebrity' | 'event' | 'generic',
-  options?: {
-    tmdbId?: number;
-    preferSource?: string;
-    minWidth?: number;
-  }
-): Promise<ImageSearchResult> {
-  const images: ImageSource[] = [];
-  const minWidth = options?.minWidth || 600;
-
-  // Strategy based on entity type
-  if (entityType === 'movie') {
-    // 1. TMDB (highest priority for movies)
-    const tmdbImage = await fetchTMDBImage('movie', query, options?.tmdbId);
-    if (tmdbImage) images.push(tmdbImage);
-
-    // 2. Wikimedia for classic movies
-    if (images.length === 0 || query.toLowerCase().includes('classic')) {
-      const wikiImage = await fetchWikimediaImage(`${query} Telugu film`);
-      if (wikiImage) images.push(wikiImage);
-    }
-  } else if (entityType === 'celebrity') {
-    // 1. TMDB person
-    const tmdbImage = await fetchTMDBImage('person', query);
-    if (tmdbImage) images.push(tmdbImage);
-
-    // 2. Wikipedia
-    const wikiImage = await fetchWikipediaImage(query);
-    if (wikiImage) images.push(wikiImage);
-
-    // 3. Wikimedia Commons
-    if (images.length === 0) {
-      const wikimediaImage = await fetchWikimediaImage(query);
-      if (wikimediaImage) images.push(wikimediaImage);
-    }
-  } else {
-    // Generic search
-    const unsplashImage = await fetchUnsplashImage(query);
-    if (unsplashImage) images.push(unsplashImage);
-
-    const wikimediaImage = await fetchWikimediaImage(query);
-    if (wikimediaImage) images.push(wikimediaImage);
-  }
-
-  // Filter by minimum width
-  const validImages = images.filter(img => !img.width || img.width >= minWidth);
-
-  // Get performance data for sources
-  const sourcePerformance = await getSourcePerformance();
-
-  // Rank and recommend
-  let recommended: ImageSource | null = null;
-  let reason = '';
-
-  if (validImages.length > 0) {
-    // Score each image
-    const scored = validImages.map(img => {
-      const sourcePriority = PRIORITY_SOURCES.find(s => s.source === img.source);
-      const perfScore = sourcePerformance.get(img.source) || 0.5;
-
-      return {
-        image: img,
-        score: (sourcePriority?.trust || 0.5) * 0.6 + perfScore * 0.4,
-      };
-    });
-
-    scored.sort((a, b) => b.score - a.score);
-    recommended = scored[0].image;
-    reason = `Selected ${recommended.source} (score: ${scored[0].score.toFixed(2)}) - legal & high engagement`;
-  } else {
-    reason = 'No suitable images found from legal sources';
-  }
-
-  return { images: validImages, recommended, reason };
+interface ScoringContext {
+  emotion?: string;
+  entityType: string;
+  category?: string;
+  preferFaces?: boolean;
 }
 
-// ===== PERFORMANCE TRACKING =====
+function scoreImage(candidate: ImageCandidate, context: ScoringContext): number {
+  let score = candidate.score;
 
-async function getSourcePerformance(): Promise<Map<string, number>> {
-  const performance = new Map<string, number>();
+  // Bonus for face presence (especially for celebrities)
+  if (context.preferFaces && candidate.metadata.hasFace) {
+    score += 10;
+  }
 
-  const { data } = await supabase
-    .from('image_registry')
-    .select('source, avg_engagement')
-    .gt('times_used', 0);
-
-  if (data) {
-    const sourceStats = new Map<string, { total: number; count: number }>();
-
-    for (const img of data) {
-      const stats = sourceStats.get(img.source) || { total: 0, count: 0 };
-      stats.total += img.avg_engagement || 0;
-      stats.count += 1;
-      sourceStats.set(img.source, stats);
-    }
-
-    for (const [source, stats] of sourceStats) {
-      performance.set(source, stats.count > 0 ? stats.total / stats.count / 100 : 0.5);
+  // Bonus for good aspect ratio (16:9 or 4:3 preferred for posts)
+  if (candidate.metadata.aspectRatio) {
+    if (candidate.metadata.aspectRatio >= 1.3 && candidate.metadata.aspectRatio <= 1.8) {
+      score += 5;
     }
   }
 
-  return performance;
+  // Bonus for high resolution
+  if (candidate.metadata.width && candidate.metadata.width >= 1200) {
+    score += 5;
+  }
+
+  // Penalty for very small images
+  if (candidate.metadata.width && candidate.metadata.width < 500) {
+    score -= 20;
+  }
+
+  // Source priority bonus
+  const sourcePriority: Record<ImageSource, number> = {
+    tmdb: 15,
+    wikimedia: 10,
+    wikipedia: 5,
+    unsplash: 0,
+    pexels: 0,
+    ai_generated: -5,
+  };
+  score += sourcePriority[candidate.source] || 0;
+
+  // Emotion match bonus
+  if (candidate.metadata.emotionMatch) {
+    score += candidate.metadata.emotionMatch * 0.1;
+  }
+
+  return Math.min(100, Math.max(0, score));
 }
 
-// ===== REGISTER IMAGE =====
+// ============================================================
+// MAIN FUNCTION
+// ============================================================
 
-export async function registerImage(
-  image: ImageSource,
-  entityType: string,
-  entityId?: string
-): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('image_registry')
-    .insert({
-      source: image.source,
-      source_url: image.url,
-      license_type: image.license,
-      author: image.author,
-      cdn_url: image.url, // Would be CDN URL after upload
-      width: image.width,
-      height: image.height,
-      aspect_ratio: image.width && image.height ? image.width / image.height : null,
-      image_type: entityType === 'movie' ? 'poster' : entityType === 'celebrity' ? 'headshot' : 'generic',
-      entity_type: entityType,
-      entity_id: entityId,
-      is_verified: image.source === 'tmdb',
-      is_active: true,
-    })
-    .select('id')
-    .single();
+export async function selectBestImage(context: ImageFetchContext): Promise<ImageSelectionResult> {
+  const allCandidates: ImageCandidate[] = [];
 
-  if (error) {
-    console.error('Error registering image:', error);
-    return null;
+  // Fetch from all sources in priority order
+  const [tmdbImages, wikimediaImages, wikipediaImages, unsplashImages] = await Promise.all([
+    fetchFromTMDB(context),
+    fetchFromWikimedia(context),
+    fetchFromWikipedia(context),
+    fetchFromUnsplash(context),
+  ]);
+
+  allCandidates.push(...tmdbImages, ...wikimediaImages, ...wikipediaImages, ...unsplashImages);
+
+  // Score all candidates
+  const scoringContext: ScoringContext = {
+    emotion: context.emotion,
+    entityType: context.entityType,
+    category: context.category,
+    preferFaces: context.entityType === 'celebrity' || context.entityType === 'post',
+  };
+
+  for (const candidate of allCandidates) {
+    candidate.score = scoreImage(candidate, scoringContext);
   }
 
-  return data.id;
-}
+  // Sort by score
+  allCandidates.sort((a, b) => b.score - a.score);
 
-// ===== TRACK IMAGE PERFORMANCE =====
-
-export async function trackImagePerformance(
-  imageId: string,
-  postId: string,
-  context: 'featured' | 'thumbnail' | 'inline'
-): Promise<void> {
-  // Increment usage
-  await supabase
-    .from('image_registry')
-    .update({
-      times_used: supabase.rpc('increment', { row_id: imageId, column_name: 'times_used' }),
-    })
-    .eq('id', imageId);
-
-  // Record performance entry
-  await supabase
-    .from('image_performance')
-    .insert({
-      image_id: imageId,
-      post_id: postId,
-      context,
-      impressions: 1,
-    });
-}
-
-// ===== UPDATE IMAGE ENGAGEMENT =====
-
-export async function updateImageEngagement(): Promise<void> {
-  console.log('Updating image engagement scores...');
-
-  // Get recent image performance
-  const { data: imagePerf } = await supabase
-    .from('image_performance')
-    .select(`
-      image_id,
-      impressions,
-      clicks,
-      engagement_lift
-    `)
-    .gte('recorded_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-
-  const imageStats = new Map<string, { impressions: number; clicks: number; engagement: number; count: number }>();
-
-  for (const perf of (imagePerf || [])) {
-    const stats = imageStats.get(perf.image_id) || { impressions: 0, clicks: 0, engagement: 0, count: 0 };
-    stats.impressions += perf.impressions || 0;
-    stats.clicks += perf.clicks || 0;
-    stats.engagement += perf.engagement_lift || 0;
-    stats.count += 1;
-    imageStats.set(perf.image_id, stats);
-  }
-
-  for (const [imageId, stats] of imageStats) {
-    const avgEngagement = stats.count > 0 ? stats.engagement / stats.count : 0;
-
-    await supabase
-      .from('image_registry')
-      .update({
-        avg_engagement: avgEngagement,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', imageId);
-  }
-
-  console.log(`Updated engagement for ${imageStats.size} images`);
-}
-
-// ===== GET BEST IMAGE FOR ENTITY =====
-
-export async function getBestImageForEntity(
-  entityType: string,
-  entityId: string
-): Promise<ImageSource | null> {
-  const { data } = await supabase
-    .from('image_registry')
-    .select('*')
-    .eq('entity_type', entityType)
-    .eq('entity_id', entityId)
-    .eq('is_active', true)
-    .order('avg_engagement', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (data) {
-    return {
-      url: data.cdn_url || data.source_url,
-      source: data.source,
-      license: data.license_type,
-      author: data.author,
-      width: data.width,
-      height: data.height,
-    };
-  }
-
-  return null;
-}
-
-// ===== VALIDATE IMAGE =====
-
-export async function validateImage(imageUrl: string): Promise<{
-  isValid: boolean;
-  hasWatermark: boolean;
-  isSafe: boolean;
-  reason?: string;
-}> {
-  // Basic validation
-  if (!imageUrl || !imageUrl.startsWith('http')) {
-    return { isValid: false, hasWatermark: false, isSafe: false, reason: 'Invalid URL' };
-  }
-
-  // Check known problematic domains
-  const blockedDomains = ['imdb.com', 'google.com/images', 'pinterest.com'];
-  for (const domain of blockedDomains) {
-    if (imageUrl.includes(domain)) {
-      return { isValid: false, hasWatermark: false, isSafe: false, reason: `Blocked source: ${domain}` };
-    }
-  }
-
-  // Check trusted domains
-  const trustedDomains = ['tmdb.org', 'wikimedia.org', 'unsplash.com', 'pexels.com', 'wikipedia.org'];
-  const isTrusted = trustedDomains.some(d => imageUrl.includes(d));
+  // Select best valid image
+  const validCandidates = allCandidates.filter(c => c.validationStatus !== 'rejected');
+  const selectedImage = validCandidates[0] || null;
 
   return {
-    isValid: true,
-    hasWatermark: !isTrusted, // Assume untrusted may have watermarks
-    isSafe: true,
-    reason: isTrusted ? 'Trusted source' : 'Needs manual verification',
+    selectedImage,
+    candidates: allCandidates,
+    selectionReason: selectedImage
+      ? `Selected ${selectedImage.source} image with score ${selectedImage.score.toFixed(1)}`
+      : 'No suitable image found',
   };
 }
 
-// ===== SMART IMAGE SELECTION =====
-
-export async function getSmartImage(
-  topic: string,
-  category: string,
-  options?: {
-    movieTitle?: string;
-    celebrityName?: string;
-    tmdbId?: number;
+/**
+ * Validate image URL is accessible
+ */
+export async function validateImageUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    return response.ok;
+  } catch {
+    return false;
   }
-): Promise<{ image: ImageSource | null; source: string; confidence: number }> {
-  let result: ImageSource | null = null;
-  let source = '';
-  let confidence = 0;
+}
 
-  // Detect entity type from topic/options
-  if (options?.movieTitle || category === 'movies') {
-    const searchResult = await searchImages(
-      options?.movieTitle || topic,
-      'movie',
-      { tmdbId: options?.tmdbId }
-    );
-    if (searchResult.recommended) {
-      result = searchResult.recommended;
-      source = 'movie_search';
-      confidence = 0.9;
-    }
-  } else if (options?.celebrityName) {
-    const searchResult = await searchImages(options.celebrityName, 'celebrity');
-    if (searchResult.recommended) {
-      result = searchResult.recommended;
-      source = 'celebrity_search';
-      confidence = 0.85;
-    }
-  } else {
-    // Generic topic search
-    const searchResult = await searchImages(topic, 'generic');
-    if (searchResult.recommended) {
-      result = searchResult.recommended;
-      source = 'topic_search';
-      confidence = 0.6;
-    }
-  }
-
-  return { image: result, source, confidence };
+/**
+ * Get image candidates for variant selection
+ */
+export async function getImageOptions(context: ImageFetchContext, count: number = 3): Promise<ImageCandidate[]> {
+  const result = await selectBestImage(context);
+  return result.candidates.slice(0, count);
 }

@@ -67,7 +67,7 @@ export async function generateCitationBlocks(postId: string): Promise<CitationBl
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           {
             role: 'system',
@@ -215,7 +215,7 @@ export async function generateAnswerSummary(postId: string): Promise<AnswerSumma
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           {
             role: 'system',

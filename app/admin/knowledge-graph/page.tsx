@@ -173,7 +173,7 @@ export default function KnowledgeGraphPage() {
               <Download className="w-5 h-5 text-orange-400" />
               Wikidata Ingestion
             </h2>
-            
+
             <div className="flex flex-wrap gap-4 items-center mb-4">
               <select
                 value={ingestType}
@@ -184,7 +184,7 @@ export default function KnowledgeGraphPage() {
                 <option value="actors">Telugu Actors Only</option>
                 <option value="legendary">Legendary Actors (Pre-1980)</option>
               </select>
-              
+
               <button
                 onClick={triggerIngestion}
                 disabled={ingesting}
@@ -344,4 +344,3 @@ function StatCard({ icon, label, value, color }: {
     </div>
   );
 }
-

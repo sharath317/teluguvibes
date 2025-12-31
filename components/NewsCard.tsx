@@ -35,7 +35,7 @@ function formatTimeAgo(dateString: string): string {
 
 export function NewsCard({ post, featured = false }: NewsCardProps) {
   // Use picsum.photos as fallback with unique seed based on post id
-  const imageUrl = post.image_urls?.[0] || `https://picsum.photos/seed/${post.id}/800/600`;
+  const imageUrl = post.image_url || post.image_urls?.[0] || `https://picsum.photos/seed/${post.id}/800/600`;
 
   return (
     <Link href={`/post/${post.slug}`}>

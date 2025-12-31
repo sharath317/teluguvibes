@@ -8,7 +8,12 @@ import {
   Award, Eye, Heart, Share2
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import { SchemaScript } from '@/components/seo/SchemaScript';
+import { generateMovieSchema, generateBreadcrumbSchema } from '@/lib/seo/schema-generator';
 import type { Movie, MovieReview } from '@/types/reviews';
+
+// ISR - Revalidate every hour
+export const revalidate = 3600;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

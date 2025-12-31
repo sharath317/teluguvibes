@@ -63,7 +63,7 @@ function SmallPostCard({
   index: number;
   showViews?: boolean;
 }) {
-  const imageUrl = post.image_urls?.[0] || `https://picsum.photos/seed/${post.id}/100/100`;
+  const imageUrl = post.image_url || post.image_urls?.[0] || `https://picsum.photos/seed/${post.id}/100/100`;
   const categoryColors: Record<string, string> = {
     gossip: 'bg-pink-500',
     sports: 'bg-green-500',

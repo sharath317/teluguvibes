@@ -9,6 +9,13 @@ import { CommentSection } from '@/components/CommentSection';
 import { AdSlot } from '@/components/AdSlot';
 import { SimilarPosts } from '@/components/RecentPostsSidebar';
 import { BottomInfoBar } from '@/components/BottomInfoBar';
+import { SchemaScript } from '@/components/seo/SchemaScript';
+import {
+  generateArticleSchema,
+  generateBreadcrumbSchema,
+  generateQASchema,
+  generateAnswerFirstSummary,
+} from '@/lib/seo/schema-generator';
 import type { Post, Category } from '@/types/database';
 
 const supabase = createClient(
@@ -112,9 +119,9 @@ export async function generateMetadata({
       type: 'article',
       publishedTime: post.created_at,
       modifiedTime: post.updated_at,
-      images: post.image_urls[0] ? [
+      images: (post.image_url || post.image_urls?.[0]) ? [
         {
-          url: post.image_urls[0],
+          url: post.image_url || post.image_urls?.[0],
           width: 1200,
           height: 630,
           alt: post.title,
@@ -126,12 +133,25 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: post.title,
       description,
-      images: post.image_urls[0] ? [post.image_urls[0]] : [],
+      images: (post.image_url || post.image_urls?.[0]) ? [post.image_url || post.image_urls?.[0]] : [],
     },
   };
 }
 
-export const revalidate = 60;
+// ISR - Revalidate every hour
+export const revalidate = 3600;
+
+// Generate static params for top posts (optional - can be enabled for production)
+// export async function generateStaticParams() {
+//   const { data: posts } = await supabase
+//     .from('posts')
+//     .select('slug')
+//     .eq('status', 'published')
+//     .order('views', { ascending: false })
+//     .limit(100);
+//
+//   return (posts || []).map((post) => ({ slug: post.slug }));
+// }
 
 export default async function PostPage({
   params
@@ -151,8 +171,38 @@ export default async function PostPage({
     getRecentPosts(post.id),
   ]);
 
+  // Generate Schema.org data
+  const postUrl = `https://teluguvibes.com/post/${post.slug}`;
+  const answerSummary = generateAnswerFirstSummary(post.telugu_body, post.title);
+
+  const articleSchema = generateArticleSchema({
+    title: post.title,
+    description: answerSummary,
+    image: post.image_url ? [post.image_url] : post.image_urls,
+    url: postUrl,
+    publishedAt: post.created_at,
+    updatedAt: post.updated_at,
+    category: categoryLabels[post.category],
+    keywords: [post.category, 'telugu news', 'తెలుగు వార్తలు', categoryLabels[post.category]],
+  });
+
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: 'హోమ్', url: 'https://teluguvibes.com' },
+    { name: categoryLabels[post.category], url: `https://teluguvibes.com/category/${post.category}` },
+    { name: post.title },
+  ]);
+
+  // Generate Q&A schema for Zero-Click SEO
+  const qaSchema = generateQASchema({
+    question: post.title.endsWith('?') ? post.title : `${post.title} గురించి తెలుసుకోండి`,
+    answer: answerSummary,
+  });
+
   return (
     <>
+      {/* Schema.org JSON-LD */}
+      <SchemaScript schema={[articleSchema, breadcrumbSchema, qaSchema]} />
+
       <div className="container mx-auto px-4 py-6">
         {/* Header Ad */}
         <div className="flex justify-center mb-6">
@@ -207,7 +257,7 @@ export default async function PostPage({
             {/* Featured Image */}
             <div className="relative aspect-video rounded-xl overflow-hidden mb-6 bg-[#262626]">
               <Image
-                src={post.image_urls?.[0] || `https://picsum.photos/seed/${post.id}/1200/675`}
+                src={post.image_url || post.image_urls?.[0] || `https://picsum.photos/seed/${post.id}/1200/675`}
                 alt={post.title}
                 fill
                 className="object-cover"
@@ -309,7 +359,7 @@ export default async function PostPage({
 // ShareButton is now in a separate client component file
 
 function SmallPostLink({ post, index }: { post: Post; index: number }) {
-  const imageUrl = post.image_urls?.[0] || `https://picsum.photos/seed/${post.id}/100/100`;
+  const imageUrl = post.image_url || post.image_urls?.[0] || `https://picsum.photos/seed/${post.id}/100/100`;
 
   return (
     <Link

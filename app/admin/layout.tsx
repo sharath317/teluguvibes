@@ -16,7 +16,8 @@ import {
   Heart,
   Brain,
   MessageSquareQuote,
-  Database
+  Database,
+  Zap
 } from 'lucide-react';
 
 export default async function AdminLayout({
@@ -70,6 +71,9 @@ export default async function AdminLayout({
             <NavItem href="/admin" icon={LayoutDashboard}>
               Dashboard
             </NavItem>
+            <NavItem href="/admin/content-manager" icon={FileText}>
+              Content Manager
+            </NavItem>
             <NavItem href="/admin/intelligence" icon={Brain}>
               Intelligence
             </NavItem>
@@ -105,16 +109,22 @@ export default async function AdminLayout({
             <NavItem href="/admin/media" icon={Flame}>
               Media Manager
             </NavItem>
+            <NavItem href="/admin/image-intelligence" icon={ImageIcon}>
+              Image Intelligence
+            </NavItem>
             <NavItem href="/admin/media/entities" icon={ImageIcon}>
               Entities
             </NavItem>
 
-            {/* Knowledge Graph */}
+            {/* Movie Catalogue & Knowledge Graph */}
             <div className="pt-4 mt-4 border-t border-[#262626]">
               <span className="px-3 text-xs font-medium text-[#737373] uppercase tracking-wider">
-                Knowledge Graph
+                Movie Database
               </span>
             </div>
+            <NavItem href="/admin/movie-catalogue" icon={Film}>
+              Movie Catalogue
+            </NavItem>
             <NavItem href="/admin/knowledge-graph" icon={Database}>
               Telugu Cinema KG
             </NavItem>
@@ -131,7 +141,13 @@ export default async function AdminLayout({
             <NavItem href="/admin/celebrities/calendar" icon={Calendar}>
               Events Calendar
             </NavItem>
-            <NavItem href="/admin/historic-drafts" icon={Sparkles}>
+            <NavItem href="/admin/historic-intelligence" icon={Sparkles}>
+              Historic Intelligence
+            </NavItem>
+            <NavItem href="/admin/trend-fusion" icon={Zap}>
+              Trend-Historic Fusion
+            </NavItem>
+            <NavItem href="/admin/historic-drafts" icon={Calendar}>
               Historic Drafts
             </NavItem>
 

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import Link from 'next/link';
-import { Newspaper, Menu } from 'lucide-react';
+import { Header } from '@/components/Header';
 import { DedicationsWidget } from '@/components/DedicationsWidget';
 import './globals.css';
 
@@ -39,49 +39,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="te">
+    <html lang="te" className="dark" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0a0a0a] text-[#ededed] min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--bg-primary)] text-[var(--text-primary)] min-h-screen`}
       >
         {/* Header */}
-        <header className="bg-[#141414] border-b border-[#262626]">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between h-16">
-              {/* Logo */}
-              <Link href="/" className="flex items-center gap-2 group">
-                <Newspaper className="w-8 h-8 text-[#eab308]" />
-                <span className="text-xl font-bold text-white group-hover:text-[#eab308] transition-colors">
-                  తెలుగు వార్తలు
-                </span>
-              </Link>
-
-              {/* Navigation */}
-              <nav className="hidden md:flex items-center gap-6">
-                <Link
-                  href="/hot"
-                  className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold rounded-full text-sm hover:opacity-90 transition-opacity"
-                >
-                  🔥 హాట్
-                </Link>
-                <Link
-                  href="/reviews"
-                  className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-bold rounded-full text-sm hover:opacity-90 transition-opacity"
-                >
-                  ⭐ రివ్యూలు
-                </Link>
-                <NavLink href="/category/gossip">గాసిప్</NavLink>
-                <NavLink href="/category/sports">స్పోర్ట్స్</NavLink>
-                <NavLink href="/category/politics">రాజకీయాలు</NavLink>
-                <NavLink href="/category/entertainment">వినోదం</NavLink>
-              </nav>
-
-              {/* Mobile menu button */}
-              <button className="md:hidden p-2 hover:bg-[#262626] rounded-lg transition-colors">
-                <Menu className="w-6 h-6" />
-              </button>
-            </div>
-          </div>
-        </header>
+        <Header />
 
         {/* Main content */}
         <main>{children}</main>
@@ -90,42 +53,42 @@ export default function RootLayout({
         <DedicationsWidget position="bottom-left" />
 
         {/* Footer */}
-        <footer className="bg-[#141414] border-t border-[#262626] mt-12">
+        <footer className="bg-[var(--bg-secondary)] border-t border-[var(--border-secondary)] mt-12">
           <div className="container mx-auto px-4 py-8">
             <div className="grid md:grid-cols-4 gap-8">
               {/* About */}
               <div>
-                <h4 className="font-bold text-[#eab308] mb-4">తెలుగు వార్తలు గురించి</h4>
-                <p className="text-sm text-[#737373]">
+                <h4 className="font-bold text-[var(--brand-primary)] mb-4">తెలుగు వార్తలు గురించి</h4>
+                <p className="text-sm text-[var(--text-tertiary)]">
                   తాజా తెలుగు వార్తలు, గాసిప్, స్పోర్ట్స్, వినోదం - అన్ని వార్తలు ఒకే చోట.
                 </p>
               </div>
 
               {/* Categories */}
               <div>
-                <h4 className="font-bold text-white mb-4">విభాగాలు</h4>
+                <h4 className="font-bold text-[var(--text-primary)] mb-4">విభాగాలు</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><Link href="/reviews" className="text-[#737373] hover:text-[#eab308]">🎬 మూవీ రివ్యూలు</Link></li>
-                  <li><Link href="/hot" className="text-[#737373] hover:text-[#eab308]">🔥 హాట్ మీడియా</Link></li>
-                  <li><Link href="/category/gossip" className="text-[#737373] hover:text-[#eab308]">గాసిప్</Link></li>
-                  <li><Link href="/category/sports" className="text-[#737373] hover:text-[#eab308]">స్పోర్ట్స్</Link></li>
-                  <li><Link href="/category/entertainment" className="text-[#737373] hover:text-[#eab308]">వినోదం</Link></li>
+                  <li><Link href="/reviews" className="text-[var(--text-tertiary)] hover:text-[var(--brand-primary)]">🎬 మూవీ రివ్యూలు</Link></li>
+                  <li><Link href="/hot" className="text-[var(--text-tertiary)] hover:text-[var(--brand-primary)]">🔥 హాట్ మీడియా</Link></li>
+                  <li><Link href="/category/gossip" className="text-[var(--text-tertiary)] hover:text-[var(--brand-primary)]">గాసిప్</Link></li>
+                  <li><Link href="/category/sports" className="text-[var(--text-tertiary)] hover:text-[var(--brand-primary)]">స్పోర్ట్స్</Link></li>
+                  <li><Link href="/category/entertainment" className="text-[var(--text-tertiary)] hover:text-[var(--brand-primary)]">వినోదం</Link></li>
                 </ul>
               </div>
 
               {/* Links */}
               <div>
-                <h4 className="font-bold text-white mb-4">లింకులు</h4>
+                <h4 className="font-bold text-[var(--text-primary)] mb-4">లింకులు</h4>
                 <ul className="space-y-2 text-sm">
-                  <li><Link href="/about" className="text-[#737373] hover:text-[#eab308]">మా గురించి</Link></li>
-                  <li><Link href="/contact" className="text-[#737373] hover:text-[#eab308]">సంప్రదించండి</Link></li>
-                  <li><Link href="/privacy" className="text-[#737373] hover:text-[#eab308]">గోప్యతా విధానం</Link></li>
+                  <li><Link href="/about" className="text-[var(--text-tertiary)] hover:text-[var(--brand-primary)]">మా గురించి</Link></li>
+                  <li><Link href="/contact" className="text-[var(--text-tertiary)] hover:text-[var(--brand-primary)]">సంప్రదించండి</Link></li>
+                  <li><Link href="/privacy" className="text-[var(--text-tertiary)] hover:text-[var(--brand-primary)]">గోప్యతా విధానం</Link></li>
                 </ul>
               </div>
 
               {/* Social */}
               <div>
-                <h4 className="font-bold text-white mb-4">మమ్మల్ని ఫాలో అవ్వండి</h4>
+                <h4 className="font-bold text-[var(--text-primary)] mb-4">మమ్మల్ని ఫాలో అవ్వండి</h4>
                 <div className="flex gap-4">
                   <SocialLink href="#" label="Facebook" />
                   <SocialLink href="#" label="Twitter" />
@@ -135,7 +98,7 @@ export default function RootLayout({
               </div>
             </div>
 
-            <div className="border-t border-[#262626] mt-8 pt-8 text-center text-sm text-[#737373]">
+            <div className="border-t border-[var(--border-secondary)] mt-8 pt-8 text-center text-sm text-[var(--text-tertiary)]">
               © {new Date().getFullYear()} తెలుగు వార్తలు. అన్ని హక్కులు రిజర్వ్ చేయబడ్డాయి.
             </div>
           </div>
@@ -145,22 +108,11 @@ export default function RootLayout({
   );
 }
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="text-[#ededed] hover:text-[#eab308] font-medium transition-colors"
-    >
-      {children}
-    </Link>
-  );
-}
-
 function SocialLink({ href, label }: { href: string; label: string }) {
   return (
     <a
       href={href}
-      className="w-10 h-10 bg-[#262626] hover:bg-[#eab308] hover:text-black rounded-full flex items-center justify-center transition-colors"
+      className="w-10 h-10 bg-[var(--bg-tertiary)] hover:bg-[var(--brand-primary)] hover:text-white rounded-full flex items-center justify-center transition-colors"
       aria-label={label}
     >
       {label[0]}

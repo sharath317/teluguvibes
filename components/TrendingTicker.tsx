@@ -1,68 +1,157 @@
 'use client';
 
+/**
+ * Trending Ticker Component
+ *
+ * Displays a horizontal scrolling ticker with:
+ * - Trending news
+ * - Cricket scores (if live)
+ * - Google Trends
+ *
+ * Uses Edge API with fallback.
+ */
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Flame } from 'lucide-react';
-import type { Post } from '@/types/database';
+import { TrendingUp, Zap, AlertCircle } from 'lucide-react';
 
-interface TrendingTickerProps {
-  initialPosts?: Post[];
+interface TickerItem {
+  id: string;
+  text: string;
+  category: 'news' | 'cricket' | 'trend' | 'gossip';
+  url?: string;
+  isLive?: boolean;
 }
 
-export function TrendingTicker({ initialPosts = [] }: TrendingTickerProps) {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+interface TickerData {
+  items: TickerItem[];
+  lastUpdated: string;
+  error?: string;
+}
+
+const CATEGORY_ICONS: Record<TickerItem['category'], React.ReactNode> = {
+  news: <TrendingUp className="w-3 h-3" />,
+  cricket: <span>🏏</span>,
+  trend: <Zap className="w-3 h-3" />,
+  gossip: <span>💫</span>,
+};
+
+const CATEGORY_COLORS: Record<TickerItem['category'], string> = {
+  news: 'text-yellow-400',
+  cricket: 'text-green-400',
+  trend: 'text-orange-400',
+  gossip: 'text-pink-400',
+};
+
+export function TrendingTicker() {
+  const [data, setData] = useState<TickerData | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    // Fetch trending posts if not provided
-    if (initialPosts.length === 0) {
-      fetchTrending();
-    }
-  }, [initialPosts]);
-
-  async function fetchTrending() {
-    try {
-      const res = await fetch('/api/posts?category=trending&limit=10');
-      if (res.ok) {
-        const data = await res.json();
-        setPosts(data.posts || []);
+    const fetchTicker = async () => {
+      try {
+        const response = await fetch('/api/ticker', {
+          next: { revalidate: 300 },
+        });
+        if (response.ok) {
+          const tickerData = await response.json();
+          setData(tickerData);
+          setError(false);
+        } else {
+          setError(true);
+        }
+      } catch {
+        setError(true);
       }
-    } catch (error) {
-      console.error('Failed to fetch trending:', error);
+    };
+
+    fetchTicker();
+
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchTicker, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!data?.items?.length) {
+    if (error) {
+      return (
+        <div className="bg-red-900/20 border-b border-red-800/30 py-1 px-4 flex items-center gap-2 text-red-400 text-xs">
+          <AlertCircle className="w-3 h-3" />
+          <span>Ticker unavailable</span>
+        </div>
+      );
     }
+    return null; // Loading or empty
   }
 
-  if (posts.length === 0) {
-    return null;
-  }
-
-  // Duplicate posts for seamless loop
-  const tickerItems = [...posts, ...posts];
+  // Duplicate items for seamless loop
+  const items = [...data.items, ...data.items];
 
   return (
-    <div className="sticky top-0 z-50 bg-[#0a0a0a] border-b border-[#262626]">
-      <div className="flex items-center">
-        {/* Breaking label */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-[#eab308] text-black font-bold shrink-0">
-          <Flame className="w-4 h-4" />
-          <span className="text-sm uppercase tracking-wide">ట్రెండింగ్</span>
+    <div
+      className="bg-gradient-to-r from-[#0a0a0a] via-[#141414] to-[#0a0a0a] border-b border-[#262626] py-1.5 overflow-hidden relative"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {/* Live indicator */}
+      {data.items.some((item) => item.isLive) && (
+        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center px-3 bg-gradient-to-r from-[#0a0a0a] to-transparent">
+          <span className="flex items-center gap-1 text-xs text-red-500 font-medium animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-red-500" />
+            LIVE
+          </span>
         </div>
+      )}
 
-        {/* Scrolling ticker */}
-        <div className="overflow-hidden flex-1">
-          <div className="animate-ticker flex whitespace-nowrap py-2">
-            {tickerItems.map((post, index) => (
-              <Link
-                key={`${post.id}-${index}`}
-                href={`/post/${post.slug}`}
-                className="inline-flex items-center px-4 hover:text-[#eab308] transition-colors"
-              >
-                <span className="text-[#eab308] mr-2">●</span>
-                <span className="text-sm">{post.title}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
+      {/* Ticker content */}
+      <div
+        className={`flex items-center gap-8 ${
+          isPaused ? '' : 'animate-ticker'
+        }`}
+        style={{
+          animationDuration: `${items.length * 5}s`,
+        }}
+      >
+        {items.map((item, index) => (
+          <TickerItemComponent key={`${item.id}-${index}`} item={item} />
+        ))}
       </div>
+
+      {/* Gradient overlays */}
+      <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#0a0a0a] to-transparent pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#0a0a0a] to-transparent pointer-events-none" />
     </div>
   );
 }
+
+function TickerItemComponent({ item }: { item: TickerItem }) {
+  const content = (
+    <span
+      className={`flex items-center gap-2 text-sm whitespace-nowrap ${CATEGORY_COLORS[item.category]}`}
+    >
+      {CATEGORY_ICONS[item.category]}
+      <span className={item.isLive ? 'font-medium' : ''}>{item.text}</span>
+      {item.isLive && (
+        <span className="text-[10px] bg-red-500 text-white px-1 py-0.5 rounded animate-pulse">
+          LIVE
+        </span>
+      )}
+    </span>
+  );
+
+  if (item.url) {
+    return (
+      <Link
+        href={item.url}
+        className="hover:opacity-80 transition-opacity cursor-pointer"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
+}
+
+export default TrendingTicker;

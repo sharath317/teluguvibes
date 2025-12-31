@@ -1,14 +1,18 @@
 /**
  * Smart Image Fetcher - Gets relevant, watermark-free images
- * Priority: TMDB (movies) > Unsplash > Pexels > Picsum
+ * Priority: Known TMDB ID > TMDB Search > Movie Poster > Wikipedia > Curated Fallback
+ *
+ * Target: 99%+ success rate for celebrity images
  */
 
 import { extractEntities } from './content-rewriter';
 import { searchMovies, detectMovieInText } from './movie-db';
+import { extractCelebrityName, extractAllCelebrities, TELUGU_NAME_MAP, TELUGU_CELEBRITIES } from './telugu-celebrities';
+import { getCelebrityTMDBData, getSearchAlternates, CelebrityTMDBData } from './celebrity-tmdb-ids';
 
 interface ImageResult {
   url: string;
-  source: 'unsplash' | 'pexels' | 'picsum';
+  source: 'tmdb' | 'unsplash' | 'pexels' | 'stock';
   query: string;
   description?: string;
 }
@@ -17,42 +21,72 @@ interface ImageResult {
 const SENSITIVE_PATTERNS = [
   /rape/i, /murder/i, /kill/i, /death/i, /suicide/i, /assault/i,
   /attack/i, /terrorist/i, /bomb/i, /accident/i, /crash/i,
-  /హత్య/, /మరణం/, /చనిపో/, /ప్రమాదం/, /దాడి/,
+  /హత్య/, /మరణం/, /చనిపో/, /ప్రమాదం/, /దాడి/, /ఆత్మహత్య/,
 ];
 
-// Category fallback images
-const CATEGORY_QUERIES: Record<string, string[]> = {
+// High-quality curated fallback images by category
+// These are reliable, free-to-use images that match Telugu entertainment themes
+const CURATED_FALLBACK_IMAGES: Record<string, string[]> = {
   entertainment: [
-    'bollywood film set',
-    'cinema hall india',
-    'movie premiere red carpet',
-    'film award ceremony',
+    'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200', // Cinema
+    'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200', // Film reel
+    'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?w=1200', // Movie theater
+    'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=1200', // Cinema seats
   ],
   sports: [
-    'cricket stadium india',
-    'IPL cricket match',
-    'sports arena crowd',
-    'cricket bat ball',
+    'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=1200', // Cricket
+    'https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?w=1200', // Cricket bat
+    'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=1200', // Stadium
+    'https://images.unsplash.com/photo-1552667466-07770ae110d0?w=1200', // Sports action
   ],
   politics: [
-    'indian parliament building',
-    'government meeting india',
-    'political rally india',
-    'delhi india government',
+    'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=1200', // Parliament
+    'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=1200', // Government
+    'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200', // Meeting
+    'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200', // Office
   ],
   gossip: [
-    'celebrity red carpet',
-    'glamour fashion india',
-    'celebrity event',
-    'star party event',
+    'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=1200', // Celebrity
+    'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=1200', // Event
+    'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200', // Party
+    'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1200', // Celebration
   ],
   trending: [
-    'social media smartphone',
-    'viral content phone',
-    'trending news india',
-    'breaking news studio',
+    'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=1200', // Social media
+    'https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?w=1200', // Trending
+    'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200', // News
+    'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=1200', // Breaking news
+  ],
+  movies: [
+    'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=1200', // Film
+    'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=1200', // Director chair
+    'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=1200', // Movie set
+    'https://images.unsplash.com/photo-1616530940355-351fabd9524b?w=1200', // Clapperboard
+  ],
+  celebrity: [
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200', // Portrait
+    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=1200', // Professional
+    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=1200', // Suit
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=1200', // Male portrait
+  ],
+  technology: [
+    'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200', // Tech
+    'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200', // Coding
+    'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200', // Devices
+  ],
+  health: [
+    'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=1200', // Health
+    'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200', // Medical
+  ],
+  sensitive: [
+    'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200', // Abstract gradient
+    'https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=1200', // Purple gradient
+    'https://images.unsplash.com/photo-1557682224-5b8590cd9ec5?w=1200', // Blue gradient
   ],
 };
+
+// Celebrity data is now imported from telugu-celebrities.ts
+// Contains 300+ Telugu celebrities with Telugu-English name mappings
 
 /**
  * Check if content is sensitive
@@ -62,11 +96,31 @@ function isSensitive(text: string): boolean {
 }
 
 /**
+ * Get a curated fallback image for a category
+ */
+function getCuratedFallback(category: string, seed: string): ImageResult {
+  const images = CURATED_FALLBACK_IMAGES[category] || CURATED_FALLBACK_IMAGES.trending;
+  // Use seed to consistently pick same image for same content
+  const hash = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const index = hash % images.length;
+
+  return {
+    url: images[index],
+    source: 'stock',
+    query: category,
+    description: `${category} themed image`,
+  };
+}
+
+/**
  * Search Unsplash for images
  */
 async function searchUnsplash(query: string, count: number = 5): Promise<ImageResult[]> {
   const accessKey = process.env.UNSPLASH_ACCESS_KEY;
-  if (!accessKey) return [];
+  if (!accessKey) {
+    console.log(`   ⚠️ No UNSPLASH_ACCESS_KEY configured`);
+    return [];
+  }
 
   try {
     const response = await fetch(
@@ -74,7 +128,10 @@ async function searchUnsplash(query: string, count: number = 5): Promise<ImageRe
       { headers: { Authorization: `Client-ID ${accessKey}` } }
     );
 
-    if (!response.ok) return [];
+    if (!response.ok) {
+      console.log(`   ⚠️ Unsplash API error: ${response.status}`);
+      return [];
+    }
 
     const data = await response.json();
     return (data.results || []).map((photo: any) => ({
@@ -94,7 +151,10 @@ async function searchUnsplash(query: string, count: number = 5): Promise<ImageRe
  */
 async function searchPexels(query: string, count: number = 5): Promise<ImageResult[]> {
   const apiKey = process.env.PEXELS_API_KEY;
-  if (!apiKey) return [];
+  if (!apiKey) {
+    console.log(`   ⚠️ No PEXELS_API_KEY configured`);
+    return [];
+  }
 
   try {
     const response = await fetch(
@@ -102,7 +162,10 @@ async function searchPexels(query: string, count: number = 5): Promise<ImageResu
       { headers: { Authorization: apiKey } }
     );
 
-    if (!response.ok) return [];
+    if (!response.ok) {
+      console.log(`   ⚠️ Pexels API error: ${response.status}`);
+      return [];
+    }
 
     const data = await response.json();
     return (data.photos || []).map((photo: any) => ({
@@ -118,96 +181,180 @@ async function searchPexels(query: string, count: number = 5): Promise<ImageResu
 }
 
 /**
- * Get picsum fallback
+ * Get TMDB person image by known ID (fastest and most reliable)
  */
-function getPicsumUrl(seed: string): ImageResult {
-  const safeSeed = seed.replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) || 'default';
-  return {
-    url: `https://picsum.photos/seed/${safeSeed}/800/600`,
-    source: 'picsum',
-    query: seed,
-  };
-}
-
-/**
- * Build search queries based on content analysis
- */
-function buildSearchQueries(title: string, content: string, category: string): string[] {
-  const fullText = `${title} ${content}`;
-  const queries: string[] = [];
-
-  // Check for sensitive content first
-  if (isSensitive(fullText)) {
-    return ['abstract gradient pattern', 'abstract colorful background'];
-  }
-
-  // Extract entities
-  const entities = extractEntities(fullText);
-
-  // Priority 1: Celebrities (most specific)
-  if (entities.celebrities.length > 0) {
-    // Search for celebrity name + context
-    const celeb = entities.celebrities[0];
-    queries.push(`${celeb} portrait`);
-    queries.push(`${celeb} celebrity`);
-
-    // Add context-aware search
-    if (fullText.toLowerCase().includes('movie') || fullText.toLowerCase().includes('film')) {
-      queries.push(`${celeb} movie`);
-    }
-    if (fullText.toLowerCase().includes('ipl') || fullText.toLowerCase().includes('cricket')) {
-      queries.push(`${celeb} cricket`);
-    }
-  }
-
-  // Priority 2: Politicians
-  if (entities.politicians.length > 0) {
-    const politician = entities.politicians[0];
-    queries.push(`${politician} politician`);
-    queries.push(`india politics government`);
-  }
-
-  // Priority 3: Topics
-  if (entities.topics.length > 0) {
-    queries.push(...entities.topics.slice(0, 2));
-  }
-
-  // Priority 4: Category fallbacks
-  const categoryQueries = CATEGORY_QUERIES[category] || CATEGORY_QUERIES.trending;
-  queries.push(...categoryQueries.slice(0, 2));
-
-  return queries;
-}
-
-/**
- * Search TMDB for person/celebrity photos
- */
-async function searchTMDBPerson(personName: string): Promise<ImageResult | null> {
+async function getTMDBPersonById(tmdbId: number, personName: string): Promise<ImageResult | null> {
   const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
   if (!apiKey) return null;
 
   try {
     const response = await fetch(
-      `https://api.themoviedb.org/3/search/person?api_key=${apiKey}&query=${encodeURIComponent(personName)}&language=en-US`
+      `https://api.themoviedb.org/3/person/${tmdbId}?api_key=${apiKey}&language=en-US`
     );
 
     if (!response.ok) return null;
 
-    const data = await response.json();
-    const person = data.results?.[0];
-
-    if (person && person.profile_path) {
-      console.log(`   👤 Found TMDB person: ${person.name}`);
+    const person = await response.json();
+    if (person.profile_path) {
+      console.log(`   ✅ Got TMDB person by ID: ${person.name} (ID: ${tmdbId})`);
       return {
         url: `https://image.tmdb.org/t/p/w500${person.profile_path}`,
-        source: 'unsplash' as const,
+        source: 'tmdb',
         query: personName,
         description: `${person.name} photo`,
       };
     }
   } catch (error) {
-    console.error('TMDB person search error:', error);
+    console.error(`TMDB person ID lookup error:`, error);
   }
+  return null;
+}
+
+/**
+ * Get movie poster as fallback for celebrity without profile image
+ */
+async function getTMDBMoviePosterById(movieId: number, personName: string): Promise<ImageResult | null> {
+  const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=en-US`
+    );
+
+    if (!response.ok) return null;
+
+    const movie = await response.json();
+    if (movie.poster_path) {
+      console.log(`   🎬 Using movie poster fallback: ${movie.title}`);
+      return {
+        url: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+        source: 'tmdb',
+        query: personName,
+        description: `${movie.title} movie poster (featuring ${personName})`,
+      };
+    }
+    if (movie.backdrop_path) {
+      return {
+        url: `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}`,
+        source: 'tmdb',
+        query: personName,
+        description: `${movie.title} movie backdrop`,
+      };
+    }
+  } catch (error) {
+    console.error(`TMDB movie lookup error:`, error);
+  }
+  return null;
+}
+
+/**
+ * Search Wikipedia for person image (fallback)
+ */
+async function searchWikipediaImage(personName: string): Promise<ImageResult | null> {
+  try {
+    // Use Wikipedia API to get page image
+    const response = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(personName.replace(/ /g, '_'))}`
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (data.thumbnail?.source) {
+      // Get higher resolution version
+      const highResUrl = data.thumbnail.source.replace(/\/\d+px-/, '/500px-');
+      console.log(`   📚 Found Wikipedia image for: ${personName}`);
+      return {
+        url: highResUrl,
+        source: 'stock', // Mark as stock since Wikipedia images have various licenses
+        query: personName,
+        description: `${personName} from Wikipedia`,
+      };
+    }
+  } catch (error) {
+    console.error(`Wikipedia image search error:`, error);
+  }
+  return null;
+}
+
+/**
+ * Search TMDB for person/celebrity photos with multiple strategies
+ */
+async function searchTMDBPerson(personName: string): Promise<ImageResult | null> {
+  const apiKey = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY;
+  if (!apiKey) {
+    console.log(`   ⚠️ No TMDB_API_KEY configured`);
+    return null;
+  }
+
+  // Strategy 1: Check if we have a known TMDB ID for this celebrity
+  const knownData = getCelebrityTMDBData(personName);
+  if (knownData) {
+    console.log(`   🔑 Found known TMDB ID for ${personName}: ${knownData.tmdbId}`);
+
+    // Try direct ID lookup first (fastest and most reliable)
+    if (knownData.hasImage) {
+      const result = await getTMDBPersonById(knownData.tmdbId, personName);
+      if (result) return result;
+    }
+
+    // If no profile image, try movie poster fallback
+    if (knownData.fallbackMovieId) {
+      const movieResult = await getTMDBMoviePosterById(knownData.fallbackMovieId, personName);
+      if (movieResult) return movieResult;
+    }
+  }
+
+  // Strategy 2: Search TMDB API with the name
+  const searchQueries = getSearchAlternates(personName);
+
+  for (const query of searchQueries) {
+    try {
+      const response = await fetch(
+        `https://api.themoviedb.org/3/search/person?api_key=${apiKey}&query=${encodeURIComponent(query)}&language=en-US`
+      );
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+
+      // Find best match with profile image
+      for (const person of (data.results || [])) {
+        if (person.profile_path) {
+          console.log(`   👤 Found TMDB person: ${person.name} (${person.known_for_department})`);
+          return {
+            url: `https://image.tmdb.org/t/p/w500${person.profile_path}`,
+            source: 'tmdb',
+            query: personName,
+            description: `${person.name} photo`,
+          };
+        }
+      }
+
+      // If found but no image, try their known_for movies
+      if (data.results?.[0]?.known_for?.length > 0) {
+        const movie = data.results[0].known_for.find((m: any) => m.poster_path);
+        if (movie) {
+          console.log(`   🎬 Using known_for movie: ${movie.title || movie.name}`);
+          return {
+            url: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+            source: 'tmdb',
+            query: personName,
+            description: `${movie.title || movie.name} poster (featuring ${personName})`,
+          };
+        }
+      }
+    } catch (error) {
+      console.error(`TMDB search error for "${query}":`, error);
+    }
+  }
+
+  // Strategy 3: Try Wikipedia as fallback
+  const wikiResult = await searchWikipediaImage(personName);
+  if (wikiResult) return wikiResult;
+
+  console.log(`   ⚠️ No image found for: ${personName}`);
   return null;
 }
 
@@ -218,9 +365,10 @@ async function searchTMDBPoster(movieName: string): Promise<ImageResult | null> 
   try {
     const movies = await searchMovies(movieName);
     if (movies.length > 0 && movies[0].posterUrl) {
+      console.log(`   🎬 Found TMDB movie: ${movies[0].title}`);
       return {
         url: movies[0].posterUrl,
-        source: 'unsplash' as const, // Mark as unsplash for consistency
+        source: 'tmdb',
         query: movieName,
         description: `${movies[0].title} movie poster`,
       };
@@ -229,7 +377,7 @@ async function searchTMDBPoster(movieName: string): Promise<ImageResult | null> 
     if (movies.length > 0 && movies[0].backdropUrl) {
       return {
         url: movies[0].backdropUrl,
-        source: 'unsplash' as const,
+        source: 'tmdb',
         query: movieName,
         description: `${movies[0].title} movie backdrop`,
       };
@@ -240,118 +388,20 @@ async function searchTMDBPoster(movieName: string): Promise<ImageResult | null> 
   return null;
 }
 
-// Telugu to English name mappings
-const TELUGU_NAME_MAP: Record<string, string> = {
-  'అల్లు అర్జున్': 'Allu Arjun',
-  'అల్లు శిరీష్': 'Allu Sirish',
-  'మహేష్ బాబు': 'Mahesh Babu',
-  'ప్రభాస్': 'Prabhas',
-  'జూనియర్ ఎన్టీఆర్': 'Jr NTR',
-  'రామ్ చరణ్': 'Ram Charan',
-  'విజయ్ దేవరకొండ': 'Vijay Deverakonda',
-  'నాని': 'Nani',
-  'రవి తేజ': 'Ravi Teja',
-  'పవన్ కల్యాణ్': 'Pawan Kalyan',
-  'చిరంజీవి': 'Chiranjeevi',
-  'నాగార్జున': 'Nagarjuna',
-  'సమంత': 'Samantha',
-  'రష్మిక': 'Rashmika Mandanna',
-  'పూజా హెగ్డే': 'Pooja Hegde',
-  'అనుష్క': 'Anushka Shetty',
-  'తమన్నా': 'Tamanna',
-  'సాయి పల్లవి': 'Sai Pallavi',
-  'కీర్తి సురేష్': 'Keerthy Suresh',
-  'రాజమౌళి': 'SS Rajamouli',
-  'సుకుమార్': 'Sukumar',
-  'త్రివిక్రమ్': 'Trivikram',
-  'విరాట్ కోహ్లీ': 'Virat Kohli',
-  'ధోనీ': 'MS Dhoni',
-  'రోహిత్ శర్మ': 'Rohit Sharma',
-  // Directors & Producers
-  'రామ్‌గోపాల్ వర్మ': 'Ram Gopal Varma',
-  'రామ్ గోపాల్ వర్మ': 'Ram Gopal Varma',
-  'ఆర్జీవీ': 'Ram Gopal Varma',
-  'వర్మ': 'Ram Gopal Varma',
-  // Politicians & Public figures
-  'శివాజీ': 'Sivaji',
-  // More actors
-  'బాలకృష్ణ': 'Nandamuri Balakrishna',
-  'మోహన్ బాబు': 'Mohan Babu',
-  'మంచు విష్ణు': 'Manchu Vishnu',
-  'మంచు మనోజ్': 'Manchu Manoj',
-  'నాగ శౌర్య': 'Naga Shaurya',
-  'సునీల్': 'Sunil',
-  'బ్రహ్మానందం': 'Brahmanandam',
-  'అలీ': 'Ali',
-};
-
-// Known Telugu celebrities for quick matching
-const TELUGU_CELEBRITIES = [
-  // Actors
-  'Allu Arjun', 'Allu Sirish', 'Mahesh Babu', 'Prabhas', 'Jr NTR', 'Ram Charan',
-  'Vijay Deverakonda', 'Nani', 'Ravi Teja', 'Pawan Kalyan', 'Chiranjeevi',
-  'Nagarjuna', 'Venkatesh', 'Rana Daggubati', 'Varun Tej', 'Naga Chaitanya',
-  'Sharwanand', 'Siddharth', 'Nithin', 'Sudheer Babu', 'Naveen Polishetty',
-  'Nandamuri Balakrishna', 'Mohan Babu', 'Manchu Vishnu', 'Manchu Manoj',
-  'Naga Shaurya', 'Sunil', 'Brahmanandam', 'Ali', 'Sivaji',
-  // Actresses
-  'Samantha', 'Rashmika Mandanna', 'Pooja Hegde', 'Anushka Shetty', 'Kajal Aggarwal',
-  'Tamanna', 'Rakul Preet', 'Keerthy Suresh', 'Sai Pallavi', 'Shruti Haasan',
-  'Kiara Advani', 'Sreeleela', 'Nayanthara', 'Trisha', 'Hansika', 'Malavika Mohanan',
-  // Directors & Producers
-  'SS Rajamouli', 'Trivikram', 'Sukumar', 'Koratala Siva', 'Prashanth Neel',
-  'Ram Gopal Varma', 'RGV', 'Puri Jagannadh', 'Boyapati Srinu', 'Harish Shankar',
-  'Anil Ravipudi', 'Vamshi Paidipally', 'Raghavendra Rao', 'Dil Raju',
-  // Cricket
-  'Virat Kohli', 'MS Dhoni', 'Rohit Sharma', 'Hardik Pandya', 'KL Rahul',
-];
-
 /**
- * Extract celebrity name from text (supports Telugu and English)
+ * Detect category from content
  */
-function extractCelebrityName(text: string): string | null {
-  // First check Telugu name mappings
-  for (const [teluguName, englishName] of Object.entries(TELUGU_NAME_MAP)) {
-    if (text.includes(teluguName)) {
-      console.log(`   🔤 Matched Telugu name: "${teluguName}" → "${englishName}"`);
-      return englishName;
-    }
-  }
-
+function detectCategory(text: string): string {
   const lowerText = text.toLowerCase();
 
-  // Check English celebrity names
-  for (const celeb of TELUGU_CELEBRITIES) {
-    // Check for exact match or partial match
-    if (lowerText.includes(celeb.toLowerCase())) {
-      return celeb;
-    }
-    // Check first name only (e.g., "Allu" for Allu family)
-    const firstName = celeb.split(' ')[0];
-    if (firstName.length > 4 && lowerText.includes(firstName.toLowerCase())) {
-      return celeb;
-    }
-    // Check last name for unique surnames
-    const lastName = celeb.split(' ').pop() || '';
-    if (lastName.length > 5 && lowerText.includes(lastName.toLowerCase())) {
-      return celeb;
-    }
-  }
+  if (/cricket|ipl|match|wicket|బ్యాట్|క్రికెట్/.test(lowerText)) return 'sports';
+  if (/movie|film|సినిమా|మూవీ|release|trailer|ott/.test(lowerText)) return 'movies';
+  if (/politics|election|minister|ఎన్నిక|మంత్రి|ముఖ్యమంత్రి|అసెంబ్లీ/.test(lowerText)) return 'politics';
+  if (/marriage|wedding|పెళ్లి|వివాహం|gossip/.test(lowerText)) return 'gossip';
+  if (/tech|satellite|space|app|అంతరిక్ష/.test(lowerText)) return 'technology';
+  if (/health|medical|ఆరోగ్య/.test(lowerText)) return 'health';
 
-  // Special handling for "Shirish" / "శిరీష్" - common variations
-  if (lowerText.includes('shirish') || text.includes('శిరీష్')) {
-    return 'Allu Sirish';
-  }
-
-  // Try to find capitalized names that look like person names
-  const namePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g;
-  const matches = text.match(namePattern);
-  if (matches && matches.length > 0) {
-    // Return the first multi-word capitalized name
-    return matches[0];
-  }
-
-  return null;
+  return 'trending';
 }
 
 /**
@@ -363,76 +413,72 @@ export async function fetchRelevantImage(
   category: string
 ): Promise<ImageResult> {
   const fullText = `${title} ${content}`;
+  const detectedCategory = detectCategory(fullText) || category;
 
-  console.log(`\n🔍 [ImageFetch] "${title.substring(0, 50)}..."`);
+  console.log(`\n🔍 [ImageFetch] "${title.substring(0, 60)}..."`);
+  console.log(`   Category: ${category} (detected: ${detectedCategory})`);
 
-  // Priority 0: Check for celebrity/person name - search TMDB for their photo
+  // Check for sensitive content first
+  if (isSensitive(fullText)) {
+    console.log(`   ⚠️ Sensitive content detected - using abstract image`);
+    return getCuratedFallback('sensitive', title);
+  }
+
+  // Priority 1: Check for celebrity/person name - search TMDB for their photo
   const celebrityName = extractCelebrityName(fullText);
   if (celebrityName) {
     console.log(`   👤 Detected celebrity: "${celebrityName}"`);
     const personResult = await searchTMDBPerson(celebrityName);
     if (personResult) {
-      console.log(`   ✅ Found TMDB person photo: "${personResult.description}"`);
+      console.log(`   ✅ Found TMDB person photo`);
       return personResult;
     }
   }
 
-  // Priority 1: Check if this is about a movie - use TMDB for official poster
+  // Priority 2: Check if this is about a movie - use TMDB for official poster
   const detectedMovie = detectMovieInText(fullText);
   if (detectedMovie) {
     console.log(`   🎬 Detected movie: "${detectedMovie}"`);
     const tmdbResult = await searchTMDBPoster(detectedMovie);
     if (tmdbResult) {
-      console.log(`   ✅ Found TMDB poster: "${tmdbResult.description}"`);
+      console.log(`   ✅ Found TMDB poster`);
       return tmdbResult;
     }
   }
 
-  // Priority 2: Check for movie-related keywords and search TMDB
-  const movieKeywords = ['movie', 'film', 'సినిమా', 'మూవీ', 'box office', 'trailer', 'teaser', 'ott', 'release'];
-  const hasMovieContext = movieKeywords.some(kw => fullText.toLowerCase().includes(kw));
+  // Priority 3: Try Unsplash with category-specific queries
+  const categoryQueries: Record<string, string[]> = {
+    entertainment: ['indian cinema', 'film industry india', 'bollywood'],
+    sports: ['cricket match india', 'IPL cricket', 'indian cricket'],
+    politics: ['indian parliament', 'government meeting', 'political rally india'],
+    gossip: ['celebrity event india', 'red carpet bollywood', 'glamour party'],
+    movies: ['movie theater india', 'film premiere', 'cinema india'],
+    trending: ['social media india', 'breaking news', 'viral trend'],
+    technology: ['technology innovation', 'satellite space', 'digital india'],
+    health: ['healthcare india', 'medical wellness'],
+  };
 
-  if (hasMovieContext && category === 'entertainment') {
-    // Try to extract movie name from title
-    const titleWords = title.split(/[\s\-:,|]+/).filter(w => w.length > 3);
-    for (const word of titleWords.slice(0, 3)) {
-      if (word.match(/^[A-Z]/) || word.match(/^[\u0C00-\u0C7F]/)) { // Capitalized or Telugu
-        const tmdbResult = await searchTMDBPoster(word);
-        if (tmdbResult) {
-          console.log(`   ✅ Found TMDB poster for "${word}": "${tmdbResult.description}"`);
-          return tmdbResult;
-        }
-      }
-    }
-  }
+  const queries = categoryQueries[detectedCategory] || categoryQueries.trending;
 
-  // Priority 3: Build search queries for Unsplash/Pexels
-  const queries = buildSearchQueries(title, content, category);
-  console.log(`   Queries: ${queries.slice(0, 3).join(' | ')}`);
-
-  // Try each query until we find a good image
-  for (const query of queries) {
-    // Try Unsplash first (best quality, no watermarks)
+  for (const query of queries.slice(0, 2)) {
     const unsplashResults = await searchUnsplash(query, 3);
     if (unsplashResults.length > 0) {
-      const result = unsplashResults[Math.floor(Math.random() * unsplashResults.length)];
-      console.log(`   ✅ Found on Unsplash: "${result.description || query}"`);
+      const result = unsplashResults[0];
+      console.log(`   ✅ Found on Unsplash: "${query}"`);
       return result;
     }
 
-    // Try Pexels (also good quality, no watermarks)
     const pexelsResults = await searchPexels(query, 3);
     if (pexelsResults.length > 0) {
-      const result = pexelsResults[Math.floor(Math.random() * pexelsResults.length)];
-      console.log(`   ✅ Found on Pexels: "${result.description || query}"`);
+      const result = pexelsResults[0];
+      console.log(`   ✅ Found on Pexels: "${query}"`);
       return result;
     }
   }
 
-  // Fallback to picsum with category-based seed
-  console.log(`   ⚠️ Fallback to Picsum`);
-  const fallbackQuery = CATEGORY_QUERIES[category]?.[0] || 'news';
-  return getPicsumUrl(fallbackQuery);
+  // Priority 4: Use curated fallback images (guaranteed to work)
+  console.log(`   📷 Using curated ${detectedCategory} fallback image`);
+  return getCuratedFallback(detectedCategory, title);
 }
 
 /**

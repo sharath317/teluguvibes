@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, RefreshCw, Check, X, ExternalLink, Edit, Newspaper, Image as ImageIcon } from 'lucide-react';
+import { TrendingUp, RefreshCw, Check, X, ExternalLink, Edit, Newspaper, Image as ImageIcon, Sparkles, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import type { Post } from '@/types/database';
 
@@ -27,6 +27,8 @@ export default function DraftsPage() {
   const [importing, setImporting] = useState(false);
   const [importingNews, setImportingNews] = useState(false);
   const [fetchingDrafts, setFetchingDrafts] = useState(true);
+  const [enriching, setEnriching] = useState<string | null>(null); // postId being enriched
+  const [enrichingAll, setEnrichingAll] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -152,6 +154,58 @@ export default function DraftsPage() {
     }
   }
 
+  // Enrich a single draft with better content & images
+  async function enrichDraft(id: string) {
+    setEnriching(id);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: id }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setMessage({
+          type: 'success',
+          text: `✨ Enriched! Source: ${data.source}, Content: ${data.changes?.contentLength} chars`
+        });
+        fetchDrafts(); // Refresh to show updated content
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to enrich' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to enrich draft' });
+    } finally {
+      setEnriching(null);
+    }
+  }
+
+  // Enrich all drafts that need better content
+  async function enrichAllDrafts() {
+    setEnrichingAll(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/enrich?status=draft&limit=20');
+      const data = await res.json();
+
+      if (res.ok) {
+        setMessage({
+          type: 'success',
+          text: `✨ Enriched ${data.enriched} drafts (${data.failed} failed)`
+        });
+        fetchDrafts();
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to enrich' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to enrich drafts' });
+    } finally {
+      setEnrichingAll(false);
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -252,14 +306,25 @@ PEXELS_API_KEY=your_key_here`}
             <h2 className="text-lg font-bold text-white">
               Pending Drafts ({drafts.length})
             </h2>
-            <button
-              onClick={fetchDrafts}
-              disabled={fetchingDrafts}
-              className="text-xs flex items-center gap-1 px-3 py-1 bg-[#262626] text-gray-300 rounded hover:bg-[#363636] transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3 h-3 ${fetchingDrafts ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={enrichAllDrafts}
+                disabled={enrichingAll || drafts.length === 0}
+                className="text-xs flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50"
+                title="Enrich all drafts with Telugu content & images"
+              >
+                <Sparkles className={`w-3 h-3 ${enrichingAll ? 'animate-pulse' : ''}`} />
+                {enrichingAll ? 'Enriching...' : 'Enrich All'}
+              </button>
+              <button
+                onClick={fetchDrafts}
+                disabled={fetchingDrafts}
+                className="text-xs flex items-center gap-1 px-3 py-1 bg-[#262626] text-gray-300 rounded hover:bg-[#363636] transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${fetchingDrafts ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
           </div>
 
           {fetchingDrafts ? (
@@ -290,11 +355,58 @@ PEXELS_API_KEY=your_key_here`}
                 >
                   <div className="flex-1 min-w-0 mr-4">
                     <h3 className="text-white truncate">{draft.title}</h3>
-                    <p className="text-xs text-[#737373]">
-                      {new Date(draft.created_at).toLocaleDateString()} • {draft.category}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#737373]">
+                      <span>{new Date(draft.created_at).toLocaleDateString()}</span>
+                      <span>•</span>
+                      <span>{draft.category}</span>
+                      {/* Content quality indicator */}
+                      {(() => {
+                        const contentLen = draft.telugu_body?.length || 0;
+                        if (contentLen < 200) {
+                          return (
+                            <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-[10px]">
+                              ⚠️ {contentLen} chars
+                            </span>
+                          );
+                        } else if (contentLen < 500) {
+                          return (
+                            <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-[10px]">
+                              📝 {contentLen} chars
+                            </span>
+                          );
+                        } else {
+                          return (
+                            <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-[10px]">
+                              ✅ {contentLen} chars
+                            </span>
+                          );
+                        }
+                      })()}
+                      {/* Image indicator */}
+                      {draft.image_url ? (
+                        <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-[10px]">
+                          🖼️
+                        </span>
+                      ) : draft.image_urls && draft.image_urls.length > 0 ? (
+                        <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded text-[10px]">
+                          📷 Stock
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-[10px]">
+                          ❌ No img
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => enrichDraft(draft.id)}
+                      disabled={enriching === draft.id}
+                      className="p-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors disabled:opacity-50"
+                      title="Enrich with Telugu content & images"
+                    >
+                      <Wand2 className={`w-4 h-4 text-purple-400 ${enriching === draft.id ? 'animate-pulse' : ''}`} />
+                    </button>
                     <Link
                       href={`/admin/posts/${draft.id}/edit`}
                       className="p-2 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors"
