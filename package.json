@@ -35,7 +35,12 @@
     "hot:ingest:smart": "npx tsx scripts/hot-ingest.ts --smart",
     "hot:ingest:full": "npx tsx scripts/hot-ingest.ts --full",
     "hot:ingest:refresh": "npx tsx scripts/hot-ingest.ts --refresh",
-    "hot:reset": "npx tsx scripts/hot-ingest.ts --reset"
+    "hot:reset": "npx tsx scripts/hot-ingest.ts --reset",
+    "ingest:social": "npx tsx scripts/ingest-social.ts",
+    "ingest:social:dry": "npx tsx scripts/ingest-social.ts --dry",
+    "ingest:social:wikidata": "npx tsx scripts/ingest-social.ts --source=wikidata",
+    "ingest:social:tmdb": "npx tsx scripts/ingest-social.ts --source=tmdb",
+    "ingest:social:update": "npx tsx scripts/ingest-social.ts --update"
   },
   "dependencies": {
     "@auth/core": "^0.41.0",
