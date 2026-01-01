@@ -73,3 +73,21 @@ export {
   type SafetyFlag,
 } from './safety-validators';
 
+// Platform Capabilities
+export {
+  PLATFORM_CAPABILITIES,
+  getPlatformCapability,
+  supportsEmbed,
+  getEmbedLevel,
+  getHotContentPriorityOrder,
+  getEmbeddablePlatforms,
+  getWikidataProperties,
+  detectPlatformFromUrl,
+  getEmbedBadge,
+  getPlatformLegalNotes,
+  HOT_CONTENT_PLATFORM_PRIORITY,
+  NO_EMBED_PLATFORMS,
+  type PlatformType,
+  type PlatformCapability,
+} from './platform-capabilities';
+

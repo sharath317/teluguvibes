@@ -15,7 +15,7 @@ import { BaseFetcher } from '../sources/base-fetcher';
 
 // Types
 export interface SocialHandle {
-  platform: 'instagram' | 'youtube' | 'twitter' | 'facebook' | 'tiktok' | 'wikipedia' | 'imdb' | 'official_website';
+  platform: 'instagram' | 'youtube' | 'twitter' | 'facebook' | 'tiktok' | 'snapchat' | 'wikipedia' | 'imdb' | 'official_website';
   handle: string;
   profile_url: string;
   source: 'wikidata' | 'wikipedia' | 'tmdb' | 'official_site' | 'manual';
@@ -39,6 +39,7 @@ const WIKIDATA_SOCIAL_PROPS = {
   youtube: 'P2397',
   facebook: 'P2013',
   tiktok: 'P7085',
+  snapchat: 'P11012',  // Added Snapchat
   imdb: 'P345',
   official_website: 'P856',
 };
@@ -70,6 +71,7 @@ SELECT ?property ?propertyLabel ?value WHERE {
     wdt:${WIKIDATA_SOCIAL_PROPS.youtube}
     wdt:${WIKIDATA_SOCIAL_PROPS.facebook}
     wdt:${WIKIDATA_SOCIAL_PROPS.tiktok}
+    wdt:${WIKIDATA_SOCIAL_PROPS.snapchat}
     wdt:${WIKIDATA_SOCIAL_PROPS.imdb}
     wdt:${WIKIDATA_SOCIAL_PROPS.official_website}
   }
@@ -114,6 +116,8 @@ SELECT DISTINCT
   ?twitter
   ?youtube
   ?facebook
+  ?tiktok
+  ?snapchat
   ?imdb
   ?website
 WHERE {
@@ -136,11 +140,13 @@ WHERE {
   OPTIONAL { ?person wdt:${WIKIDATA_SOCIAL_PROPS.twitter} ?twitter. }
   OPTIONAL { ?person wdt:${WIKIDATA_SOCIAL_PROPS.youtube} ?youtube. }
   OPTIONAL { ?person wdt:${WIKIDATA_SOCIAL_PROPS.facebook} ?facebook. }
+  OPTIONAL { ?person wdt:${WIKIDATA_SOCIAL_PROPS.tiktok} ?tiktok. }
+  OPTIONAL { ?person wdt:${WIKIDATA_SOCIAL_PROPS.snapchat} ?snapchat. }
   OPTIONAL { ?person wdt:${WIKIDATA_SOCIAL_PROPS.imdb} ?imdb. }
   OPTIONAL { ?person wdt:${WIKIDATA_SOCIAL_PROPS.official_website} ?website. }
   
   # At least one social handle must exist
-  FILTER(BOUND(?instagram) || BOUND(?twitter) || BOUND(?youtube) || BOUND(?facebook))
+  FILTER(BOUND(?instagram) || BOUND(?twitter) || BOUND(?youtube) || BOUND(?facebook) || BOUND(?tiktok))
   
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 }
@@ -251,6 +257,29 @@ LIMIT ${limit}`;
         });
       }
 
+      // TikTok
+      if (binding.tiktok?.value) {
+        handles.push({
+          platform: 'tiktok',
+          handle: this.cleanHandle(binding.tiktok.value, 'tiktok'),
+          profile_url: `https://www.tiktok.com/@${this.cleanHandle(binding.tiktok.value, 'tiktok')}`,
+          source: 'wikidata',
+          confidence_score: 0.8,
+        });
+      }
+
+      // Snapchat (metadata only - no embed support)
+      if (binding.snapchat?.value) {
+        handles.push({
+          platform: 'snapchat',
+          handle: binding.snapchat.value,
+          profile_url: `https://www.snapchat.com/add/${binding.snapchat.value}`,
+          source: 'wikidata',
+          confidence_score: 0.8,
+          metadata: { embed_supported: false },
+        });
+      }
+
       // IMDB
       if (binding.imdb?.value) {
         handles.push({
@@ -288,6 +317,7 @@ LIMIT ${limit}`;
       [WIKIDATA_SOCIAL_PROPS.youtube]: 'youtube',
       [WIKIDATA_SOCIAL_PROPS.facebook]: 'facebook',
       [WIKIDATA_SOCIAL_PROPS.tiktok]: 'tiktok',
+      [WIKIDATA_SOCIAL_PROPS.snapchat]: 'snapchat',
       [WIKIDATA_SOCIAL_PROPS.imdb]: 'imdb',
       [WIKIDATA_SOCIAL_PROPS.official_website]: 'official_website',
     };
@@ -330,6 +360,8 @@ LIMIT ${limit}`;
         return `https://www.facebook.com/${handle}`;
       case 'tiktok':
         return `https://www.tiktok.com/@${handle}`;
+      case 'snapchat':
+        return `https://www.snapchat.com/add/${handle}`;
       case 'imdb':
         return `https://www.imdb.com/name/${handle}/`;
       case 'official_website':
@@ -484,6 +516,32 @@ export class WikipediaSocialAdapter {
           handle: pathParts[1],
           profile_url: `https://www.imdb.com/name/${pathParts[1]}/`,
         };
+      }
+
+      // TikTok
+      if (hostname.includes('tiktok.com')) {
+        const handle = pathParts[0]?.startsWith('@') 
+          ? pathParts[0].slice(1) 
+          : pathParts[0];
+        if (handle && !['discover', 'live', 'upload', 'search'].includes(handle)) {
+          return {
+            platform: 'tiktok',
+            handle,
+            profile_url: `https://www.tiktok.com/@${handle}`,
+          };
+        }
+      }
+
+      // Snapchat (metadata only - NO EMBED)
+      if (hostname.includes('snapchat.com')) {
+        const handle = pathParts[0] === 'add' ? pathParts[1] : pathParts[0];
+        if (handle && !['add', 'discover', 'spotlight'].includes(handle)) {
+          return {
+            platform: 'snapchat',
+            handle,
+            profile_url: `https://www.snapchat.com/add/${handle}`,
+          };
+        }
       }
     } catch {
       // Invalid URL

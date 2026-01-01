@@ -75,14 +75,17 @@ const PLATFORM_RULES: Record<string, {
   minLength: number;
   maxLength: number;
   pattern?: RegExp;
+  embedSupported?: boolean;
+  confidenceBonus?: number;
 }> = {
-  instagram: { minLength: 1, maxLength: 30, pattern: /^[\w.]+$/ },
-  twitter: { minLength: 1, maxLength: 15, pattern: /^[\w]+$/ },
-  youtube: { minLength: 1, maxLength: 100 },
-  facebook: { minLength: 1, maxLength: 50 },
-  tiktok: { minLength: 1, maxLength: 24, pattern: /^[\w.]+$/ },
-  imdb: { minLength: 7, maxLength: 10, pattern: /^nm\d+$/ },
-  official_website: { minLength: 3, maxLength: 200 },
+  instagram: { minLength: 1, maxLength: 30, pattern: /^[\w.]+$/, embedSupported: true, confidenceBonus: 0.1 },
+  twitter: { minLength: 1, maxLength: 15, pattern: /^[\w]+$/, embedSupported: true, confidenceBonus: 0 },
+  youtube: { minLength: 1, maxLength: 100, embedSupported: true, confidenceBonus: 0.05 },
+  facebook: { minLength: 1, maxLength: 50, embedSupported: true, confidenceBonus: 0 },
+  tiktok: { minLength: 1, maxLength: 24, pattern: /^[\w.]+$/, embedSupported: true, confidenceBonus: 0.05 },
+  snapchat: { minLength: 1, maxLength: 15, pattern: /^[\w._]+$/, embedSupported: false, confidenceBonus: -0.1 },
+  imdb: { minLength: 7, maxLength: 10, pattern: /^nm\d+$/, embedSupported: false, confidenceBonus: 0.1 },
+  official_website: { minLength: 3, maxLength: 200, embedSupported: false, confidenceBonus: 0 },
 };
 
 /**
@@ -244,6 +247,36 @@ export function calculateConfidence(
       reason: 'Platform is highly reliable (IMDB/Wikipedia)',
     });
     score = Math.min(1, score + 0.1);
+  }
+
+  // TikTok bonus for glamour content
+  if (handle.platform === 'tiktok') {
+    adjustments.push({
+      factor: 'tiktok_glam',
+      value: 0.05,
+      reason: 'TikTok is popular for glamour content',
+    });
+    score = Math.min(1, score + 0.05);
+  }
+
+  // Snapchat penalty - no embed support, less useful
+  if (handle.platform === 'snapchat') {
+    // Snapchat without Wikidata confirmation should be rejected
+    if (handle.source !== 'wikidata') {
+      adjustments.push({
+        factor: 'snapchat_unverified',
+        value: -0.3,
+        reason: 'Snapchat handle without Wikidata verification',
+      });
+      score = Math.max(0, score - 0.3);
+    } else {
+      adjustments.push({
+        factor: 'snapchat_no_embed',
+        value: -0.1,
+        reason: 'Snapchat does not support embedding (metadata only)',
+      });
+      score = Math.max(0, score - 0.1);
+    }
   }
 
   // Determine status

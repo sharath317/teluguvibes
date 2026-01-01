@@ -14,6 +14,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { PLATFORM_ICONS } from '@/lib/social/oembed';
+import { 
+  PLATFORM_CAPABILITIES, 
+  getEmbedBadge, 
+  type PlatformType 
+} from '@/lib/social/platform-capabilities';
 
 interface SocialProfile {
   id: string;
@@ -244,13 +249,25 @@ export function SocialProfilesTab({ celebrityId, celebrityName }: SocialProfiles
       </div>
 
       {/* Profiles by Platform */}
-      {Object.entries(byPlatform).map(([platform, platformProfiles]) => (
+      {Object.entries(byPlatform).map(([platform, platformProfiles]) => {
+        const embedBadge = getEmbedBadge(platform as PlatformType);
+        const platformCap = PLATFORM_CAPABILITIES[platform as PlatformType];
+        
+        return (
         <div key={platform} className="border rounded-lg overflow-hidden">
           <div className="bg-gray-50 px-4 py-3 border-b flex items-center gap-2">
-            <span className="text-xl">{PLATFORM_ICONS[platform] || '🔗'}</span>
-            <span className="font-medium capitalize">{platform}</span>
+            <span className="text-xl">{PLATFORM_ICONS[platform] || platformCap?.icon || '🔗'}</span>
+            <span className="font-medium capitalize">{platformCap?.name || platform}</span>
             <span className="text-gray-500 text-sm">
               ({platformProfiles.length} profiles)
+            </span>
+            {/* Embed Level Badge */}
+            <span className={`ml-auto px-2 py-0.5 rounded text-xs ${
+              embedBadge.color === 'green' ? 'bg-green-100 text-green-800' :
+              embedBadge.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              {embedBadge.icon} {embedBadge.label}
             </span>
           </div>
 
@@ -302,13 +319,23 @@ export function SocialProfilesTab({ celebrityId, celebrityName }: SocialProfiles
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setSelectedProfile(profile)}
-                        className="p-2 text-gray-400 hover:text-gray-600"
-                        title="Preview embed"
-                      >
-                        👁️
-                      </button>
+                      {/* Preview button - disabled for non-embeddable platforms */}
+                      {PLATFORM_CAPABILITIES[profile.platform as PlatformType]?.supportsEmbed ? (
+                        <button
+                          onClick={() => setSelectedProfile(profile)}
+                          className="p-2 text-gray-400 hover:text-gray-600"
+                          title="Preview embed"
+                        >
+                          👁️
+                        </button>
+                      ) : (
+                        <span 
+                          className="p-2 text-gray-300 cursor-not-allowed"
+                          title="No embed support for this platform"
+                        >
+                          🚫
+                        </span>
+                      )}
                       
                       <button
                         onClick={() => toggleVerified(profile)}
@@ -346,7 +373,8 @@ export function SocialProfilesTab({ celebrityId, celebrityName }: SocialProfiles
             })}
           </div>
         </div>
-      ))}
+        );
+      })}
 
       {profiles.length === 0 && (
         <div className="text-center py-12 text-gray-500">
@@ -477,11 +505,12 @@ function AddProfileModal({
               onChange={(e) => setPlatform(e.target.value)}
               className="w-full border rounded px-3 py-2"
             >
-              <option value="instagram">📸 Instagram</option>
-              <option value="youtube">▶️ YouTube</option>
-              <option value="twitter">🐦 Twitter/X</option>
-              <option value="facebook">📘 Facebook</option>
-              <option value="tiktok">🎵 TikTok</option>
+              <option value="instagram">📸 Instagram (Full Embed)</option>
+              <option value="youtube">▶️ YouTube (Full Embed)</option>
+              <option value="twitter">🐦 Twitter/X (Full Embed)</option>
+              <option value="tiktok">🎵 TikTok (Partial Embed)</option>
+              <option value="facebook">📘 Facebook (Partial Embed)</option>
+              <option value="snapchat">👻 Snapchat (No Embed - Metadata Only)</option>
             </select>
           </div>
           
@@ -538,6 +567,8 @@ function getProfileUrl(platform: string, handle: string): string {
       return `https://www.facebook.com/${cleanHandle}`;
     case 'tiktok':
       return `https://www.tiktok.com/@${cleanHandle}`;
+    case 'snapchat':
+      return `https://www.snapchat.com/add/${cleanHandle}`;
     default:
       return `https://${platform}.com/${cleanHandle}`;
   }

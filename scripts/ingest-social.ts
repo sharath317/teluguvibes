@@ -56,9 +56,13 @@ function getSupabase(): SupabaseClient {
   return supabase;
 }
 
+// Valid platforms for filtering
+const VALID_PLATFORMS = ['instagram', 'youtube', 'twitter', 'facebook', 'tiktok', 'snapchat', 'imdb'];
+
 // Parse CLI arguments
 function parseArgs(): {
   sources: string[];
+  platforms: string[];
   dry: boolean;
   celebrity?: string;
   update: boolean;
@@ -69,6 +73,7 @@ function parseArgs(): {
   const args = process.argv.slice(2);
   const result = {
     sources: ['wikidata', 'wikipedia', 'tmdb'],
+    platforms: VALID_PLATFORMS, // Default: all platforms
     dry: false,
     celebrity: undefined as string | undefined,
     update: false,
@@ -86,6 +91,9 @@ function parseArgs(): {
       result.help = true;
     } else if (arg.startsWith('--source=')) {
       result.sources = arg.replace('--source=', '').split(',');
+    } else if (arg.startsWith('--platform=')) {
+      const platforms = arg.replace('--platform=', '').split(',');
+      result.platforms = platforms.filter(p => VALID_PLATFORMS.includes(p));
     } else if (arg.startsWith('--celebrity=')) {
       result.celebrity = arg.replace('--celebrity=', '');
     } else if (arg.startsWith('--confidence=')) {
@@ -112,6 +120,13 @@ Options:
   --source=...       Comma-separated sources: wikidata,wikipedia,tmdb
                      Default: all sources
 
+  --platform=...     Comma-separated platforms to include:
+                     instagram,youtube,twitter,facebook,tiktok,snapchat
+                     Default: all platforms
+                     
+                     Note: Snapchat has NO embed support (metadata only)
+                     TikTok has partial embed support (videos only)
+
   --dry              Preview mode - no database writes
                      Shows what would be added/updated
 
@@ -136,11 +151,22 @@ Examples:
   # Ingest from Wikidata only
   pnpm run ingest:social --source=wikidata
 
+  # Only Instagram and TikTok handles
+  pnpm run ingest:social --platform=instagram,tiktok
+
   # Update single celebrity
   pnpm run ingest:social --celebrity="Samantha Ruth Prabhu" --update
 
   # High confidence only
   pnpm run ingest:social --confidence=0.8 --limit=50
+
+Platform Embed Support:
+  ✓ Instagram  - Full oEmbed support
+  ✓ YouTube    - Full oEmbed support
+  ✓ Twitter/X  - Full oEmbed support
+  ⚠ TikTok     - Partial (videos only, web-based)
+  ⚠ Facebook   - Partial (page embeds need app review)
+  ✗ Snapchat   - NO EMBED (metadata storage only)
 
 Legal:
   ✓ Uses only Wikidata, Wikipedia, TMDB APIs
@@ -325,6 +351,7 @@ async function runIngestion(options: ReturnType<typeof parseArgs>): Promise<void
 `);
 
   console.log(`Sources: ${options.sources.join(', ')}`);
+  console.log(`Platforms: ${options.platforms.join(', ')}`);
   console.log(`Confidence threshold: ${options.confidence}`);
   console.log(`Update existing: ${options.update}`);
   if (options.celebrity) {
@@ -386,8 +413,11 @@ async function runIngestion(options: ReturnType<typeof parseArgs>): Promise<void
       // Validate and filter
       const { valid, rejected } = processAndValidateHandles(result);
 
-      // Filter by confidence threshold
-      const qualified = valid.filter(h => h.final_score >= options.confidence);
+      // Filter by confidence threshold AND platform
+      const qualified = valid.filter(h => 
+        h.final_score >= options.confidence && 
+        options.platforms.includes(h.handle.platform)
+      );
 
       console.log(`   Found ${result.handles.length} handles`);
       console.log(`   Qualified: ${qualified.length} | Rejected: ${rejected.length}`);
