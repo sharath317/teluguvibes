@@ -77,7 +77,7 @@ const REGION_QIDS = {
 
 /**
  * Discover Telugu cinema celebrities from Wikidata
- * Uses SPARQL to find actresses/actors associated with Telugu film industry
+ * Uses SPARQL to find FEMALE actresses specifically in Telugu film industry
  */
 export async function discoverFromWikidata(options: {
   limit?: number;
@@ -86,18 +86,30 @@ export async function discoverFromWikidata(options: {
 }): Promise<DiscoveredEntity[]> {
   const { limit = 100, entityTypes = ['actress'], minPopularity = 0 } = options;
   
-  // Build occupation filter
+  // Determine if we need female filter
+  const needsFemaleFilter = entityTypes.includes('actress') || entityTypes.includes('model');
+  const genderFilter = needsFemaleFilter ? '?person wdt:P21 wd:Q6581072.' : ''; // Q6581072 = female
+  
+  // Build occupation filter - use film actor (Q10800557) for females in film
   const occupationValues = entityTypes
     .flatMap(type => {
       switch (type) {
-        case 'actress': return ['wd:Q33999', 'wd:Q21169216'];
-        case 'anchor': return ['wd:Q2722764'];
-        case 'model': return ['wd:Q4610556'];
-        case 'influencer': return ['wd:Q21930755'];
+        case 'actress': return ['wd:Q33999', 'wd:Q10800557', 'wd:Q21169216']; // actor, film actor
+        case 'anchor': return ['wd:Q2722764', 'wd:Q17125263']; // TV presenter, TV host
+        case 'model': return ['wd:Q4610556']; // model
+        case 'influencer': return ['wd:Q21930755']; // social media personality
         default: return [];
       }
     })
     .join(' ');
+  
+  // Wikidata property IDs:
+  // P21 = sex or gender (Q6581072 = female)
+  // P106 = occupation
+  // P800 = notable work
+  // P2860 = cites work (for filmography)
+  // P161 = cast member (reverse lookup)
+  // Q2516266 = Telugu cinema
   
   const query = `
 SELECT DISTINCT
@@ -110,34 +122,43 @@ SELECT DISTINCT
   ?tmdb
   (GROUP_CONCAT(DISTINCT ?occupationLabel; separator=", ") AS ?occupations)
 WHERE {
-  # Find people in Indian film industry
+  # Find people with actor/actress occupation
   ?person wdt:P106 ?occupation.
   VALUES ?occupation { ${occupationValues} }
   
-  # Must be associated with Telugu cinema or born in AP/Telangana
+  # MUST be female (for actresses/models)
+  ${genderFilter}
+  
+  # Must be linked to Telugu cinema through one of these paths:
   {
-    # Works in Telugu cinema
-    ?person wdt:P937 ?workLocation.
-    VALUES ?workLocation { wd:Q1361 wd:Q1159 wd:Q677037 }
+    # Direct link: worked in Telugu cinema industry
+    ?person wdt:P101 wd:Q2516266.  # field of work = Telugu cinema
   } UNION {
-    # Born in AP/Telangana  
-    ?person wdt:P19 ?birthPlace.
-    ?birthPlace wdt:P131* ?region.
-    VALUES ?region { wd:Q1159 wd:Q677037 }
+    # Alternative: appeared in a Telugu film
+    ?teluguFilm wdt:P161 ?person.  # cast member
+    ?teluguFilm wdt:P364 wd:Q8097.  # original language = Telugu
   } UNION {
-    # Filmography includes Telugu films
-    ?person wdt:P106 wd:Q33999.
-    ?person wdt:P27 wd:Q668.  # Indian citizen
+    # Alternative: notable work is a Telugu film
+    ?person wdt:P800 ?notableWork.
+    ?notableWork wdt:P364 wd:Q8097.  # original language = Telugu
+  } UNION {
+    # Alternative: film actor from India with Telugu name/label
+    ?person wdt:P106 wd:Q10800557.  # film actor
+    ?person wdt:P27 wd:Q668.  # citizen of India
+    ?person rdfs:label ?teLabel. 
+    FILTER(LANG(?teLabel) = "te")  # has Telugu label
   }
   
-  # Only living people (no death date) or recently active
+  # Only living people
   FILTER NOT EXISTS { ?person wdt:P570 ?deathDate. }
   
-  # Get labels
+  # Get English label (required)
   ?person rdfs:label ?personLabel. FILTER(LANG(?personLabel) = "en")
+  
+  # Optional Telugu label
   OPTIONAL { ?person rdfs:label ?personLabelTe. FILTER(LANG(?personLabelTe) = "te") }
   
-  # Optional data
+  # Optional metadata
   OPTIONAL { ?person wdt:P569 ?birthDate. }
   OPTIONAL { 
     ?wikipedia schema:about ?person.
@@ -146,12 +167,13 @@ WHERE {
   OPTIONAL { ?person wdt:P345 ?imdb. }
   OPTIONAL { ?person wdt:P4985 ?tmdb. }
   
-  # Occupation labels
+  # Occupation labels for display
   ?occupation rdfs:label ?occupationLabel. FILTER(LANG(?occupationLabel) = "en")
   
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en,te". }
 }
 GROUP BY ?person ?personLabel ?personLabelTe ?birthDate ?wikipedia ?imdb ?tmdb
+ORDER BY DESC(?tmdb)
 LIMIT ${limit}
 `;
 
@@ -223,14 +245,59 @@ LIMIT ${limit}
   }
 }
 
+// Known Telugu actresses for TMDB seed discovery
+// These are verified Telugu film industry actresses
+const TELUGU_ACTRESS_SEEDS = [
+  'Samantha Ruth Prabhu',
+  'Rashmika Mandanna',
+  'Pooja Hegde',
+  'Kajal Aggarwal',
+  'Tamannaah Bhatia',
+  'Anushka Shetty',
+  'Nayanthara',
+  'Keerthy Suresh',
+  'Sai Pallavi',
+  'Shruti Haasan',
+  'Rakul Preet Singh',
+  'Krithi Shetty',
+  'Sreeleela',
+  'Nabha Natesh',
+  'Anupama Parameswaran',
+  'Lavanya Tripathi',
+  'Rashi Khanna',
+  'Payal Rajput',
+  'Nidhhi Agerwal',
+  'Regina Cassandra',
+  'Hebah Patel',
+  'Eesha Rebba',
+  'Mehreen Pirzada',
+  'Nivetha Thomas',
+  'Nivetha Pethuraj',
+  'Pragya Jaiswal',
+  'Varalaxmi Sarathkumar',
+  'Trisha Krishnan',
+  'Hansika Motwani',
+  'Shriya Saran',
+];
+
+// Known Telugu anchors for discovery
+const TELUGU_ANCHOR_SEEDS = [
+  'Sreemukhi',
+  'Anasuya Bharadwaj',
+  'Rashmi Gautam',
+  'Suma Kanakala',
+  'Anchor Ravi',
+];
+
 /**
- * Discover popular Indian actresses from TMDB
+ * Discover popular Telugu actresses from TMDB
+ * Uses seed names since TMDB doesn't have good keyword search for regional cinema
  */
 export async function discoverFromTMDB(options: {
   limit?: number;
   minPopularity?: number;
 }): Promise<DiscoveredEntity[]> {
-  const { limit = 50, minPopularity = 10 } = options;
+  const { limit = 50, minPopularity = 5 } = options;
   const apiKey = process.env.TMDB_API_KEY;
   
   if (!apiKey) {
@@ -242,63 +309,64 @@ export async function discoverFromTMDB(options: {
   const now = new Date().toISOString();
   
   try {
-    console.log('🔍 Discovering from TMDB...');
+    console.log('🔍 Discovering from TMDB (using seed names)...');
     
-    // Search for popular Indian actresses
-    // TMDB doesn't have great filtering, so we search by known keywords
-    const searchTerms = [
-      'Telugu actress',
-      'South Indian actress',
-      'Tollywood actress',
-    ];
+    // Use seed names for accurate discovery
+    const searchNames = [...TELUGU_ACTRESS_SEEDS, ...TELUGU_ANCHOR_SEEDS].slice(0, limit);
     
     const seenIds = new Set<number>();
     
-    for (const term of searchTerms) {
-      const searchUrl = `${TMDB_API_BASE}/search/person?api_key=${apiKey}&query=${encodeURIComponent(term)}&page=1`;
+    for (const name of searchNames) {
+      const searchUrl = `${TMDB_API_BASE}/search/person?api_key=${apiKey}&query=${encodeURIComponent(name)}&page=1`;
       const response = await fetch(searchUrl);
       
       if (!response.ok) continue;
       
       const data = await response.json();
       
-      for (const person of data.results || []) {
-        if (seenIds.has(person.id)) continue;
-        if (person.popularity < minPopularity) continue;
-        
-        seenIds.add(person.id);
-        
-        // Determine if likely actress
-        const knownFor = person.known_for_department?.toLowerCase();
-        if (knownFor !== 'acting') continue;
-        
-        // Get external IDs
-        const externalUrl = `${TMDB_API_BASE}/person/${person.id}/external_ids?api_key=${apiKey}`;
-        const externalRes = await fetch(externalUrl);
-        const externalData = externalRes.ok ? await externalRes.json() : {};
-        
-        entities.push({
-          name_en: person.name,
-          tmdb_id: person.id,
-          imdb_id: externalData.imdb_id,
-          industry: 'south-indian',
-          entity_type: 'actress',
-          occupation: ['actress'],
-          popularity_score: Math.min(100, person.popularity),
-          tmdb_popularity: person.popularity,
-          trend_score: 0,
-          discovery_source: 'tmdb',
-          discovered_at: now,
-          last_seen_at: now,
-        });
-        
-        if (entities.length >= limit) break;
-      }
+      // Get the best match (first result with exact name match preferred)
+      const person = data.results?.find((p: any) => 
+        p.name.toLowerCase() === name.toLowerCase()
+      ) || data.results?.[0];
+      
+      if (!person) continue;
+      if (seenIds.has(person.id)) continue;
+      if (person.popularity < minPopularity) continue;
+      
+      seenIds.add(person.id);
+      
+      // Determine if likely actress
+      const knownFor = person.known_for_department?.toLowerCase();
+      if (knownFor !== 'acting') continue;
+      
+      // Get external IDs
+      const externalUrl = `${TMDB_API_BASE}/person/${person.id}/external_ids?api_key=${apiKey}`;
+      const externalRes = await fetch(externalUrl);
+      const externalData = externalRes.ok ? await externalRes.json() : {};
+      
+      // Determine entity type
+      const isAnchor = TELUGU_ANCHOR_SEEDS.includes(name);
+      const entityType = isAnchor ? 'anchor' : 'actress';
+      
+      entities.push({
+        name_en: person.name,
+        tmdb_id: person.id,
+        imdb_id: externalData.imdb_id,
+        industry: 'telugu',
+        entity_type: entityType,
+        occupation: [entityType],
+        popularity_score: Math.min(100, person.popularity),
+        tmdb_popularity: person.popularity,
+        trend_score: 0,
+        discovery_source: 'tmdb',
+        discovered_at: now,
+        last_seen_at: now,
+      });
       
       if (entities.length >= limit) break;
       
-      // Rate limit
-      await new Promise(r => setTimeout(r, 250));
+      // Rate limit to avoid TMDB throttling
+      await new Promise(r => setTimeout(r, 200));
     }
     
     console.log(`✅ Found ${entities.length} entities from TMDB`);
