@@ -22,7 +22,8 @@
  *   --help          Show this help message
  */
 
-import 'dotenv/config';
+import { config } from 'dotenv';
+config({ path: '.env.local' });
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import {
   unifiedSocialFetcher,
