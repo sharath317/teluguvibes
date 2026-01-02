@@ -327,14 +327,26 @@ async function upsertMovie(
     .single();
 
   // Map to actual movies table schema
-  const movieData = {
+  // Safely handle numeric fields to avoid overflow
+  const safeRuntime = movie.runtime_minutes !== null && 
+    movie.runtime_minutes !== undefined && 
+    movie.runtime_minutes > 0 && 
+    movie.runtime_minutes < 1000 
+    ? movie.runtime_minutes : null;
+  
+  // Database avg_rating column is DECIMAL(2,1) - max 9.9, min 0
+  const safeRating = movie.imdb_rating !== null && 
+    movie.imdb_rating !== undefined && 
+    movie.imdb_rating >= 0 
+    ? Math.min(9.9, Math.round(movie.imdb_rating * 10) / 10) : null;
+
+  const movieData: Record<string, any> = {
     tmdb_id: movie.tmdb_id,
     title_en: movie.title_en,
-    title_te: movie.title_te,
+    title_te: movie.title_te || null,
     slug: movie.slug,
     release_date: movie.release_date,
     release_year: movie.release_year,
-    runtime_minutes: movie.runtime_minutes,
     genres: movie.genres,
     director: movie.director,
     hero: movie.hero,
@@ -343,10 +355,16 @@ async function upsertMovie(
     cast_members: movie.cast_members,
     poster_url: movie.poster_url,
     backdrop_url: movie.backdrop_url,
-    avg_rating: movie.imdb_rating,
-    our_rating: movie.our_rating,
     is_published: movie.is_published,
   };
+
+  // Only include numeric fields if valid
+  if (safeRuntime !== null) {
+    movieData.runtime_minutes = safeRuntime;
+  }
+  if (safeRating !== null) {
+    movieData.avg_rating = safeRating;
+  }
 
   if (existing) {
     const { error } = await supabase

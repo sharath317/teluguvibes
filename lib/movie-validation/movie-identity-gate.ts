@@ -83,6 +83,7 @@ export interface MovieCandidate {
   title_te?: string;
   release_year?: number;
   tmdb_id?: number;
+  wikidata_id?: string;  // Fallback identifier (e.g., Q12345)
   director?: string;
   poster_url?: string;
   backdrop_url?: string;
@@ -652,6 +653,166 @@ export async function batchValidateMovies(
       byStatus,
     },
   };
+}
+
+// ============================================================
+// CANONICAL IDENTITY RESOLUTION
+// ============================================================
+
+export interface CanonicalIdentity {
+  primary_key: { type: 'tmdb_id'; value: number } | null;
+  secondary_key: { type: 'normalized_title_year'; value: string } | null;
+  fallback_key: { type: 'wikidata_id'; value: string } | null;
+  confidence: number;
+  resolution_path: string[];
+}
+
+/**
+ * Fetch Wikidata movie ID using SPARQL query
+ */
+export async function fetchWikidataMovieId(
+  title: string,
+  year?: number
+): Promise<string | null> {
+  const sparqlEndpoint = 'https://query.wikidata.org/sparql';
+  
+  // Build SPARQL query for Telugu films
+  const yearFilter = year ? `FILTER(YEAR(?date) = ${year})` : '';
+  const query = `
+    SELECT ?film WHERE {
+      ?film wdt:P31 wd:Q11424 .          # Instance of: film
+      ?film wdt:P364 wd:Q8097 .          # Original language: Telugu
+      ?film rdfs:label "${title}"@en .
+      OPTIONAL { ?film wdt:P577 ?date . }
+      ${yearFilter}
+    }
+    LIMIT 1
+  `;
+
+  try {
+    const response = await fetch(sparqlEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/sparql-query',
+        'Accept': 'application/sparql-results+json',
+        'User-Agent': 'TeluguVibes/1.0 (https://teluguvibes.com)'
+      },
+      body: query,
+    });
+
+    if (!response.ok) {
+      console.warn('Wikidata SPARQL query failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const bindings = data?.results?.bindings || [];
+    
+    if (bindings.length > 0) {
+      const filmUri = bindings[0]?.film?.value;
+      // Extract Q-id from URI (e.g., http://www.wikidata.org/entity/Q12345 → Q12345)
+      const match = filmUri?.match(/Q\d+$/);
+      return match ? match[0] : null;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Wikidata fetch error:', error);
+    return null;
+  }
+}
+
+/**
+ * Resolve canonical movie identity using multiple sources
+ * Priority: TMDB ID → Normalized Title+Year → Wikidata ID
+ */
+export async function resolveCanonicalMovieIdentity(
+  candidate: MovieCandidate
+): Promise<CanonicalIdentity> {
+  const resolutionPath: string[] = [];
+  let confidence = 0;
+
+  // Primary: TMDB ID
+  let primaryKey: CanonicalIdentity['primary_key'] = null;
+  if (candidate.tmdb_id) {
+    const verification = await verifyTMDBEntityType(candidate.tmdb_id);
+    if (verification.isMovie) {
+      primaryKey = { type: 'tmdb_id', value: candidate.tmdb_id };
+      confidence += 0.5;
+      resolutionPath.push(`TMDB verified: ${candidate.tmdb_id}`);
+    } else {
+      resolutionPath.push(`TMDB ID ${candidate.tmdb_id} is not a movie (${verification.entityType})`);
+    }
+  }
+
+  // Secondary: Normalized title + year
+  let secondaryKey: CanonicalIdentity['secondary_key'] = null;
+  const canonicalTitle = canonicalizeTitle(candidate.title_en);
+  const normalizedKey = candidate.release_year 
+    ? `${canonicalTitle}::${candidate.release_year}`
+    : canonicalTitle;
+  
+  secondaryKey = { type: 'normalized_title_year', value: normalizedKey };
+  confidence += 0.3;
+  resolutionPath.push(`Normalized: ${normalizedKey}`);
+
+  // Fallback: Wikidata ID
+  let fallbackKey: CanonicalIdentity['fallback_key'] = null;
+  if (candidate.wikidata_id) {
+    fallbackKey = { type: 'wikidata_id', value: candidate.wikidata_id };
+    confidence += 0.2;
+    resolutionPath.push(`Wikidata provided: ${candidate.wikidata_id}`);
+  } else if (!primaryKey) {
+    // Try to fetch from Wikidata if no TMDB ID
+    const wikidataId = await fetchWikidataMovieId(
+      candidate.title_en,
+      candidate.release_year
+    );
+    if (wikidataId) {
+      fallbackKey = { type: 'wikidata_id', value: wikidataId };
+      confidence += 0.15;
+      resolutionPath.push(`Wikidata resolved: ${wikidataId}`);
+    }
+  }
+
+  return {
+    primary_key: primaryKey,
+    secondary_key: secondaryKey,
+    fallback_key: fallbackKey,
+    confidence: Math.min(1, confidence),
+    resolution_path: resolutionPath
+  };
+}
+
+/**
+ * Check if two movies are the same entity
+ */
+export function isSameMovie(
+  identity1: CanonicalIdentity,
+  identity2: CanonicalIdentity
+): { match: boolean; confidence: number; matched_on: string } {
+  // Match on TMDB ID (highest confidence)
+  if (identity1.primary_key && identity2.primary_key) {
+    if (identity1.primary_key.value === identity2.primary_key.value) {
+      return { match: true, confidence: 0.99, matched_on: 'tmdb_id' };
+    }
+  }
+
+  // Match on Wikidata ID
+  if (identity1.fallback_key && identity2.fallback_key) {
+    if (identity1.fallback_key.value === identity2.fallback_key.value) {
+      return { match: true, confidence: 0.95, matched_on: 'wikidata_id' };
+    }
+  }
+
+  // Match on normalized title + year
+  if (identity1.secondary_key && identity2.secondary_key) {
+    if (identity1.secondary_key.value === identity2.secondary_key.value) {
+      return { match: true, confidence: 0.85, matched_on: 'normalized_title_year' };
+    }
+  }
+
+  return { match: false, confidence: 0, matched_on: 'none' };
 }
 
 

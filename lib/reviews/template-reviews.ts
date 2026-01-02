@@ -42,6 +42,46 @@ export interface TemplateReview {
   confidence: number;
   data_quality: 'high' | 'medium' | 'low' | 'minimal';
   generated_at: string;
+  
+  // Phase 5.1: Structured sections for enhanced reviews
+  best_scenes?: string[];
+  performance_highlights?: PerformanceHighlight[];
+  watch_recommendation?: WatchRecommendation;
+  
+  // Entity links for knowledge graph
+  linked_celebrities?: LinkedCelebrity[];
+  linked_movies?: LinkedMovie[];  // Similar movies with confidence
+}
+
+// Phase 5.1: Performance highlight for individual actors
+export interface PerformanceHighlight {
+  actor: string;
+  role: string;
+  note_te: string;
+  note_en: string;
+}
+
+// Phase 5.1: Watch recommendation with context
+export interface WatchRecommendation {
+  recommended: boolean;
+  audience: 'family' | 'youth' | 'mass' | 'class' | 'all';
+  best_for: string;
+  skip_if: string | null;
+}
+
+// Phase 5.1: Linked celebrity reference
+export interface LinkedCelebrity {
+  name: string;
+  role_in_movie: 'hero' | 'heroine' | 'villain' | 'director' | 'music' | 'support';
+  tmdb_person_id?: number;
+}
+
+// Phase 5.1: Similar movie link with confidence
+export interface LinkedMovie {
+  movie_id: string;
+  title: string;
+  similarity_score: number;
+  reason: string;
 }
 
 // ============================================================
@@ -533,5 +573,291 @@ export async function generateFallbackReviews(
   }
   
   return result;
+}
+
+// ============================================================
+// PHASE 5.1: STRUCTURED REVIEW GENERATION
+// ============================================================
+
+/**
+ * Generate best scenes based on movie dimensions and genre
+ */
+export function generateBestScenes(
+  movie: Movie,
+  dimensions: Record<string, TemplateDimension>
+): string[] {
+  const scenes: string[] = [];
+  const genres = movie.genres || [];
+  
+  // High-scoring dimensions suggest memorable scenes
+  const sortedDims = Object.entries(dimensions)
+    .sort(([, a], [, b]) => b.score - a.score)
+    .slice(0, 3);
+  
+  for (const [dimName, dim] of sortedDims) {
+    if (dim.score >= 7) {
+      switch (dimName) {
+        case 'action':
+          if (genres.includes('Action')) {
+            scenes.push('Mass interval fight sequence');
+            scenes.push('Climax confrontation scene');
+          }
+          break;
+        case 'emotion':
+          scenes.push('Heart-touching emotional climax');
+          if (genres.includes('Family')) {
+            scenes.push('Family reunion moment');
+          }
+          break;
+        case 'romance':
+          scenes.push('Hero-heroine introduction scene');
+          scenes.push('Romantic song sequence');
+          break;
+        case 'comedy':
+          scenes.push('Comedy track highlight');
+          break;
+        case 'music':
+          scenes.push('Chartbuster song picturization');
+          break;
+      }
+    }
+  }
+  
+  // Genre-specific default scenes
+  if (scenes.length === 0) {
+    if (genres.includes('Drama')) {
+      scenes.push('Pivotal dramatic confrontation');
+    }
+    if (genres.includes('Thriller')) {
+      scenes.push('Twist reveal moment');
+    }
+  }
+  
+  return [...new Set(scenes)].slice(0, 5);
+}
+
+/**
+ * Generate performance highlights for cast members
+ */
+export function generatePerformanceHighlights(movie: Movie): PerformanceHighlight[] {
+  const highlights: PerformanceHighlight[] = [];
+  
+  // Hero performance
+  if (movie.hero) {
+    highlights.push({
+      actor: movie.hero,
+      role: 'Hero',
+      note_te: `${movie.hero} తన నటనతో ప్రేక్షకులను ఆకట్టుకున్నారు`,
+      note_en: `${movie.hero} captivates the audience with their performance`
+    });
+  }
+  
+  // Heroine performance
+  if (movie.heroine) {
+    highlights.push({
+      actor: movie.heroine,
+      role: 'Heroine',
+      note_te: `${movie.heroine} పాత్రలో ఒదిగిపోయారు`,
+      note_en: `${movie.heroine} fits perfectly into the role`
+    });
+  }
+  
+  // Director mention
+  if (movie.director) {
+    highlights.push({
+      actor: movie.director,
+      role: 'Director',
+      note_te: `దర్శకుడు ${movie.director} కథను చక్కగా నడిపించారు`,
+      note_en: `Director ${movie.director} handles the narrative well`
+    });
+  }
+  
+  return highlights;
+}
+
+/**
+ * Generate watch recommendation based on movie data
+ */
+export function generateWatchRecommendation(
+  movie: Movie,
+  overallScore: number
+): WatchRecommendation {
+  const genres = movie.genres || [];
+  
+  // Determine audience
+  let audience: WatchRecommendation['audience'] = 'all';
+  if (genres.includes('Family') || genres.includes('Drama')) {
+    audience = 'family';
+  } else if (genres.includes('Action') && !genres.includes('Romance')) {
+    audience = 'mass';
+  } else if (genres.includes('Thriller') || genres.includes('Crime')) {
+    audience = 'class';
+  } else if (genres.includes('Romance') || genres.includes('Comedy')) {
+    audience = 'youth';
+  }
+  
+  // Generate best_for text
+  let bestFor = 'General audience';
+  if (audience === 'family') {
+    bestFor = 'Family weekend watch';
+  } else if (audience === 'mass') {
+    bestFor = 'Single-screen action lovers';
+  } else if (audience === 'class') {
+    bestFor = 'Content-oriented viewers';
+  } else if (audience === 'youth') {
+    bestFor = 'Young audience looking for entertainment';
+  }
+  
+  // Generate skip_if text for lower scores
+  let skipIf: string | null = null;
+  if (overallScore < 5) {
+    skipIf = 'You prefer tight screenplays';
+  } else if (overallScore < 6 && genres.includes('Action')) {
+    skipIf = 'You dislike formulaic mass films';
+  }
+  
+  return {
+    recommended: overallScore >= 6,
+    audience,
+    best_for: bestFor,
+    skip_if: skipIf
+  };
+}
+
+/**
+ * Find similar movies based on genre, director, and cast
+ */
+export async function findSimilarMovies(movie: Movie): Promise<LinkedMovie[]> {
+  const supabase = getSupabaseClient();
+  const similar: LinkedMovie[] = [];
+  
+  // Find movies by same director
+  if (movie.director) {
+    const { data: directorMovies } = await supabase
+      .from('movies')
+      .select('id, title_en')
+      .eq('director', movie.director)
+      .neq('id', movie.id)
+      .limit(3);
+    
+    if (directorMovies) {
+      for (const m of directorMovies) {
+        similar.push({
+          movie_id: m.id,
+          title: m.title_en,
+          similarity_score: 0.85,
+          reason: `Same director: ${movie.director}`
+        });
+      }
+    }
+  }
+  
+  // Find movies with same hero
+  if (movie.hero) {
+    const { data: heroMovies } = await supabase
+      .from('movies')
+      .select('id, title_en')
+      .eq('hero', movie.hero)
+      .neq('id', movie.id)
+      .limit(3);
+    
+    if (heroMovies) {
+      for (const m of heroMovies) {
+        if (!similar.find(s => s.movie_id === m.id)) {
+          similar.push({
+            movie_id: m.id,
+            title: m.title_en,
+            similarity_score: 0.75,
+            reason: `Same lead actor: ${movie.hero}`
+          });
+        }
+      }
+    }
+  }
+  
+  // Find movies with similar genres (same primary genre + year range)
+  const primaryGenre = movie.genres?.[0];
+  if (primaryGenre && movie.release_year) {
+    const { data: genreMovies } = await supabase
+      .from('movies')
+      .select('id, title_en')
+      .contains('genres', [primaryGenre])
+      .gte('release_year', movie.release_year - 3)
+      .lte('release_year', movie.release_year + 3)
+      .neq('id', movie.id)
+      .limit(3);
+    
+    if (genreMovies) {
+      for (const m of genreMovies) {
+        if (!similar.find(s => s.movie_id === m.id)) {
+          similar.push({
+            movie_id: m.id,
+            title: m.title_en,
+            similarity_score: 0.65,
+            reason: `Similar genre: ${primaryGenre}`
+          });
+        }
+      }
+    }
+  }
+  
+  // Sort by similarity score and limit
+  return similar
+    .sort((a, b) => b.similarity_score - a.similarity_score)
+    .slice(0, 5);
+}
+
+/**
+ * Generate linked celebrities from movie data
+ */
+export function generateLinkedCelebrities(movie: Movie): LinkedCelebrity[] {
+  const celebrities: LinkedCelebrity[] = [];
+  
+  if (movie.hero) {
+    celebrities.push({
+      name: movie.hero,
+      role_in_movie: 'hero'
+    });
+  }
+  
+  if (movie.heroine) {
+    celebrities.push({
+      name: movie.heroine,
+      role_in_movie: 'heroine'
+    });
+  }
+  
+  if (movie.director) {
+    celebrities.push({
+      name: movie.director,
+      role_in_movie: 'director'
+    });
+  }
+  
+  return celebrities;
+}
+
+/**
+ * Generate enhanced template review with all structured sections
+ */
+export async function generateEnhancedTemplateReview(movie: Movie): Promise<TemplateReview> {
+  // Generate base template review
+  const baseReview = generateTemplateReview(movie);
+  
+  // Add structured sections
+  const bestScenes = generateBestScenes(movie, baseReview.dimensions);
+  const performanceHighlights = generatePerformanceHighlights(movie);
+  const watchRecommendation = generateWatchRecommendation(movie, baseReview.overall_score);
+  const linkedCelebrities = generateLinkedCelebrities(movie);
+  const linkedMovies = await findSimilarMovies(movie);
+  
+  return {
+    ...baseReview,
+    best_scenes: bestScenes,
+    performance_highlights: performanceHighlights,
+    watch_recommendation: watchRecommendation,
+    linked_celebrities: linkedCelebrities,
+    linked_movies: linkedMovies
+  };
 }
 

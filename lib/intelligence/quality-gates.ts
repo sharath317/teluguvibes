@@ -496,4 +496,217 @@ export async function getAutoFixableIssues(postId: string): Promise<{
     }));
 }
 
+// ============================================================
+// CONFIDENCE-DRIVEN PUBLISHING GATES
+// ============================================================
+
+/**
+ * Confidence thresholds for content publishing decisions
+ * - AUTO_PUBLISH: ≥0.82 → Content is auto-approved for publishing
+ * - NEEDS_REVIEW: 0.65-0.82 → Content requires human review
+ * - BLOCK: <0.65 → Content is blocked until confidence improves
+ */
+export const CONFIDENCE_THRESHOLDS = {
+  AUTO_PUBLISH: 0.82,
+  NEEDS_REVIEW: 0.65,
+  BLOCK: 0.65
+} as const;
+
+export type ConfidenceDecision = 'publish' | 'review' | 'block';
+
+export interface ConfidenceGateResult {
+  decision: ConfidenceDecision;
+  confidence: number;
+  threshold_used: keyof typeof CONFIDENCE_THRESHOLDS;
+  reason: string;
+  can_override: boolean;
+}
+
+/**
+ * Determine publishing decision based on confidence score
+ */
+export function enforceConfidenceGate(confidence: number): ConfidenceDecision {
+  if (confidence >= CONFIDENCE_THRESHOLDS.AUTO_PUBLISH) {
+    return 'publish';
+  }
+  if (confidence >= CONFIDENCE_THRESHOLDS.NEEDS_REVIEW) {
+    return 'review';
+  }
+  return 'block';
+}
+
+/**
+ * Get detailed confidence gate result with explanation
+ */
+export function getConfidenceGateResult(confidence: number): ConfidenceGateResult {
+  const decision = enforceConfidenceGate(confidence);
+  
+  switch (decision) {
+    case 'publish':
+      return {
+        decision,
+        confidence,
+        threshold_used: 'AUTO_PUBLISH',
+        reason: `Confidence ${(confidence * 100).toFixed(1)}% meets auto-publish threshold (≥${CONFIDENCE_THRESHOLDS.AUTO_PUBLISH * 100}%)`,
+        can_override: false
+      };
+    case 'review':
+      return {
+        decision,
+        confidence,
+        threshold_used: 'NEEDS_REVIEW',
+        reason: `Confidence ${(confidence * 100).toFixed(1)}% requires human review (${CONFIDENCE_THRESHOLDS.NEEDS_REVIEW * 100}-${CONFIDENCE_THRESHOLDS.AUTO_PUBLISH * 100}%)`,
+        can_override: true
+      };
+    case 'block':
+      return {
+        decision,
+        confidence,
+        threshold_used: 'BLOCK',
+        reason: `Confidence ${(confidence * 100).toFixed(1)}% is below minimum threshold (<${CONFIDENCE_THRESHOLDS.BLOCK * 100}%)`,
+        can_override: false
+      };
+  }
+}
+
+/**
+ * Apply confidence gate to content and update its status
+ */
+export async function applyConfidenceGateToContent(
+  contentId: string,
+  confidence: number,
+  contentType: 'post' | 'movie' | 'review' = 'post'
+): Promise<{
+  success: boolean;
+  gate_result: ConfidenceGateResult;
+  status_updated: string | null;
+  error?: string;
+}> {
+  const gateResult = getConfidenceGateResult(confidence);
+  
+  // Determine table based on content type
+  const table = contentType === 'post' ? 'posts' 
+    : contentType === 'movie' ? 'movies' 
+    : 'movie_reviews';
+  
+  // Determine status based on decision
+  const newStatus = gateResult.decision === 'publish' ? 'READY'
+    : gateResult.decision === 'review' ? 'NEEDS_REVIEW'
+    : 'BLOCKED';
+  
+  try {
+    const { error } = await supabase
+      .from(table)
+      .update({ 
+        status: newStatus,
+        confidence_score: confidence,
+        confidence_decision: gateResult.decision,
+        confidence_updated_at: new Date().toISOString()
+      })
+      .eq('id', contentId);
+    
+    if (error) {
+      return {
+        success: false,
+        gate_result: gateResult,
+        status_updated: null,
+        error: error.message
+      };
+    }
+    
+    return {
+      success: true,
+      gate_result: gateResult,
+      status_updated: newStatus
+    };
+  } catch (err) {
+    return {
+      success: false,
+      gate_result: gateResult,
+      status_updated: null,
+      error: err instanceof Error ? err.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Batch apply confidence gates to multiple content items
+ */
+export async function batchApplyConfidenceGates(
+  items: Array<{ id: string; confidence: number; type?: 'post' | 'movie' | 'review' }>
+): Promise<{
+  total: number;
+  published: number;
+  needs_review: number;
+  blocked: number;
+  errors: number;
+}> {
+  const stats = {
+    total: items.length,
+    published: 0,
+    needs_review: 0,
+    blocked: 0,
+    errors: 0
+  };
+  
+  for (const item of items) {
+    const result = await applyConfidenceGateToContent(
+      item.id,
+      item.confidence,
+      item.type || 'post'
+    );
+    
+    if (!result.success) {
+      stats.errors++;
+      continue;
+    }
+    
+    switch (result.gate_result.decision) {
+      case 'publish':
+        stats.published++;
+        break;
+      case 'review':
+        stats.needs_review++;
+        break;
+      case 'block':
+        stats.blocked++;
+        break;
+    }
+  }
+  
+  return stats;
+}
+
+/**
+ * Calculate aggregate confidence from multiple signals
+ */
+export function calculateAggregateConfidence(signals: {
+  source_confidence?: number;      // From data source (TMDB, Wikipedia)
+  content_quality?: number;        // From quality gates
+  image_quality?: number;          // From image validation
+  entity_match?: number;           // From entity resolution
+  fact_validation?: number;        // From fact checker
+}): number {
+  const weights = {
+    source_confidence: 0.25,
+    content_quality: 0.25,
+    image_quality: 0.15,
+    entity_match: 0.20,
+    fact_validation: 0.15
+  };
+  
+  let totalWeight = 0;
+  let weightedSum = 0;
+  
+  for (const [key, weight] of Object.entries(weights)) {
+    const value = signals[key as keyof typeof signals];
+    if (value !== undefined) {
+      weightedSum += value * weight;
+      totalWeight += weight;
+    }
+  }
+  
+  return totalWeight > 0 ? weightedSum / totalWeight : 0;
+}
+
 

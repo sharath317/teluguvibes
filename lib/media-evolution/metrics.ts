@@ -347,3 +347,253 @@ export function compareMetrics(
   return { improvements, regressions, unchanged, summary };
 }
 
+// ============================================================
+// MEDIA COMPLETENESS SCORING (Phase 4)
+// ============================================================
+
+export interface MediaCompletenessResult {
+  score: number;  // 0-100
+  components: {
+    poster: { present: boolean; source: string; quality: number };
+    backdrop: { present: boolean; source: string; quality: number };
+    trailer: { present: boolean; source: string };
+    gallery: { count: number };
+  };
+  tier: 'complete' | 'partial' | 'minimal';
+  recommendation: string | null;
+}
+
+export interface CompletenessReport {
+  total_movies: number;
+  by_tier: {
+    complete: number;
+    partial: number;
+    minimal: number;
+  };
+  avg_score: number;
+  missing_poster: number;
+  missing_backdrop: number;
+  missing_trailer: number;
+  recommendations: string[];
+}
+
+/**
+ * Detect media source from URL
+ */
+function detectMediaSource(url: string): string {
+  if (!url) return 'none';
+  if (url.includes('tmdb.org')) return 'tmdb';
+  if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+  if (url.includes('wikimedia.org') || url.includes('wikipedia.org')) return 'wikimedia';
+  if (url.includes('unsplash.com')) return 'unsplash';
+  return 'other';
+}
+
+/**
+ * Calculate quality score for a media URL based on source
+ */
+function calculateMediaQuality(url: string, type: 'poster' | 'backdrop'): number {
+  if (!url) return 0;
+  
+  const source = detectMediaSource(url);
+  
+  // Quality scores by source (trusted order: TMDB > YouTube > Wikimedia > Other)
+  const qualityScores: Record<string, number> = {
+    tmdb: 100,
+    youtube: 85,
+    wikimedia: 80,
+    unsplash: 70,
+    other: 50
+  };
+  
+  let score = qualityScores[source] || 30;
+  
+  // Check for high-res indicators
+  if (url.includes('/original/') || url.includes('/w1280/')) {
+    score = Math.min(100, score + 10);
+  }
+  if (url.includes('/w185/') || url.includes('/w92/')) {
+    score = Math.max(0, score - 20); // Low res penalty
+  }
+  
+  return score;
+}
+
+/**
+ * Calculate comprehensive media completeness score for a single movie
+ */
+export async function calculateMediaCompletenessScore(movieId: string): Promise<MediaCompletenessResult> {
+  const supabase = getSupabaseClient();
+
+  const { data: movie, error } = await supabase
+    .from('movies')
+    .select('poster_url, backdrop_url, youtube_trailer_id, gallery_images')
+    .eq('id', movieId)
+    .single();
+
+  if (error || !movie) {
+    return {
+      score: 0,
+      components: {
+        poster: { present: false, source: 'none', quality: 0 },
+        backdrop: { present: false, source: 'none', quality: 0 },
+        trailer: { present: false, source: 'none' },
+        gallery: { count: 0 }
+      },
+      tier: 'minimal',
+      recommendation: 'Movie not found'
+    };
+  }
+
+  // Analyze each component
+  const posterPresent = !!movie.poster_url;
+  const posterSource = detectMediaSource(movie.poster_url || '');
+  const posterQuality = calculateMediaQuality(movie.poster_url || '', 'poster');
+
+  const backdropPresent = !!movie.backdrop_url;
+  const backdropSource = detectMediaSource(movie.backdrop_url || '');
+  const backdropQuality = calculateMediaQuality(movie.backdrop_url || '', 'backdrop');
+
+  const trailerPresent = !!movie.youtube_trailer_id;
+  const trailerSource = trailerPresent ? 'youtube' : 'none';
+
+  const galleryImages = movie.gallery_images || [];
+  const galleryCount = Array.isArray(galleryImages) ? galleryImages.length : 0;
+
+  // Calculate composite score
+  // Weights: Poster 40%, Backdrop 30%, Trailer 20%, Gallery 10%
+  let score = 0;
+  score += posterPresent ? (posterQuality * 0.4) : 0;
+  score += backdropPresent ? (backdropQuality * 0.3) : 0;
+  score += trailerPresent ? 20 : 0;
+  score += Math.min(10, galleryCount * 2);
+
+  // Determine tier
+  let tier: 'complete' | 'partial' | 'minimal';
+  if (score >= 80) {
+    tier = 'complete';
+  } else if (score >= 40) {
+    tier = 'partial';
+  } else {
+    tier = 'minimal';
+  }
+
+  // Generate recommendation
+  let recommendation: string | null = null;
+  if (!posterPresent) {
+    recommendation = 'Add poster image from TMDB';
+  } else if (!backdropPresent) {
+    recommendation = 'Add backdrop image';
+  } else if (!trailerPresent) {
+    recommendation = 'Link YouTube trailer';
+  } else if (galleryCount < 3) {
+    recommendation = 'Add more gallery images';
+  }
+
+  return {
+    score: Math.round(score),
+    components: {
+      poster: { present: posterPresent, source: posterSource, quality: posterQuality },
+      backdrop: { present: backdropPresent, source: backdropSource, quality: backdropQuality },
+      trailer: { present: trailerPresent, source: trailerSource },
+      gallery: { count: galleryCount }
+    },
+    tier,
+    recommendation
+  };
+}
+
+/**
+ * Calculate media completeness for multiple movies
+ */
+export async function calculateBatchMediaCompleteness(
+  movieIds: string[]
+): Promise<Map<string, MediaCompletenessResult>> {
+  const results = new Map<string, MediaCompletenessResult>();
+
+  for (const id of movieIds) {
+    const result = await calculateMediaCompletenessScore(id);
+    results.set(id, result);
+  }
+
+  return results;
+}
+
+/**
+ * Generate a comprehensive media completeness report
+ */
+export async function getMediaCompletenessReport(): Promise<CompletenessReport> {
+  const supabase = getSupabaseClient();
+
+  const { data: movies, error } = await supabase
+    .from('movies')
+    .select('id, poster_url, backdrop_url, youtube_trailer_id, gallery_images')
+    .limit(3000);
+
+  if (error || !movies) {
+    throw new Error(`Failed to fetch movies: ${error?.message}`);
+  }
+
+  const byTier = { complete: 0, partial: 0, minimal: 0 };
+  let totalScore = 0;
+  let missingPoster = 0;
+  let missingBackdrop = 0;
+  let missingTrailer = 0;
+
+  for (const movie of movies) {
+    // Quick inline calculation for performance
+    const posterPresent = !!movie.poster_url;
+    const backdropPresent = !!movie.backdrop_url;
+    const trailerPresent = !!movie.youtube_trailer_id;
+    const galleryCount = Array.isArray(movie.gallery_images) ? movie.gallery_images.length : 0;
+
+    if (!posterPresent) missingPoster++;
+    if (!backdropPresent) missingBackdrop++;
+    if (!trailerPresent) missingTrailer++;
+
+    // Quick score calculation
+    let score = 0;
+    score += posterPresent ? 40 : 0;
+    score += backdropPresent ? 30 : 0;
+    score += trailerPresent ? 20 : 0;
+    score += Math.min(10, galleryCount * 2);
+
+    totalScore += score;
+
+    if (score >= 80) byTier.complete++;
+    else if (score >= 40) byTier.partial++;
+    else byTier.minimal++;
+  }
+
+  const avgScore = movies.length > 0 ? Math.round(totalScore / movies.length) : 0;
+
+  // Generate recommendations
+  const recommendations: string[] = [];
+  const posterPercent = Math.round((1 - missingPoster / movies.length) * 100);
+  const backdropPercent = Math.round((1 - missingBackdrop / movies.length) * 100);
+  const trailerPercent = Math.round((1 - missingTrailer / movies.length) * 100);
+
+  if (posterPercent < 80) {
+    recommendations.push(`Improve poster coverage from ${posterPercent}% to 80%+`);
+  }
+  if (backdropPercent < 60) {
+    recommendations.push(`Improve backdrop coverage from ${backdropPercent}% to 60%+`);
+  }
+  if (trailerPercent < 30) {
+    recommendations.push(`Link more YouTube trailers (currently ${trailerPercent}%)`);
+  }
+  if (byTier.minimal > movies.length * 0.3) {
+    recommendations.push(`Reduce minimal-tier movies (currently ${Math.round(byTier.minimal / movies.length * 100)}%)`);
+  }
+
+  return {
+    total_movies: movies.length,
+    by_tier: byTier,
+    avg_score: avgScore,
+    missing_poster: missingPoster,
+    missing_backdrop: missingBackdrop,
+    missing_trailer: missingTrailer,
+    recommendations
+  };
+}
+
