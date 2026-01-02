@@ -112,6 +112,8 @@
     "movies:ingest:multilang:dry": "npx tsx scripts/ingest-multilang-movies.ts --all --dry",
     "enrich:movies": "npx tsx scripts/enrich-movies-tmdb.ts",
     "enrich:movies:dry": "npx tsx scripts/enrich-movies-tmdb.ts --dry",
+    "enrich:posters": "npx tsx scripts/enrich-posters-fast.ts",
+    "enrich:posters:dry": "npx tsx scripts/enrich-posters-fast.ts --dry",
     "enrich:movies:all": "npx tsx scripts/enrich-movies-tmdb.ts --all",
     "run-migrations": "npx tsx scripts/run-migrations.ts",
     "movies:coverage:analyze": "npx tsx scripts/movies-coverage-analyze.ts",
@@ -187,15 +189,12 @@
     "finalize:fast": "npx tsx scripts/finalize-fast.ts",
     "finalize:fast:dry": "npx tsx scripts/finalize-fast.ts --dry",
     "finalize:fast:status": "npx tsx scripts/finalize-fast.ts --status",
-    
     "promote:auto": "npx tsx scripts/auto-promote.ts",
     "promote:auto:dry": "npx tsx scripts/auto-promote.ts --dry",
     "promote:auto:status": "npx tsx scripts/auto-promote.ts --status",
-    
     "tags:generate": "npx tsx scripts/smart-tag-generator.ts",
     "tags:generate:dry": "npx tsx scripts/smart-tag-generator.ts --dry",
     "tags:generate:status": "npx tsx scripts/smart-tag-generator.ts --status",
-    
     "orphan:resolve": "npx tsx scripts/orphan-resolve.ts",
     "orphan:resolve:dry": "npx tsx scripts/orphan-resolve.ts --dry",
     "ingest:accelerated": "npx tsx scripts/ingest-accelerated.ts",

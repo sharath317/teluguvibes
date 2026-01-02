@@ -31,13 +31,14 @@ export async function GET(request: NextRequest) {
   // Pagination & Sorting
   const sortBy = searchParams.get('sortBy') || 'rating';
   const sortOrder = searchParams.get('sortOrder') || 'desc';
-  const limit = parseInt(searchParams.get('limit') || '20');
+  const limit = parseInt(searchParams.get('limit') || '50');
   const offset = parseInt(searchParams.get('offset') || '0');
 
   let query = supabase
     .from('movies')
     .select('*', { count: 'exact' })
-    .eq('is_published', true);
+    .eq('is_published', true)
+    .not('poster_url', 'is', null);  // Only show movies with posters
 
   // Apply filters
   if (genre) {
@@ -82,10 +83,8 @@ export async function GET(request: NextRequest) {
 
   if (language) {
     query = query.eq('language', language);
-    // For non-Telugu languages, only show quality movies
-    if (language !== 'Telugu') {
-      query = query.or('is_blockbuster.eq.true,is_classic.eq.true,is_underrated.eq.true,avg_rating.gte.7');
-    }
+    // Quality gate removed - all published movies with posters are visible
+    // Tags (blockbuster, classic, underrated) are for filtering, not gating
   }
 
   if (search) {

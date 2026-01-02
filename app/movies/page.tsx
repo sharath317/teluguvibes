@@ -36,8 +36,9 @@ async function getMovies(decade?: string) {
     .from('movies')
     .select('*')
     .eq('is_published', true)
+    .not('poster_url', 'is', null)  // Only show movies with posters
     .order('release_year', { ascending: false })
-    .limit(60);
+    .limit(200);
 
   if (decade && decade !== 'all') {
     if (decade === 'classic') {
