@@ -5,12 +5,18 @@
  * Single command to discover ALL Telugu movies from TMDB.
  * 
  * Usage:
- *   pnpm ingest:tmdb:telugu --dry          # Preview mode
- *   pnpm ingest:tmdb:telugu                # Full discovery
- *   pnpm ingest:tmdb:telugu --year=2024    # Single year
- *   pnpm ingest:tmdb:telugu --from=2020    # 2020 to present
- *   pnpm ingest:tmdb:telugu --credits      # Also fetch credits (slower)
- *   pnpm ingest:tmdb:telugu --status       # Show current index status
+ *   pnpm ingest:tmdb:telugu --dry                         # Preview mode
+ *   pnpm ingest:tmdb:telugu                               # Full discovery
+ *   pnpm ingest:tmdb:telugu --year=2024                   # Single year
+ *   pnpm ingest:tmdb:telugu --from=1940 --to=2025         # Year range (chunked)
+ *   pnpm ingest:tmdb:telugu --from=1940 --chunk-size=10   # 10 years per chunk
+ *   pnpm ingest:tmdb:telugu --resume                      # Resume from last checkpoint
+ *   pnpm ingest:tmdb:telugu --credits                     # Also fetch credits (slower)
+ *   pnpm ingest:tmdb:telugu --status                      # Show current index status
+ * 
+ * Speed optimizations:
+ *   --chunk-size=10  Break large ranges into 10-year chunks (default)
+ *   --resume         Resume from last checkpoint if interrupted
  */
 
 import { config } from 'dotenv';
@@ -26,6 +32,7 @@ import {
   getIndexStats,
   PaginatorOptions,
 } from '../lib/movie-index/tmdb-paginator';
+import { createProgress } from '../lib/pipeline/progress-tracker';
 
 // ============================================================
 // CLI ARGUMENT PARSING
@@ -36,11 +43,13 @@ interface CLIArgs {
   year?: number;
   fromYear?: number;
   toYear?: number;
+  chunkSize: number; // Years per chunk
   maxPages?: number;
   fetchCredits: boolean;
   verbose: boolean;
   statusOnly: boolean;
   help: boolean;
+  resume: boolean; // Resume from last checkpoint
 }
 
 function parseArgs(): CLIArgs {
@@ -51,6 +60,8 @@ function parseArgs(): CLIArgs {
     verbose: false,
     statusOnly: false,
     help: false,
+    chunkSize: 10, // Default: 10 years per chunk
+    resume: false,
   };
 
   for (const arg of args) {
@@ -64,12 +75,16 @@ function parseArgs(): CLIArgs {
       parsed.statusOnly = true;
     } else if (arg === '-h' || arg === '--help') {
       parsed.help = true;
+    } else if (arg === '--resume') {
+      parsed.resume = true;
     } else if (arg.startsWith('--year=')) {
       parsed.year = parseInt(arg.split('=')[1]);
     } else if (arg.startsWith('--from=')) {
       parsed.fromYear = parseInt(arg.split('=')[1]);
     } else if (arg.startsWith('--to=')) {
       parsed.toYear = parseInt(arg.split('=')[1]);
+    } else if (arg.startsWith('--chunk-size=')) {
+      parsed.chunkSize = parseInt(arg.split('=')[1]);
     } else if (arg.startsWith('--max-pages=')) {
       parsed.maxPages = parseInt(arg.split('=')[1]);
     }
@@ -77,6 +92,51 @@ function parseArgs(): CLIArgs {
 
   return parsed;
 }
+
+// ============================================================
+// CHECKPOINT SYSTEM
+// ============================================================
+
+interface DiscoveryCheckpoint {
+  lastCompletedYear: number;
+  totalMoviesFound: number;
+  timestamp: string;
+}
+
+const CHECKPOINT_FILE = '.tmdb-discovery-checkpoint.json';
+
+async function saveCheckpoint(year: number, totalMovies: number): Promise<void> {
+  const fs = await import('fs/promises');
+  const checkpoint: DiscoveryCheckpoint = {
+    lastCompletedYear: year,
+    totalMoviesFound: totalMovies,
+    timestamp: new Date().toISOString(),
+  };
+  await fs.writeFile(CHECKPOINT_FILE, JSON.stringify(checkpoint, null, 2));
+}
+
+async function loadCheckpoint(): Promise<DiscoveryCheckpoint | null> {
+  try {
+    const fs = await import('fs/promises');
+    const data = await fs.readFile(CHECKPOINT_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+
+async function clearCheckpoint(): Promise<void> {
+  try {
+    const fs = await import('fs/promises');
+    await fs.unlink(CHECKPOINT_FILE);
+  } catch {
+    // Ignore if file doesn't exist
+  }
+}
+
+// ============================================================
+// HELP & STATUS
+// ============================================================
 
 function showHelp(): void {
   console.log(`
@@ -94,10 +154,16 @@ ${chalk.yellow('Options:')}
   --year=YYYY         Discover movies for a single year
   --from=YYYY         Start year for range discovery
   --to=YYYY           End year for range discovery (default: current year)
+  --chunk-size=N      Years per chunk (default: 10, for progress tracking)
+  --resume            Resume from last checkpoint if interrupted
   --max-pages=N       Limit pages per request
   --credits           Also fetch credits (slower, better confidence)
   -v, --verbose       Show detailed output
   -h, --help          Show this help message
+
+${chalk.yellow('Speed optimizations:')}
+  --chunk-size=10     Break large year ranges into manageable chunks
+  --resume            Resume interrupted discovery from last checkpoint
 
 ${chalk.yellow('Examples:')}
   pnpm ingest:tmdb:telugu --dry           # Preview all Telugu movies
@@ -223,16 +289,81 @@ async function main(): Promise<void> {
     let result;
 
     if (args.fromYear) {
-      // Year range discovery
+      // Year range discovery with chunking
       const toYear = args.toYear || new Date().getFullYear();
-      console.log(chalk.cyan(`📅 Discovering Telugu movies from ${args.fromYear} to ${toYear}...`));
+      let startYear = args.fromYear;
       
-      result = await paginateByYear(args.fromYear, toYear, {
-        dryRun: args.dryRun,
-        fetchCredits: args.fetchCredits,
-        verbose: args.verbose,
-        maxPages: args.maxPages,
-      });
+      // Check for resume
+      if (args.resume) {
+        const checkpoint = await loadCheckpoint();
+        if (checkpoint) {
+          console.log(chalk.yellow(`📍 Resuming from checkpoint: ${checkpoint.lastCompletedYear}`));
+          console.log(chalk.gray(`   Found ${checkpoint.totalMoviesFound} movies so far\n`));
+          startYear = checkpoint.lastCompletedYear + 1;
+        }
+      }
+
+      const totalYears = toYear - startYear + 1;
+      const numChunks = Math.ceil(totalYears / args.chunkSize);
+      
+      console.log(chalk.cyan(`📅 Discovering Telugu movies from ${startYear} to ${toYear}`));
+      console.log(chalk.gray(`   ${numChunks} chunks of ${args.chunkSize} years each\n`));
+      
+      const progress = createProgress('Discovery progress', numChunks, 5);
+      let totalMoviesFound = 0;
+      let allResults: any = { inserted: 0, updated: 0, skipped: 0 };
+      
+      // Process in chunks
+      for (let chunkIndex = 0; chunkIndex < numChunks; chunkIndex++) {
+        const chunkStartYear = startYear + (chunkIndex * args.chunkSize);
+        const chunkEndYear = Math.min(chunkStartYear + args.chunkSize - 1, toYear);
+        
+        // Check timeout every chunk
+        const action = await progress.checkTimeout();
+        if (action === 'stop') {
+          console.log(chalk.yellow('\n⏸️  Discovery stopped by user. Progress saved.'));
+          await saveCheckpoint(chunkStartYear - 1, totalMoviesFound);
+          break;
+        } else if (action === 'skip') {
+          console.log(chalk.yellow('\n⏩ Skipping remaining chunks...'));
+          break;
+        }
+        
+        console.log(chalk.blue(`\n📆 Chunk ${chunkIndex + 1}/${numChunks}: ${chunkStartYear}-${chunkEndYear}`));
+        
+        const chunkResult = await paginateByYear(chunkStartYear, chunkEndYear, {
+          dryRun: args.dryRun,
+          fetchCredits: args.fetchCredits,
+          verbose: args.verbose,
+          maxPages: args.maxPages,
+        });
+        
+        allResults.inserted += chunkResult.inserted;
+        allResults.updated += chunkResult.updated;
+        allResults.skipped += chunkResult.skipped;
+        totalMoviesFound += chunkResult.inserted + chunkResult.updated;
+        
+        // Save checkpoint after each chunk
+        if (!args.dryRun) {
+          await saveCheckpoint(chunkEndYear, totalMoviesFound);
+        }
+        
+        progress.increment();
+        
+        // Rate limit between chunks
+        if (chunkIndex < numChunks - 1) {
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+      
+      progress.complete('Discovery completed');
+      
+      // Clear checkpoint on successful completion
+      if (!args.dryRun) {
+        await clearCheckpoint();
+      }
+      
+      result = allResults;
     } else if (args.year) {
       // Single year discovery
       console.log(chalk.cyan(`📅 Discovering Telugu movies for year ${args.year}...`));

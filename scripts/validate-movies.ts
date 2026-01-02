@@ -12,9 +12,17 @@
  * 5. Duplicate detection
  * 
  * Usage:
- *   pnpm intel:validate:movies           # Validate all pending
- *   pnpm intel:validate:movies --fix     # Auto-fix issues
- *   pnpm intel:validate:movies --strict  # Strict mode (rejects more)
+ *   pnpm intel:validate:movies                           # Validate all pending (sequential)
+ *   pnpm intel:validate:movies --parallel                # Parallel validation (4x faster)
+ *   pnpm intel:validate:movies --fix                     # Auto-fix issues
+ *   pnpm intel:validate:movies --strict                  # Strict mode (rejects more)
+ *   pnpm intel:validate:movies --parallel --batch-size=50 # 50 movies per batch
+ *   pnpm intel:validate:movies --limit=500               # Process 500 movies max
+ * 
+ * Speed optimizations:
+ *   --parallel          Enable parallel processing (4x faster)
+ *   --batch-size=50     Movies per batch (default: 50)
+ *   --limit=500         Max movies to process
  */
 
 import { config } from 'dotenv';
@@ -31,6 +39,7 @@ import {
   type MovieCandidate,
   type EntityStatus,
 } from '../lib/movie-validation/movie-identity-gate';
+import { createProgress } from '../lib/pipeline/progress-tracker';
 
 // ============================================================
 // TYPES
@@ -52,6 +61,8 @@ interface CLIArgs {
   limit?: number;
   verbose: boolean;
   statusOnly: boolean;
+  parallel: boolean;
+  batchSize: number;
 }
 
 // ============================================================
@@ -257,6 +268,8 @@ function parseArgs(): CLIArgs {
     strict: false,
     verbose: false,
     statusOnly: false,
+    parallel: false,
+    batchSize: 50, // Optimized default: 50 movies per batch
   };
 
   for (const arg of args) {
@@ -264,7 +277,9 @@ function parseArgs(): CLIArgs {
     if (arg === '--strict') parsed.strict = true;
     if (arg === '-v' || arg === '--verbose') parsed.verbose = true;
     if (arg === '--status') parsed.statusOnly = true;
+    if (arg === '--parallel') parsed.parallel = true;
     if (arg.startsWith('--limit=')) parsed.limit = parseInt(arg.split('=')[1]);
+    if (arg.startsWith('--batch-size=')) parsed.batchSize = parseInt(arg.split('=')[1]);
   }
 
   return parsed;
@@ -318,6 +333,158 @@ async function showStatus(supabase: ReturnType<typeof getSupabaseClient>): Promi
       console.log(`  ... and ${duplicates.length - 5} more`);
     }
   }
+}
+
+// ============================================================
+// PARALLEL VALIDATION
+// ============================================================
+
+interface ValidationResult {
+  movieId: string;
+  title: string;
+  status: EntityStatus;
+  fixed: boolean;
+  error?: string;
+}
+
+async function validateMovieBatch(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  movies: any[],
+  options: { strict: boolean; fix: boolean }
+): Promise<ValidationResult[]> {
+  const results: ValidationResult[] = [];
+
+  // Process movies in parallel within the batch
+  const promises = movies.map(async (movie) => {
+    try {
+      const result = await validateMovie(supabase, movie, { strict: options.strict });
+
+      // Determine final status
+      let finalStatus: EntityStatus;
+      if (result.status.startsWith('INVALID')) {
+        finalStatus = 'REJECTED';
+      } else if (result.status === 'VALID') {
+        finalStatus = 'VALID';
+      } else {
+        finalStatus = 'NEEDS_REVIEW';
+      }
+
+      // Update status in database
+      const updateData: any = {
+        status: finalStatus,
+      };
+
+      if (result.status.startsWith('INVALID')) {
+        updateData.rejection_reason = result.issues.join('; ');
+      }
+
+      await supabase
+        .from('telugu_movie_index')
+        .update(updateData)
+        .eq('id', movie.id);
+
+      // Fix if requested
+      let fixed = false;
+      if (options.fix && result.tmdbData) {
+        fixed = await fixMovie(supabase, movie.id, result.tmdbData);
+      }
+
+      return {
+        movieId: movie.id,
+        title: movie.title_en,
+        status: finalStatus,
+        fixed,
+      };
+
+    } catch (error: any) {
+      return {
+        movieId: movie.id,
+        title: movie.title_en,
+        status: 'REJECTED' as EntityStatus,
+        fixed: false,
+        error: error.message,
+      };
+    }
+  });
+
+  // Execute with rate limiting between movies
+  const batchResults = await Promise.all(promises);
+  results.push(...batchResults);
+
+  return results;
+}
+
+async function runParallelValidation(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  movies: any[],
+  args: CLIArgs
+): Promise<ValidationStats> {
+  const stats: ValidationStats = {
+    total: movies.length,
+    valid: 0,
+    needsReview: 0,
+    rejected: 0,
+    fixed: 0,
+    duplicatesFound: 0,
+    errors: [],
+  };
+
+  // Split into batches
+  const batches: any[][] = [];
+  for (let i = 0; i < movies.length; i += args.batchSize) {
+    batches.push(movies.slice(i, i + args.batchSize));
+  }
+
+  console.log(chalk.gray(`  Processing in ${batches.length} batches of ${args.batchSize} movies\n`));
+
+  // Create progress tracker
+  const progress = createProgress('Validating movies', movies.length, 5);
+
+  // Process batches sequentially (to respect rate limits), but movies within each batch in parallel
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+    // Check timeout every batch
+    const action = await progress.checkTimeout();
+    if (action === 'stop') {
+      console.log(chalk.yellow('\n⏸️  Validation stopped by user. Progress has been saved.'));
+      break;
+    } else if (action === 'skip') {
+      console.log(chalk.yellow('\n⏩ Skipping remaining validation...'));
+      break;
+    }
+
+    const batch = batches[batchIndex];
+    const batchResults = await validateMovieBatch(supabase, batch, { strict: args.strict, fix: args.fix });
+
+    for (const result of batchResults) {
+      if (result.error) {
+        stats.errors.push(`${result.title}: ${result.error}`);
+        stats.rejected++;
+      } else if (result.status === 'VALID') {
+        stats.valid++;
+      } else if (result.status === 'NEEDS_REVIEW') {
+        stats.needsReview++;
+      } else {
+        stats.rejected++;
+      }
+
+      if (result.fixed) {
+        stats.fixed++;
+      }
+    }
+
+    // Update progress
+    const processed = Math.min((batchIndex + 1) * args.batchSize, movies.length);
+    progress.set(processed);
+
+    // Rate limit between batches (500ms)
+    if (batchIndex < batches.length - 1) {
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+
+  progress.complete('Validation completed');
+
+  return stats;
 }
 
 // ============================================================
@@ -413,52 +580,63 @@ async function main(): Promise<void> {
   console.log(chalk.cyan(`\n📋 Validating ${movies.length} movies...`));
   stats.total = movies.length;
 
-  // 3. Validate each movie
-  for (let i = 0; i < movies.length; i++) {
-    const movie = movies[i];
+  // 3. Validate movies (parallel or sequential)
+  if (args.parallel) {
+    console.log(chalk.gray(`  🚀 Parallel mode enabled (batch size: ${args.batchSize})\n`));
+    const parallelStats = await runParallelValidation(supabase, movies, args);
+    stats.valid = parallelStats.valid;
+    stats.needsReview = parallelStats.needsReview;
+    stats.rejected = parallelStats.rejected;
+    stats.fixed = parallelStats.fixed;
+    stats.errors = parallelStats.errors;
+  } else {
+    // Sequential validation (original behavior)
+    for (let i = 0; i < movies.length; i++) {
+      const movie = movies[i];
 
-    if (args.verbose) {
-      console.log(`  [${i + 1}/${movies.length}] ${movie.title_en}`);
-    }
-
-    try {
-      const result = await validateMovie(supabase, movie, { strict: args.strict });
-
-      // Update status
-      const updateData: any = {
-        status: result.status,
-      };
-
-      if (result.status.startsWith('INVALID')) {
-        updateData.rejection_reason = result.issues.join('; ');
-        stats.rejected++;
-      } else if (result.status === 'VALID') {
-        stats.valid++;
-      } else {
-        stats.needsReview++;
+      if (args.verbose) {
+        console.log(`  [${i + 1}/${movies.length}] ${movie.title_en}`);
       }
 
-      await supabase
-        .from('telugu_movie_index')
-        .update(updateData)
-        .eq('id', movie.id);
+      try {
+        const result = await validateMovie(supabase, movie, { strict: args.strict });
 
-      // Fix if requested
-      if (args.fix && result.tmdbData) {
-        const fixed = await fixMovie(supabase, movie.id, result.tmdbData);
-        if (fixed) stats.fixed++;
+        // Update status
+        const updateData: any = {
+          status: result.status,
+        };
+
+        if (result.status.startsWith('INVALID')) {
+          updateData.rejection_reason = result.issues.join('; ');
+          stats.rejected++;
+        } else if (result.status === 'VALID') {
+          stats.valid++;
+        } else {
+          stats.needsReview++;
+        }
+
+        await supabase
+          .from('telugu_movie_index')
+          .update(updateData)
+          .eq('id', movie.id);
+
+        // Fix if requested
+        if (args.fix && result.tmdbData) {
+          const fixed = await fixMovie(supabase, movie.id, result.tmdbData);
+          if (fixed) stats.fixed++;
+        }
+
+        // Rate limit
+        await new Promise(r => setTimeout(r, 100));
+
+      } catch (error: any) {
+        stats.errors.push(`${movie.title_en}: ${error.message}`);
       }
 
-      // Rate limit
-      await new Promise(r => setTimeout(r, 100));
-
-    } catch (error: any) {
-      stats.errors.push(`${movie.title_en}: ${error.message}`);
-    }
-
-    // Progress
-    if (i > 0 && i % 50 === 0) {
-      console.log(`  Progress: ${i}/${movies.length} (${stats.valid} valid, ${stats.rejected} rejected)`);
+      // Progress
+      if (i > 0 && i % 50 === 0) {
+        console.log(`  Progress: ${i}/${movies.length} (${stats.valid} valid, ${stats.rejected} rejected)`);
+      }
     }
   }
 

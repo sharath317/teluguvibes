@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
   const blockbuster = searchParams.get('blockbuster');
   const classic = searchParams.get('classic');
   const search = searchParams.get('search');
+  const language = searchParams.get('language');
 
   // Pagination & Sorting
   const sortBy = searchParams.get('sortBy') || 'rating';
@@ -77,6 +78,14 @@ export async function GET(request: NextRequest) {
 
   if (classic === 'true') {
     query = query.eq('is_classic', true);
+  }
+
+  if (language) {
+    query = query.eq('language', language);
+    // For non-Telugu languages, only show quality movies
+    if (language !== 'Telugu') {
+      query = query.or('is_blockbuster.eq.true,is_classic.eq.true,is_underrated.eq.true,avg_rating.gte.7');
+    }
   }
 
   if (search) {

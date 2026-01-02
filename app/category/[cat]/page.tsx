@@ -327,20 +327,20 @@ export default async function CategoryPage({
             </div>
           </div>
 
-          {/* Quick Navigation to Related Sections */}
-          {relatedSections.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {/* Current Category (Active) */}
-              <span
-                className={`px-4 py-2 rounded-full text-sm font-medium bg-gradient-to-r ${info.gradient} text-white shadow-lg`}
-              >
-                {info.icon} {info.label}
-              </span>
-              
-              {/* Related Categories */}
-              {relatedSections.slice(0, 5).map((item) => {
-                const itemMeta = CATEGORY_META[item.id] || {};
-                return (
+          {/* Unified Category Navigation - Single Row */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            {/* Show related sections first if available, otherwise show primary categories */}
+            {relatedSections.length > 0 ? (
+              <>
+                {/* Current Category (Active) */}
+                <span
+                  className={`px-4 py-2 rounded-full text-sm font-medium bg-gradient-to-r ${info.gradient} text-white shadow-lg`}
+                >
+                  {info.icon} {info.label}
+                </span>
+                
+                {/* Related Categories from same group */}
+                {relatedSections.slice(0, 5).map((item) => (
                   <Link
                     key={item.id}
                     href={item.href}
@@ -352,35 +352,33 @@ export default async function CategoryPage({
                   >
                     {item.emoji} {item.label}
                   </Link>
+                ))}
+              </>
+            ) : (
+              /* Fallback: Primary categories if no group context */
+              validCategories.slice(0, 6).map((category) => {
+                const catInfo = getCategoryInfo(category);
+                const isActive = category === cat;
+                
+                return (
+                  <Link
+                    key={category}
+                    href={`/category/${category}`}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                      isActive
+                        ? `bg-gradient-to-r ${catInfo.gradient} text-white shadow-lg`
+                        : ''
+                    }`}
+                    style={!isActive ? { 
+                      background: 'var(--bg-tertiary)', 
+                      color: 'var(--text-secondary)' 
+                    } : undefined}
+                  >
+                    {catInfo.icon} {catInfo.label}
+                  </Link>
                 );
-              })}
-            </div>
-          )}
-
-          {/* Primary Categories Navigation */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            {validCategories.slice(0, 8).map((category) => {
-              const catInfo = getCategoryInfo(category);
-              const isActive = category === cat;
-              
-              return (
-                <Link
-                  key={category}
-                  href={`/category/${category}`}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                    isActive
-                      ? `bg-gradient-to-r ${catInfo.gradient} text-white shadow-lg`
-                      : ''
-                  }`}
-                  style={!isActive ? { 
-                    background: 'var(--bg-tertiary)', 
-                    color: 'var(--text-secondary)' 
-                  } : undefined}
-                >
-                  {catInfo.icon} {catInfo.label}
-                </Link>
-              );
-            })}
+              })
+            )}
           </div>
         </div>
 

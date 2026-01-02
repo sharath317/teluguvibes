@@ -2,8 +2,8 @@
 
 export type Genre =
   | 'Action' | 'Drama' | 'Romance' | 'Comedy' | 'Thriller'
-  | 'Horror' | 'Fantasy' | 'Crime' | 'Period' | 'Family'
-  | 'Musical' | 'Devotional' | 'Biographical' | 'Sports';
+  | 'Horror' | 'Fantasy' | 'Crime' | 'Family' | 'Mystery'
+  | 'Adventure' | 'Music' | 'Documentary';
 
 export type DedicationType =
   | 'birthday' | 'anniversary' | 'achievement' | 'memorial'

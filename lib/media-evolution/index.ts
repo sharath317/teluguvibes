@@ -31,6 +31,9 @@ export {
   detectDuplicateEntities,
   detectCollaborations,
   normalizeEntities,
+  normalizeMovieTitles,
+  normalizeMediaUrl,
+  normalizeAllMediaUrls,
   detectCareerPhase,
   enrichEntitiesWithCareerPhase
 } from './entity-normalizer';

@@ -11,6 +11,10 @@ interface HorizontalCarouselProps {
   onShowAll?: () => void;
   className?: string;
   gap?: 'sm' | 'md' | 'lg';
+  /** Accessible label for the carousel region */
+  ariaLabel?: string;
+  /** Unique ID for the carousel (for ARIA) */
+  id?: string;
 }
 
 export function HorizontalCarousel({
@@ -20,7 +24,9 @@ export function HorizontalCarousel({
   showAllHref,
   onShowAll,
   className = '',
-  gap = 'md'
+  gap = 'md',
+  ariaLabel,
+  id,
 }: HorizontalCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -58,12 +64,23 @@ export function HorizontalCarousel({
     }
   }, [children]);
 
+  // Generate accessible label
+  const effectiveAriaLabel = ariaLabel || (title ? `${title} carousel` : 'Content carousel');
+  const carouselId = id || `carousel-${Math.random().toString(36).substr(2, 9)}`;
+
   return (
-    <div className={`relative group/carousel ${className}`}>
+    <section
+      className={`relative group/carousel ${className}`}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label={effectiveAriaLabel}
+      id={carouselId}
+    >
       {/* Header */}
       {title && (
         <div className="flex items-center justify-between mb-2 px-1">
           <h3
+            id={`${carouselId}-title`}
             className="flex items-center gap-2 text-sm font-semibold"
             style={{ color: 'var(--text-primary)' }}
           >
@@ -97,6 +114,18 @@ export function HorizontalCarousel({
         <div
           ref={scrollRef}
           className={`flex ${gapClass} overflow-x-auto scrollbar-hide scroll-smooth pb-1`}
+          role="list"
+          aria-labelledby={title ? `${carouselId}-title` : undefined}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft') {
+              e.preventDefault();
+              scroll('left');
+            } else if (e.key === 'ArrowRight') {
+              e.preventDefault();
+              scroll('right');
+            }
+          }}
         >
           {children}
         </div>
@@ -105,31 +134,35 @@ export function HorizontalCarousel({
         {canScrollLeft && (
           <button
             onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover/carousel:opacity-90 transition-all z-10 shadow-lg"
+            aria-label="Scroll left"
+            aria-controls={carouselId}
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover/carousel:opacity-90 transition-all z-10 shadow-lg focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
             style={{
               background: 'var(--bg-primary)',
               color: 'var(--text-primary)',
               border: '1px solid var(--border-primary)'
             }}
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4" aria-hidden="true" />
           </button>
         )}
         {canScrollRight && (
           <button
             onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover/carousel:opacity-90 transition-all z-10 shadow-lg"
+            aria-label="Scroll right"
+            aria-controls={carouselId}
+            className="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover/carousel:opacity-90 transition-all z-10 shadow-lg focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
             style={{
               background: 'var(--bg-primary)',
               color: 'var(--text-primary)',
               border: '1px solid var(--border-primary)'
             }}
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </button>
         )}
       </div>
-    </div>
+    </section>
   );
 }
 

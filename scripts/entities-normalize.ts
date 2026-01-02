@@ -1,14 +1,17 @@
 #!/usr/bin/env npx tsx
 /**
- * Phase 4: Entity Normalization CLI
+ * Phase 4 + 7: Entity & Data Normalization CLI
  * 
- * Normalizes entity names, detects duplicates, finds collaborations.
+ * Normalizes entity names, movie titles, media URLs, detects duplicates, finds collaborations.
  * 
  * Usage:
- *   pnpm entities:normalize              # Dry run analysis
- *   pnpm entities:normalize --fix        # Apply normalization
+ *   pnpm entities:normalize              # Dry run analysis (celebrities)
+ *   pnpm entities:normalize --fix        # Apply celebrity normalization
  *   pnpm entities:normalize --duplicates # Find duplicates only
  *   pnpm entities:normalize --collaborations  # Find actor-director pairs
+ *   pnpm intel:normalize --movies        # Normalize movie titles
+ *   pnpm intel:normalize --media         # Normalize media URLs
+ *   pnpm intel:normalize --all           # All normalizations
  */
 
 import { config } from 'dotenv';
@@ -21,7 +24,9 @@ import {
   normalizeEntities,
   detectDuplicateEntities,
   detectCollaborations,
-  enrichEntitiesWithCareerPhase
+  enrichEntitiesWithCareerPhase,
+  normalizeMovieTitles,
+  normalizeAllMediaUrls
 } from '../lib/media-evolution';
 
 async function main() {
@@ -30,10 +35,81 @@ async function main() {
   const findDuplicates = args.includes('--duplicates');
   const findCollaborations = args.includes('--collaborations');
   const careerPhases = args.includes('--career-phases');
+  const normalizeMovies = args.includes('--movies');
+  const normalizeMedia = args.includes('--media');
+  const normalizeAll = args.includes('--all');
 
-  console.log(chalk.bold.cyan('\n👥 ENTITY NORMALIZATION\n'));
+  console.log(chalk.bold.cyan('\n👥 ENTITY & DATA NORMALIZATION\n'));
 
   try {
+    // Phase 7: Movie title normalization
+    if (normalizeMovies || normalizeAll) {
+      console.log(chalk.bold('🎬 MOVIE TITLE NORMALIZATION\n'));
+      console.log(`Mode: ${fix ? chalk.green('FIX') : chalk.yellow('DRY RUN')}\n`);
+
+      const result = await normalizeMovieTitles({
+        fix,
+        dryRun: !fix
+      });
+
+      console.log(`Analyzed: ${chalk.cyan(result.analyzed)}`);
+      console.log(`Would Normalize: ${chalk.yellow(result.normalized)}`);
+
+      if (result.changes.length > 0) {
+        console.log(chalk.bold('\n🔄 TITLE CHANGES (first 15):\n'));
+        result.changes.slice(0, 15).forEach(change => {
+          console.log(`"${chalk.red(change.old_title)}" → "${chalk.green(change.new_title)}"`);
+        });
+
+        if (result.changes.length > 15) {
+          console.log(chalk.gray(`\n... and ${result.changes.length - 15} more`));
+        }
+      }
+
+      if (!fix && result.normalized > 0) {
+        console.log(chalk.yellow('\n⚠️  DRY RUN - No changes were made'));
+        console.log('Run with --fix --movies to apply normalization');
+      }
+
+      if (!normalizeAll) return;
+      console.log('\n' + '─'.repeat(60) + '\n');
+    }
+
+    // Phase 7: Media URL normalization
+    if (normalizeMedia || normalizeAll) {
+      console.log(chalk.bold('🖼️  MEDIA URL NORMALIZATION\n'));
+      console.log(`Mode: ${fix ? chalk.green('FIX') : chalk.yellow('DRY RUN')}\n`);
+
+      const result = await normalizeAllMediaUrls({
+        fix,
+        dryRun: !fix
+      });
+
+      console.log(`Analyzed: ${chalk.cyan(result.analyzed)}`);
+      console.log(`Would Fix: ${chalk.yellow(result.fixed)}`);
+      
+      if (result.broken_urls.length > 0) {
+        console.log(`Broken URLs: ${chalk.red(result.broken_urls.length)}`);
+        console.log(chalk.bold('\n⚠️  BROKEN URLs:\n'));
+        result.broken_urls.slice(0, 10).forEach(url => {
+          console.log(`  ${chalk.red('✗')} ${url}`);
+        });
+      }
+
+      if (!fix && result.fixed > 0) {
+        console.log(chalk.yellow('\n⚠️  DRY RUN - No changes were made'));
+        console.log('Run with --fix --media to apply normalization');
+      }
+
+      if (!normalizeAll) return;
+      console.log('\n' + '─'.repeat(60) + '\n');
+    }
+
+    // Continue with celebrity normalization if --all
+    if (normalizeAll) {
+      console.log(chalk.bold('👤 CELEBRITY NAME NORMALIZATION\n'));
+    }
+
     if (findDuplicates) {
       console.log(chalk.bold('🔍 Detecting Duplicate Entities...\n'));
       

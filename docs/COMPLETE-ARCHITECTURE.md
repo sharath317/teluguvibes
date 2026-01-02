@@ -517,7 +517,14 @@ pnpm intel:validate:movies --limit=1000
 # Enrichment
 pnpm ingest:movies:smart               # Enrich movies
 pnpm ingest:movies:smart --limit=500
+pnpm ingest:movies:smart --limit=100   # Continue enriching batch
 pnpm enrich:movies --all               # Re-enrich all
+
+# Media Enrichment (by decade)
+pnpm movies:enrich:media --tiered                     # Enrich all media
+pnpm movies:enrich:media --tiered --decade=2020       # Focus on 2020s (17% coverage)
+pnpm movies:enrich:media --tiered --focus=backdrop    # Backdrops only
+pnpm movies:enrich:media --tiered --limit=100         # Limit batch size
 
 # Reviews
 pnpm reviews:coverage --target=0.95    # Generate reviews
@@ -527,6 +534,11 @@ pnpm reviews:coverage --status         # Check status
 pnpm movies:coverage --full            # Full report
 pnpm intel:movie-audit                 # Database audit
 pnpm intel:movie-audit --duplicates    # Find duplicates
+
+# Weekly Discovery
+pnpm discover:telugu:delta             # Check for new TMDB releases
+pnpm discover:telugu:delta --apply     # Apply new releases
+pnpm discover:telugu:delta --status    # Show discovery status
 ```
 
 ### Content Pipeline
@@ -540,6 +552,237 @@ pnpm free:run --mode=smart             # Generate
 # Intelligence
 pnpm intelligence:sync                 # Sync external data
 ```
+
+### Data Governance (Phase 2-7)
+
+```bash
+# Entity Audit & Merge (Phase 3)
+pnpm intel:entity-audit                # Find duplicate entities
+pnpm intel:entity-merge                # Preview merge candidates
+pnpm intel:entity-merge:dry            # Dry run merge preview
+pnpm intel:entity-merge:apply          # Apply entity merges
+pnpm intel:entity-merge:auto           # Auto-merge high-confidence duplicates
+pnpm intel:entity-merge:stats          # Show merge statistics
+
+# Normalization (Phase 7)
+pnpm intel:normalize                   # Dry run celebrity normalization
+pnpm intel:normalize:movies            # Normalize movie titles
+pnpm intel:normalize:media             # Normalize media URLs
+pnpm intel:normalize:celebs            # Normalize celebrity names (apply)
+pnpm intel:normalize:all               # All normalizations (apply)
+pnpm intel:normalize:all:dry           # All normalizations (preview)
+
+# Coverage Enforcement (Phase 6 - 95% Target)
+pnpm movies:coverage:enforce           # Preview enforcement actions
+pnpm movies:coverage:enforce:dry       # Dry run enforcement
+pnpm movies:coverage:enforce:apply     # Apply enforcement (ingest missing)
+pnpm movies:coverage:enforce:status    # Show current coverage status
+
+# Smart Tags (Phase 5)
+pnpm tags:rebuild                      # Rebuild structured tags (dry)
+pnpm tags:rebuild:apply                # Apply tag rebuild
+pnpm tags:rebuild:stats                # Show tag distribution
+pnpm tags:rebuild:smart                # Generate SmartTagContext (dry)
+pnpm tags:rebuild:smart:apply          # Apply SmartTagContext
+
+# Media Audit
+pnpm media:audit                       # Run media completeness audit
+pnpm media:audit:missing               # Show missing media
+pnpm media:audit:metrics               # Show metrics dashboard
+pnpm media:audit:json                  # Output as JSON
+```
+
+### Recommended Workflow
+
+```bash
+# Weekly Maintenance
+pnpm discover:telugu:delta --apply     # 1. Check for new releases
+pnpm intel:entity-audit                # 2. Find duplicates
+pnpm intel:entity-merge:auto           # 3. Auto-merge high confidence
+pnpm movies:coverage:enforce:status    # 4. Check coverage status
+
+# Monthly Deep Clean
+pnpm intel:normalize:all:dry           # 1. Preview normalizations
+pnpm intel:normalize:all               # 2. Apply normalizations
+pnpm media:audit:metrics               # 3. Check media health
+pnpm movies:enrich:media --tiered      # 4. Fill media gaps
+
+# Continuous Enrichment
+pnpm ingest:movies:smart --limit=100   # Enrich pending movies
+pnpm tags:rebuild:smart --apply        # Generate smart tags
+```
+
+---
+
+## ⚡ Accelerated Pipeline (v3.4)
+
+### Quick Start
+
+```bash
+# Full pipeline (recommended for new ingestion)
+pnpm ingest:accelerated --language=te
+
+# Check current status
+pnpm ingest:accelerated --status
+
+# If you only need speed (skip verification)
+pnpm ingest:fast --language=te
+
+# If you have partial data needing verification
+pnpm ingest:finalize
+
+# Resume interrupted pipeline
+pnpm ingest:accelerated --resume
+```
+
+### Execution Model
+
+The ingestion pipeline separates operations into two categories:
+
+| Operation Type | Execution | Examples |
+|---------------|-----------|----------|
+| **PARALLEL-SAFE** | Can run concurrently | Discovery, enrichment, media, tagging, reviews |
+| **SERIAL-REQUIRED** | Must run one at a time | Normalization, deduplication, entity linking |
+
+### Command Classification
+
+| Command | Type | Parallel-Safe | Notes |
+|---------|------|---------------|-------|
+| `ingest:tmdb:telugu` | WRITE | YES | Language-isolated discovery |
+| `ingest:tmdb:hi/ta/ml/kn` | WRITE | YES | Each language independent |
+| `ingest:movies:smart` | WRITE | BOUNDED | Per-movie enrichment, rate-limited |
+| `intel:validate:movies` | READ/WRITE | YES | Per-movie validation |
+| `movies:enrich:media` | WRITE | YES | Image discovery per-movie |
+| `movies:auto-tag` | WRITE | YES | Tagging per-movie |
+| `reviews:coverage` | WRITE | YES | Review generation per-movie |
+| `intel:entity-merge` | WRITE | SERIAL | Cross-entity deduplication |
+| `intel:normalize` | WRITE | SERIAL | Title/name normalization |
+
+### Data Lifecycle States
+
+Movies progress through these states during ingestion:
+
+```
+raw → partial → enriched → verified → published
+```
+
+| Status | Description | Completeness Score |
+|--------|-------------|-------------------|
+| `raw` | Just discovered, minimal data | 0.0 - 0.2 |
+| `partial` | Enriched but not verified | 0.2 - 0.6 |
+| `enriched` | Fully enriched, pending verification | 0.6 - 0.8 |
+| `verified` | Passed all integrity gates | 0.8 - 1.0 |
+| `published` | Live on the site | 1.0 |
+
+### Fast Mode vs Finalize Mode
+
+**Fast Mode** (`pnpm ingest:fast`)
+- Runs all PARALLEL-SAFE operations
+- Processes movies in concurrent batches
+- Marks records as `status = "partial"`
+- Optimized for speed, not verification
+
+**Finalize Mode** (`pnpm ingest:finalize`)
+- Runs SERIAL integrity gates only
+- Operations: Orphan Resolution → Normalize → Dedupe → Audit → Score → Promote
+- Gate 0: Resolves movies with no TMDB ID (merges duplicates or enriches)
+- Promotes records to `status = "verified"` if score >= 0.8
+- Ensures data integrity
+
+**Accelerated Mode** (`pnpm ingest:accelerated`)
+- Combines both modes in sequence
+- Fast parallel phase + serial finalization
+- Full pipeline in one command
+
+### Accelerated Pipeline Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ACCELERATED PIPELINE                      │
+├─────────────────────────────────────────────────────────────┤
+│  PARALLEL PHASE (ingest:fast)                               │
+│  ├─ Discovery: ingest:tmdb:{lang} (1 call)                  │
+│  ├─ Enrichment: 5 parallel batches × 20 movies              │
+│  ├─ Media: 5 parallel batches × 20 movies                   │
+│  └─ Tags & Reviews: Parallel per movie                      │
+│                                                              │
+│  SERIAL PHASE (ingest:finalize)                             │
+│  ├─ Gate 0: Orphan resolution (TMDB matching + merge)       │
+│  ├─ Gate 1: intel:normalize:all                             │
+│  ├─ Gate 2: intel:entity-merge:auto                         │
+│  ├─ Gate 3: intel:movie-audit --fix                         │
+│  └─ Gate 4: Completeness scoring + promotion                │
+│                                                              │
+│  OUTPUT                                                      │
+│  └─ Coverage metrics + failure summary                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Accelerated Pipeline Commands
+
+```bash
+# Full accelerated pipeline
+pnpm ingest:accelerated --language=te    # Telugu full pipeline
+pnpm ingest:accelerated --all            # All languages
+pnpm ingest:accelerated --status         # Check pipeline status
+pnpm ingest:accelerated --resume         # Resume from checkpoint
+pnpm ingest:accelerated --dry            # Preview mode
+
+# Fast mode only (parallel operations)
+pnpm ingest:fast --language=te           # Fast Telugu ingestion
+pnpm ingest:fast --all                   # All languages
+pnpm ingest:fast --status                # Show partial records
+pnpm ingest:fast --dry                   # Preview mode
+
+# Finalize mode only (serial gates)
+pnpm ingest:finalize                     # Finalize all partial records
+pnpm ingest:finalize --language=te       # Telugu only
+pnpm ingest:finalize --status            # Show verification status
+pnpm ingest:finalize --skip-orphan       # Skip orphan resolution
+pnpm ingest:finalize --dry               # Preview mode
+
+# Orphan resolution (standalone)
+pnpm orphan:resolve                      # Resolve movies with no TMDB ID
+pnpm orphan:resolve --status             # Show orphan movie count
+pnpm orphan:resolve --dry                # Preview mode
+
+# Batch mode enrichment
+pnpm ingest:movies:smart:batch           # Parallel batch enrichment
+pnpm ingest:movies:smart --batch-mode --concurrency=5 --batch-size=20
+```
+
+### Performance Expectations
+
+| Operation | Sequential | Accelerated | Improvement |
+|-----------|------------|-------------|-------------|
+| 100 movies enrichment | ~15 min | ~3 min | 5x faster |
+| 500 movies full pipeline | ~75 min | ~12 min | 6x faster |
+| 1000+ movies | ~2.5 hours | ~25 min | 6x faster |
+
+### Resumability
+
+The pipeline supports resuming from failures:
+
+```bash
+# Resume from last checkpoint
+pnpm ingest:accelerated --resume
+
+# Resume from specific stage
+pnpm ingest:accelerated --resume-from=enrichment
+
+# Skip specific phases
+pnpm ingest:accelerated --skip-fast       # Only finalize
+pnpm ingest:accelerated --skip-finalize   # Only fast mode
+```
+
+### New Database Fields
+
+| Column | Table | Purpose |
+|--------|-------|---------|
+| `ingestion_status` | movies | Lifecycle state (raw/partial/enriched/verified/published) |
+| `completeness_score` | movies | Data quality score 0.0-1.0 |
+| `last_stage_completed` | movies | Last successful pipeline stage |
+| `stage_completed_at` | movies | Timestamp of last stage completion |
 
 ---
 
@@ -566,6 +809,13 @@ pnpm intelligence:sync                 # Sync external data
 | `audience_preferences` | Learned prefs |
 | `ai_learnings` | Pattern storage |
 | `entity_popularity` | Buzz scores |
+
+### Pipeline Tables (v3.4)
+
+| Table | Purpose |
+|-------|---------|
+| `pipeline_stage_history` | Detailed stage execution history per movie |
+| `pipeline_runs` | Pipeline run tracking (fast/finalize/accelerated) |
 
 ---
 
@@ -606,5 +856,634 @@ pnpm intelligence:sync                 # Sync external data
 
 ---
 
-*Documentation Version 3.0 - January 2025*
+---
+
+## 🌍 Multi-Language Support (v3.1)
+
+### Language Coverage Strategy
+
+| Language | Priority | Max Movies | Min Rating | Coverage Target |
+|----------|----------|------------|------------|-----------------|
+| Telugu | 1 (Primary) | 2000+ | 5.0 | 100% |
+| Hindi | 2 | 100 | 7.0 | Quality only |
+| Tamil | 3 | 75 | 7.0 | Quality only |
+| Malayalam | 4 | 50 | 7.5 | Quality only |
+| Kannada | 5 | 30 | 7.0 | Quality only |
+| English | 6 | 50 | 7.5 | Blockbusters only |
+
+### Smart Quality Gates (Non-Telugu)
+
+Only ingest movies that pass ONE of these criteria:
+- **Blockbuster**: Top stars/directors + rating ≥ 6.5
+- **Classic**: Pre-2005 + rating ≥ 7.0
+- **Hidden Gem**: Rating ≥ 7.5 + vote count < 1000
+- **Quality**: Rating ≥ min_rating + vote count ≥ 100
+
+**Never ingest**: Flops (rating < 5.0), low votes, excluded genres
+
+### CLI Commands
+
+```bash
+pnpm movies:ingest:multilang:status      # Check coverage
+pnpm movies:ingest:multilang:hindi       # Ingest Hindi
+pnpm movies:ingest:multilang:tamil       # Ingest Tamil
+pnpm movies:ingest:multilang:all         # Ingest all languages
+```
+
+---
+
+## 📊 Confidence & Enrichment Lifecycle
+
+### Confidence Scoring
+
+| Score | Action | Example |
+|-------|--------|---------|
+| ≥ 0.82 | Auto-publish | TMDB-verified with complete data |
+| 0.65-0.82 | Needs review | Missing director or cast |
+| < 0.65 | Block | Unverified or duplicate candidate |
+
+### Enrichment Lifecycle
+
+```
+Discovery → Validation → Enrichment → Review → Publication
+    ↓           ↓            ↓           ↓          ↓
+  TMDB      Gate checks   TMDB+Wiki   Template   Confidence
+  Search    (is_movie?)   Credits     Reviews    ≥ 0.82
+```
+
+### What Gets Persisted
+
+| Data Type | Source | Persisted? | Table |
+|-----------|--------|------------|-------|
+| TMDB ID | TMDB API | ✅ | movies.tmdb_id |
+| Confidence | Computed | ✅ | movies.confidence_score |
+| Quality Tags | Computed | ✅ | is_blockbuster, is_classic, is_underrated |
+| Review | Template | ✅ | movie_reviews |
+| Smart Tags | Computed | ✅ | movies.tags |
+
+---
+
+## 🎭 Actor/Director Entity Intelligence
+
+### Celebrity Sources
+
+1. **TMDB People API** - Primary source for credits
+2. **Wikidata** - Canonical IDs and Telugu names
+3. **Wikipedia** - Additional bio data
+
+### Spotlight Rules
+
+- Show top N actors by movie count + avg rating
+- Horizontal scroll carousel layout
+- Clicking actor → filters reviews by that actor
+- Actor images: TMDB profile → initials gradient fallback
+
+### CLI Commands
+
+```bash
+pnpm intel:entity-audit      # Find duplicates
+pnpm intel:entity-merge:auto # Auto-merge high confidence
+pnpm intel:normalize:celebs  # Normalize names
+```
+
+---
+
+## 📝 Review Enhancement Structure
+
+### Template Review Dimensions
+
+| Dimension | Weight | Source |
+|-----------|--------|--------|
+| Performance | 25% | Cast analysis |
+| Direction | 20% | Director + TMDB score |
+| Technical | 20% | Production values |
+| Story | 20% | Genre + narrative |
+| Music | 15% | Music director |
+
+### Connected Content (Mini-Story) Logic
+
+Each review auto-links to:
+- Similar movies (same genre + era)
+- Other movies by same director
+- Other movies with same lead actor
+- Related classics from same decade
+
+---
+
+## 🎬 Review Section Intelligence
+
+### Auto-Generated Sections
+
+| Section | Logic | Priority |
+|---------|-------|----------|
+| Recent Releases | release_date ≤ today, last 2 years | 1 |
+| Coming Soon | release_date > today | 2 |
+| Top Rated | Highest avg_rating | 3 |
+| Most Recommended | Rating ≥ 7, shuffled | 3.5 |
+| Blockbusters | is_blockbuster = true | 4 |
+| Telugu Classics | is_classic = true | 5 |
+| Hidden Gems | is_underrated = true | 6 |
+| Cult Classics | tags contains 'cult-classic' | 7 |
+| Genre Sections | Action, Drama, Thriller, etc. | 10+ |
+
+### Star Spotlight Behavior
+
+- Shows top heroes/heroines by movie count
+- Displays initials in branded gradient if no image
+- Click → applies actor filter to reviews
+- Horizontal scroll carousel on desktop/mobile
+
+---
+
+## 🛠️ Script Responsibility Matrix
+
+| Script | Purpose | Idempotent? |
+|--------|---------|-------------|
+| `ingest-tmdb-telugu.ts` | Discover Telugu movies | ✅ |
+| `ingest-multilang-movies.ts` | Quality ingest other languages | ✅ |
+| `auto-tag-movies.ts` | Tag blockbusters/classics/gems | ✅ |
+| `smart-movie-enrichment.ts` | Enrich movie details | ✅ |
+| `generate-canonical-reviews.ts` | Generate template reviews | ✅ |
+| `entity-merge.ts` | Merge duplicate entities | ✅ |
+| `entities-normalize.ts` | Normalize names/titles | ✅ |
+| `movies-enrich-media.ts` | Fill missing images | ✅ |
+| `reviews-enhance.ts` | Add structured review sections | ✅ |
+
+---
+
+## 🎬 Review Insights Enrichment (Phase 2)
+
+The review-insights system adds structured, confidence-gated sections to reviews.
+
+### New Structured Sections
+
+| Section | Type | Description |
+|---------|------|-------------|
+| `standout_scenes` | StandoutScene[] | Spoiler-free scene highlights |
+| `audience_fit` | AudienceFit | Who the movie is for |
+| `comparable_movies` | ComparableMovie[] | Validated similar movies |
+
+### StandoutScene Types
+
+| Type | When Generated |
+|------|----------------|
+| `action` | Action genre + rating ≥ 6.5 |
+| `emotional` | Drama/Romance + rating ≥ 7 |
+| `comedy` | Comedy genre |
+| `climax` | Rating ≥ 7.5 |
+
+### AudienceFit Targeting
+
+| Audience | Genres Mapped |
+|----------|---------------|
+| `family` | Family, Kids |
+| `mass` | Action + Drama/Crime |
+| `youth` | Romance, Horror, Thriller |
+| `class` | Drama (rating ≥ 7.5) |
+| `all` | Default fallback |
+
+### Comparable Movies Logic
+
+1. **Genre + Era Match**: Same primary genre, ±5 years, rating ≥ 6.5
+2. **Same Director**: Other films by same director, rating ≥ 6
+3. **Same Lead Actor**: Other films with same hero, rating ≥ 6.5
+
+All comparables are **validated** (exist in our DB) - no hallucination.
+
+### Confidence Thresholds
+
+| Confidence | Action |
+|------------|--------|
+| ≥ 0.80 | Include section automatically |
+| 0.60 - 0.79 | Include with review flag |
+| < 0.60 | Skip section |
+
+### CLI Commands
+
+```bash
+# Dry run enhancement for all movies
+pnpm reviews:enhance:dry
+
+# Enhance single movie
+pnpm reviews:enhance --movie <slug> --dry
+
+# Apply enhancements
+pnpm reviews:enhance:apply
+
+# Check confidence scores only
+pnpm reviews:enhance:confidence
+```
+
+---
+
+## 📱 Category Page UX
+
+### Unified Navigation
+
+Category pages now have a **single navigation row** instead of two redundant tabs:
+- If category belongs to a menu group → show related sections
+- Otherwise → show primary categories
+
+### Removed Redundancy
+
+Before:
+- Quick Navigation row
+- Primary Categories row (duplicate)
+
+After:
+- Single contextual navigation row
+
+---
+
+## 🌍 Multi-Language Content
+
+### Language Distribution (as of January 2025)
+
+| Language | Movies | Percentage |
+|----------|--------|------------|
+| Telugu | 1,167 | 90.2% |
+| Hindi | 100 | 7.7% |
+| Tamil | 18 | 1.4% |
+| Malayalam | 6 | 0.5% |
+| Kannada | 3 | 0.2% |
+| **Total** | **1,294** | 100% |
+
+### Ingestion Commands
+
+```bash
+# Telugu (primary)
+pnpm ingest:tmdb:te
+
+# Other languages (quality-filtered)
+pnpm ingest:tmdb:hi   # Hindi - 100 max, rating ≥7
+pnpm ingest:tmdb:ta   # Tamil - 75 max, rating ≥7
+pnpm ingest:tmdb:ml   # Malayalam - 50 max, rating ≥7.5
+pnpm ingest:tmdb:kn   # Kannada - 30 max, rating ≥7
+```
+
+### Quality Gates for Other Languages
+
+- **Hindi**: Rating ≥ 7, max 100 movies
+- **Tamil**: Rating ≥ 7, max 75 movies (hidden gems prioritized)
+- **Malayalam**: Rating ≥ 7.5, max 50 movies
+- **Kannada**: Rating ≥ 7, max 30 movies
+
+### Notable Other-Language Movies
+
+**Hindi Classics**: Sholay, Mother India, Munna Bhai M.B.B.S., Hera Pheri  
+**Hindi Quality**: 3 Idiots, Dangal, PK, Lagaan, Dil Chahta Hai, Andhadhun  
+**Tamil Hits**: Vikram, Kaithi, Super Deluxe, 96, Soorarai Pottru  
+**Malayalam Gems**: Drishyam, Kumbalangi Nights, Premam, Bangalore Days  
+**Kannada**: KGF Chapter 1 & 2, Kantara
+
+---
+
+## 📊 Current Database Statistics
+
+| Metric | Value |
+|--------|-------|
+| Total Movies | 1,294 |
+| TMDB Coverage | 84.5% |
+| Poster Coverage | 84.9% |
+| Blockbusters Tagged | 44 |
+| Classics Tagged | 294 |
+| Hidden Gems Tagged | 173 |
+| Data Quality Score | 70.8% |
+| Entity Confidence | 0.83 |
+| Duplicates | 0 |
+
+---
+
+## 🔧 Complete CLI Reference
+
+### Movie Ingestion
+```bash
+pnpm ingest:tmdb:te              # Telugu movies
+pnpm ingest:tmdb:hi              # Hindi movies
+pnpm ingest:tmdb:ta              # Tamil movies
+pnpm ingest:tmdb:ml              # Malayalam movies
+pnpm ingest:tmdb:kn              # Kannada movies
+```
+
+### Movie Enrichment
+```bash
+pnpm movies:auto-tag             # Tag blockbusters/classics/gems
+pnpm movies:auto-tag:dry         # Preview tags without applying
+pnpm enrich:movies               # Enrich via TMDB (all fields)
+pnpm enrich:movies:media         # Fill missing images
+```
+
+### Review Enrichment
+```bash
+pnpm reviews:enhance:dry         # Preview all enhancements
+pnpm reviews:enhance:apply       # Apply enhancements
+pnpm reviews:enhance --movie X   # Enhance single movie
+pnpm reviews:enhance:confidence  # Show confidence distribution
+```
+
+### Data Quality
+```bash
+pnpm intel:movie-audit           # Full audit
+pnpm intel:movie-audit:status    # Quick status
+pnpm intel:entity-audit          # Find duplicates
+pnpm intel:normalize:all         # Normalize titles/names
+pnpm media:audit:metrics         # Media coverage report
+```
+
+### Master Injection Commands
+```bash
+pnpm inject:all                  # Complete injection pipeline
+pnpm inject:all:dry              # Dry run mode
+pnpm inject:all:status           # Pipeline status
+pnpm inject:all:resume           # Resume from last checkpoint
+pnpm inject:movies:all           # Movies only
+pnpm inject:reviews:all          # Reviews only
+pnpm inject:sections:all         # Sections only
+```
+
+---
+
+## 🎨 UX & Accessibility Features
+
+### Scroll Restoration
+The system includes scroll preservation across:
+- Tab switches
+- Filter changes
+- Modal interactions
+- Back/forward navigation
+
+**Hook**: `hooks/useScrollRestoration.ts`
+
+### Modal State Management
+Modal behavior with accessibility compliance:
+- Focus trap inside modals
+- Background scroll lock
+- Escape key to close
+- Focus restoration on close
+
+**Hook**: `hooks/useModalState.ts`
+
+### Mobile Bottom Menu (Sakshi-style)
+Single bottom menu with two tabs:
+- Popular content
+- Recent content
+
+Features:
+- Appears below content
+- Touch-friendly targets (min 48px)
+- Zero layout shifts
+- Accessible tab panels
+
+**Component**: `components/mobile/BottomMenu.tsx`
+
+### Skip Links & Landmarks
+- Skip to main content link (visible on focus)
+- Semantic landmarks: header, main, footer, nav
+- ARIA labels on all interactive elements
+
+**Component**: `components/a11y/SkipLink.tsx`
+
+---
+
+## 📰 Reviews Page Components
+
+### Star Spotlight
+- Max 5 visible cards on desktop
+- Horizontal scroll carousel
+- Actor/actress images with movie count
+- Average rating badges
+
+**Component**: `components/reviews/StarSpotlight.tsx`
+
+### Collections Tab
+- Top 10 curated collections
+- Vertical scroll panel
+- Poster grid (2x2)
+- Movie count and ratings
+
+**Component**: `components/reviews/CollectionsTab.tsx`
+
+### OTT Recommendations
+- Movies by streaming platform
+- Platform badges (Netflix, Prime, Hotstar, etc.)
+- Filter by platform
+- Compact movie cards
+
+**Component**: `components/reviews/OTTRecommendations.tsx`
+
+### Floating Promotions
+- Auto-rotating banners
+- Pause on interaction
+- Accessible controls
+- Multiple content types
+
+**Component**: `components/promotions/FloatingPromotions.tsx`
+
+---
+
+## 🔍 SEO Features
+
+### Dynamic Sitemap
+Automatically generates sitemap.xml with:
+- All published movie pages
+- Category pages
+- Static pages
+- Posts and stories
+
+**File**: `app/sitemap.ts`
+
+### Robots.txt
+Crawler rules for search engines:
+- Allows public pages
+- Blocks admin, API, auth routes
+
+**File**: `app/robots.ts`
+
+### Schema Markup
+JSON-LD structured data for:
+- Movie schema
+- Review schema
+- Article schema
+- Person schema
+
+**Component**: `components/seo/SchemaScript.tsx`
+
+---
+
+## 🎨 UI Components
+
+### Skeleton Loaders
+Placeholder loading states:
+- CardSkeleton
+- ListSkeleton
+- GridSkeleton
+- CarouselSkeleton
+- TextSkeleton
+
+**Component**: `components/ui/Skeleton.tsx`
+
+### Empty States
+Graceful placeholders:
+- NoSearchResults
+- NoMoviesFound
+- ErrorState
+- OfflineState
+
+**Component**: `components/ui/EmptyState.tsx`
+
+---
+
+## 📊 Observability & Health
+
+### Coverage Dashboard
+Internal admin dashboard at `/admin/coverage`:
+- Total movies by language
+- Verified vs Partial percentages
+- Coverage by decade
+- Missing data hotspots
+- Review coverage metrics
+- Orphan and duplicate counts
+
+**Page**: `app/admin/coverage/page.tsx`
+**API**: `app/api/admin/coverage/route.ts`
+
+### System Health Endpoint
+Health check API at `/api/health`:
+- Database connectivity check
+- Table counts and status
+- Orphan record counts
+- Last update timestamps
+- Latency metrics
+
+Returns status: `healthy`, `degraded`, or `unhealthy`
+
+**API**: `app/api/health/route.ts`
+
+---
+
+## 🔧 Pipeline Logging
+
+### Structured Logging
+All pipeline commands use structured logging with:
+- JSON-friendly output format
+- Timestamps on all entries
+- Phase tracking (discovery, fast, finalize, etc.)
+- Entity type and counts (input/output)
+- Duration per phase
+- Error categorization
+- Retry markers
+
+**Utility**: `lib/logging/pipeline-logger.ts`
+
+### Log Entry Format
+```typescript
+{
+  timestamp: "2025-01-03T10:30:00.000Z",
+  level: "info",
+  command: "ingest:accelerated",
+  phase: "enrichment",
+  message: "Completed enrichment phase",
+  inputCount: 1000,
+  outputCount: 985,
+  durationMs: 45000,
+  entityType: "movie"
+}
+```
+
+---
+
+## 🧹 Data Hygiene
+
+### Orphan Resolution
+Automatically identifies and resolves orphan records:
+- Movies without TMDB IDs
+- Invalid entries (person names stored as movies)
+- Duplicate entries
+
+**Command**: `pnpm orphan:resolve`
+
+### Invalid Entry Detection
+Pattern-based detection of non-movie entries:
+- Person names (detected by surname patterns)
+- Very short titles
+- Names with initials
+
+Invalid entries are automatically unpublished.
+
+### Zero Tolerance Policy
+After cleanup:
+- Orphans = 0
+- Duplicates = 0
+- All published movies have valid TMDB data
+
+### Sample Data Cleanup
+Removes all placeholder/dummy data:
+- Hot media seed entries
+- Invalid movie entries (missing title/language)
+- Person names incorrectly stored as movies
+- Empty collections
+- Orphan reviews
+
+**Command**: `pnpm cleanup:sample`
+
+---
+
+## 🔐 Browser-Only Personalization
+
+### User Preferences
+All personalization is stored in localStorage (NO cookies, NO backend profiles):
+- Interest clusters (actors, genres, eras, languages)
+- View history tracking
+- Section preferences
+
+**Utility**: `lib/personalization/browser-preferences.ts`
+**Hook**: `hooks/usePersonalization.ts`
+
+### Features
+- Adaptive home section re-ranking
+- Favorite genre boosting
+- Irrelevant block hiding
+- Score decay over time (30 days)
+
+---
+
+## 📱 Mobile UX Components
+
+### MobileMenuCard (Sakshi-style)
+Single card with Popular | Recent tabs:
+- Horizontal scroll within tabs
+- Finger-friendly touch targets (44px minimum)
+- Zero layout shifts
+- Scroll position preserved on tab switch
+
+**Component**: `components/mobile/MobileMenuCard.tsx`
+
+### Scroll Restoration
+Preserves scroll position across:
+- Tab switches
+- Filter changes
+- Modal open/close
+- Back/forward navigation
+
+**Hook**: `hooks/useScrollRestoration.ts`
+
+---
+
+## 🔍 SEO Schema Components
+
+### Schema.org Support
+JSON-LD structured data for rich snippets:
+- MovieSchema (with ratings, cast, director)
+- ReviewSchema (with author, rating)
+- PersonSchema (for actors/directors)
+- CollectionSchema (for movie lists)
+- ArticleSchema (for posts)
+- WebsiteSchema (for homepage)
+- BreadcrumbSchema (for navigation)
+
+**Component**: `components/seo/SchemaScript.tsx`
+
+---
+
+*Documentation Version 3.7 - January 2025 (Final Production Hardening)*
 

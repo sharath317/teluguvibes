@@ -3,6 +3,7 @@ import { Inter, Poppins, Noto_Sans_Telugu } from 'next/font/google';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { DedicationsWidget } from '@/components/DedicationsWidget';
+import { SkipLink } from '@/components/a11y/SkipLink';
 import { LanguageProvider } from '@/lib/i18n';
 import './globals.css';
 
@@ -58,17 +59,24 @@ export default function RootLayout({
         className={`${inter.variable} ${poppins.variable} ${notoSansTelugu.variable} font-telugu antialiased bg-[var(--bg-primary)] text-[var(--text-primary)] min-h-screen`}
       >
         <LanguageProvider>
-          {/* Header */}
-          <Header />
+          {/* Skip Link for Accessibility */}
+          <SkipLink targetId="main-content" text="Skip to main content" />
 
-          {/* Main content */}
-          <main>{children}</main>
+          {/* Header - Semantic landmark */}
+          <header role="banner">
+            <Header />
+          </header>
+
+          {/* Main content - Semantic landmark */}
+          <main id="main-content" tabIndex={-1} role="main" aria-label="Main content">
+            {children}
+          </main>
 
           {/* Dedications Widget - Bottom Left */}
           <DedicationsWidget position="bottom-left" />
 
-        {/* Footer */}
-        <footer className="bg-[var(--bg-secondary)] border-t border-[var(--border-secondary)] mt-12">
+        {/* Footer - Semantic landmark */}
+        <footer role="contentinfo" className="bg-[var(--bg-secondary)] border-t border-[var(--border-secondary)] mt-12">
           <div className="container mx-auto px-4 py-8">
             <div className="grid md:grid-cols-4 gap-8">
               {/* About */}
@@ -80,7 +88,7 @@ export default function RootLayout({
               </div>
 
               {/* Categories */}
-              <div>
+              <nav aria-label="Footer categories">
                 <h4 className="font-bold text-[var(--text-primary)] mb-4">విభాగాలు</h4>
                 <ul className="space-y-2 text-sm">
                   <li><Link href="/reviews" className="text-[var(--text-tertiary)] hover:text-[var(--brand-primary)]">🎬 మూవీ రివ్యూలు</Link></li>
@@ -89,7 +97,7 @@ export default function RootLayout({
                   <li><Link href="/category/sports" className="text-[var(--text-tertiary)] hover:text-[var(--brand-primary)]">స్పోర్ట్స్</Link></li>
                   <li><Link href="/category/entertainment" className="text-[var(--text-tertiary)] hover:text-[var(--brand-primary)]">వినోదం</Link></li>
                 </ul>
-              </div>
+              </nav>
 
               {/* Links */}
               <div>

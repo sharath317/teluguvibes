@@ -12,9 +12,18 @@
  * - Links to celebrities and similar movies
  * 
  * Usage:
- *   pnpm ingest:movies:smart            # Enrich pending movies
- *   pnpm ingest:movies:smart --dry      # Preview mode
- *   pnpm ingest:movies:smart --force    # Re-enrich all
+ *   pnpm ingest:movies:smart                           # Enrich 300 movies (default)
+ *   pnpm ingest:movies:smart --dry                     # Preview mode
+ *   pnpm ingest:movies:smart --force                   # Re-enrich all
+ *   pnpm ingest:movies:smart --batch                   # Enable batch mode (default off)
+ *   pnpm ingest:movies:smart --limit=500               # Process 500 movies
+ *   pnpm ingest:movies:smart --batch --concurrency=25  # 25 concurrent batches
+ *   pnpm ingest:movies:smart --batch --batch-size=50   # 50 movies per batch
+ * 
+ * Optimized defaults for batch mode:
+ *   --concurrency=25  (25 parallel batches)
+ *   --batch-size=50   (50 movies per batch)
+ *   --limit=300       (process 300 movies)
  */
 
 import { config } from 'dotenv';
@@ -26,6 +35,8 @@ config({ path: resolve(process.cwd(), '.env.local') });
 import chalk from 'chalk';
 import { createClient } from '@supabase/supabase-js';
 import slugify from 'slugify';
+
+import { createProgress } from '../lib/pipeline/progress-tracker';
 
 // ============================================================
 // TYPES
@@ -319,12 +330,22 @@ async function upsertMovie(
   supabase: ReturnType<typeof getSupabaseClient>,
   movie: EnrichedMovie
 ): Promise<{ inserted: boolean; updated: boolean; error?: string }> {
-  // Check if exists
-  const { data: existing } = await supabase
+  // Check if exists by tmdb_id
+  const { data: existingByTmdb } = await supabase
     .from('movies')
     .select('id')
     .eq('tmdb_id', movie.tmdb_id)
     .single();
+
+  // Also check by slug (for movies created without TMDB ID)
+  const { data: existingBySlug } = await supabase
+    .from('movies')
+    .select('id, tmdb_id')
+    .eq('slug', movie.slug)
+    .single();
+
+  // Determine existing record
+  const existing = existingByTmdb || existingBySlug;
 
   // Map to actual movies table schema
   // Safely handle numeric fields to avoid overflow
@@ -415,6 +436,9 @@ interface CLIArgs {
   force: boolean;
   limit?: number;
   verbose: boolean;
+  batchMode: boolean;
+  batchSize: number;
+  concurrency: number;
 }
 
 function parseArgs(): CLIArgs {
@@ -423,10 +447,171 @@ function parseArgs(): CLIArgs {
     dryRun: args.includes('--dry') || args.includes('--dry-run'),
     force: args.includes('--force'),
     verbose: args.includes('-v') || args.includes('--verbose'),
+    batchMode: args.includes('--batch-mode') || args.includes('--batch'),
     limit: args.find(a => a.startsWith('--limit='))
       ? parseInt(args.find(a => a.startsWith('--limit='))!.split('=')[1])
       : undefined,
+    batchSize: args.find(a => a.startsWith('--batch-size='))
+      ? parseInt(args.find(a => a.startsWith('--batch-size='))!.split('=')[1])
+      : 50, // Optimized default: process 50 movies per batch
+    concurrency: args.find(a => a.startsWith('--concurrency='))
+      ? parseInt(args.find(a => a.startsWith('--concurrency='))!.split('=')[1])
+      : 25, // Optimized default: 25 concurrent batches
   };
+}
+
+// ============================================================
+// BATCH PROCESSING
+// ============================================================
+
+interface BatchEnrichmentResult {
+  tmdbId: number;
+  title: string;
+  success: boolean;
+  inserted: boolean;
+  updated: boolean;
+  error?: string;
+}
+
+async function enrichMovieBatch(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  movies: any[],
+  args: CLIArgs
+): Promise<BatchEnrichmentResult[]> {
+  const results: BatchEnrichmentResult[] = [];
+
+  // Process movies in parallel within the batch
+  const promises = movies.map(async (indexMovie) => {
+    try {
+      const tmdbData = await fetchFullMovieDetails(indexMovie.tmdb_id);
+
+      if (!tmdbData) {
+        return {
+          tmdbId: indexMovie.tmdb_id,
+          title: indexMovie.title_en,
+          success: false,
+          inserted: false,
+          updated: false,
+          error: 'TMDB fetch failed',
+        };
+      }
+
+      const enriched = await enrichMovie(tmdbData, indexMovie);
+
+      if (args.dryRun) {
+        return {
+          tmdbId: indexMovie.tmdb_id,
+          title: indexMovie.title_en,
+          success: true,
+          inserted: false,
+          updated: false,
+        };
+      }
+
+      const result = await upsertMovie(supabase, enriched);
+
+      if (!result.error) {
+        await updateIndexEnriched(supabase, indexMovie.id);
+      }
+
+      return {
+        tmdbId: indexMovie.tmdb_id,
+        title: indexMovie.title_en,
+        success: !result.error,
+        inserted: result.inserted,
+        updated: result.updated,
+        error: result.error,
+      };
+
+    } catch (error: any) {
+      return {
+        tmdbId: indexMovie.tmdb_id,
+        title: indexMovie.title_en,
+        success: false,
+        inserted: false,
+        updated: false,
+        error: error.message,
+      };
+    }
+  });
+
+  // Execute with rate limiting between batches
+  const batchResults = await Promise.all(promises);
+  results.push(...batchResults);
+
+  return results;
+}
+
+async function runBatchEnrichment(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  movies: any[],
+  args: CLIArgs
+): Promise<EnrichmentStats> {
+  const stats: EnrichmentStats = {
+    total: movies.length,
+    enriched: 0,
+    inserted: 0,
+    updated: 0,
+    skipped: 0,
+    errors: [],
+  };
+
+  // Split into batches
+  const batches: any[][] = [];
+  for (let i = 0; i < movies.length; i += args.batchSize) {
+    batches.push(movies.slice(i, i + args.batchSize));
+  }
+
+  console.log(chalk.gray(`  Processing in ${batches.length} batches of ${args.batchSize} movies (concurrency: ${args.concurrency})\n`));
+
+  // Create progress tracker
+  const progress = createProgress('Enriching movies', movies.length, 5);
+
+  // Process batches with controlled concurrency
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex += args.concurrency) {
+    // Check timeout every batch group
+    const action = await progress.checkTimeout();
+    if (action === 'stop') {
+      console.log(chalk.yellow('\n⏸️  Enrichment stopped by user. Progress has been saved.'));
+      break;
+    } else if (action === 'skip') {
+      console.log(chalk.yellow('\n⏩ Skipping remaining enrichment...'));
+      break;
+    }
+
+    const concurrentBatches = batches.slice(batchIndex, batchIndex + args.concurrency);
+
+    const batchPromises = concurrentBatches.map(batch => enrichMovieBatch(supabase, batch, args));
+    const batchResultsArray = await Promise.all(batchPromises);
+
+    for (const batchResults of batchResultsArray) {
+      for (const result of batchResults) {
+        if (result.success) {
+          stats.enriched++;
+          if (result.inserted) stats.inserted++;
+          if (result.updated) stats.updated++;
+        } else {
+          stats.skipped++;
+          if (result.error) {
+            stats.errors.push(`${result.title}: ${result.error}`);
+          }
+        }
+      }
+    }
+
+    // Update progress
+    const processed = Math.min((batchIndex + args.concurrency) * args.batchSize, movies.length);
+    progress.set(processed);
+
+    // Rate limit between batch groups
+    if (batchIndex + args.concurrency < batches.length) {
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+
+  progress.complete('Enrichment completed');
+
+  return stats;
 }
 
 // ============================================================
@@ -466,7 +651,7 @@ async function main(): Promise<void> {
   if (args.limit) {
     query = query.limit(args.limit);
   } else {
-    query = query.limit(100);
+    query = query.limit(300); // Optimized default for faster batch processing
   }
 
   query = query.order('popularity', { ascending: false });
@@ -485,68 +670,77 @@ async function main(): Promise<void> {
 
   console.log(chalk.cyan(`📋 Enriching ${movies.length} movies...\n`));
 
-  const stats: EnrichmentStats = {
-    total: movies.length,
-    enriched: 0,
-    inserted: 0,
-    updated: 0,
-    skipped: 0,
-    errors: [],
-  };
+  let stats: EnrichmentStats;
 
-  for (let i = 0; i < movies.length; i++) {
-    const indexMovie = movies[i];
+  // Use batch mode for parallel processing if enabled
+  if (args.batchMode) {
+    console.log(chalk.gray(`  🚀 Batch mode enabled (${args.concurrency} concurrent batches)\n`));
+    stats = await runBatchEnrichment(supabase, movies, args);
+  } else {
+    // Sequential processing (original behavior)
+    stats = {
+      total: movies.length,
+      enriched: 0,
+      inserted: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [],
+    };
 
-    if (args.verbose) {
-      console.log(`  [${i + 1}/${movies.length}] ${indexMovie.title_en}`);
-    }
+    for (let i = 0; i < movies.length; i++) {
+      const indexMovie = movies[i];
 
-    try {
-      // Fetch full details
-      const tmdbData = await fetchFullMovieDetails(indexMovie.tmdb_id);
-
-      if (!tmdbData) {
-        stats.skipped++;
-        stats.errors.push(`${indexMovie.title_en}: TMDB fetch failed`);
-        continue;
+      if (args.verbose) {
+        console.log(`  [${i + 1}/${movies.length}] ${indexMovie.title_en}`);
       }
 
-      // Enrich
-      const enriched = await enrichMovie(tmdbData, indexMovie);
-      stats.enriched++;
+      try {
+        // Fetch full details
+        const tmdbData = await fetchFullMovieDetails(indexMovie.tmdb_id);
 
-      if (args.dryRun) {
-        if (args.verbose) {
-          console.log(chalk.gray(`    Director: ${enriched.director || 'N/A'}`));
-          console.log(chalk.gray(`    Cast: ${enriched.cast_members.length} members`));
-          console.log(chalk.gray(`    Quality: ${(enriched.data_quality_score * 100).toFixed(0)}%`));
+        if (!tmdbData) {
+          stats.skipped++;
+          stats.errors.push(`${indexMovie.title_en}: TMDB fetch failed`);
+          continue;
         }
-        continue;
+
+        // Enrich
+        const enriched = await enrichMovie(tmdbData, indexMovie);
+        stats.enriched++;
+
+        if (args.dryRun) {
+          if (args.verbose) {
+            console.log(chalk.gray(`    Director: ${enriched.director || 'N/A'}`));
+            console.log(chalk.gray(`    Cast: ${enriched.cast_members.length} members`));
+            console.log(chalk.gray(`    Quality: ${(enriched.data_quality_score * 100).toFixed(0)}%`));
+          }
+          continue;
+        }
+
+        // Save to movies table
+        const result = await upsertMovie(supabase, enriched);
+
+        if (result.error) {
+          stats.errors.push(`${indexMovie.title_en}: ${result.error}`);
+        } else {
+          if (result.inserted) stats.inserted++;
+          if (result.updated) stats.updated++;
+
+          // Update index
+          await updateIndexEnriched(supabase, indexMovie.id);
+        }
+
+        // Rate limit
+        await new Promise(r => setTimeout(r, 150));
+
+      } catch (error: any) {
+        stats.errors.push(`${indexMovie.title_en}: ${error.message}`);
       }
 
-      // Save to movies table
-      const result = await upsertMovie(supabase, enriched);
-
-      if (result.error) {
-        stats.errors.push(`${indexMovie.title_en}: ${result.error}`);
-      } else {
-        if (result.inserted) stats.inserted++;
-        if (result.updated) stats.updated++;
-
-        // Update index
-        await updateIndexEnriched(supabase, indexMovie.id);
+      // Progress
+      if (i > 0 && i % 20 === 0) {
+        console.log(`  Progress: ${i}/${movies.length} (${stats.inserted} new, ${stats.updated} updated)`);
       }
-
-      // Rate limit
-      await new Promise(r => setTimeout(r, 150));
-
-    } catch (error: any) {
-      stats.errors.push(`${indexMovie.title_en}: ${error.message}`);
-    }
-
-    // Progress
-    if (i > 0 && i % 20 === 0) {
-      console.log(`  Progress: ${i}/${movies.length} (${stats.inserted} new, ${stats.updated} updated)`);
     }
   }
 

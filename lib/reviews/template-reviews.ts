@@ -289,7 +289,7 @@ function calculateDimensionScores(movie: Movie): Record<string, number> {
   const scores: Record<string, number> = {};
   const variance = 0.8; // ±0.8 variance
   
-  for (const [key, def] of Object.entries(DIMENSION_DEFINITIONS)) {
+  for (const key of Object.keys(DIMENSION_DEFINITIONS)) {
     // Base score with small variance
     let score = normalizedBase + (Math.random() * variance * 2 - variance);
     
