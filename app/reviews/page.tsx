@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { Movie, Genre, ReviewFilters } from '@/types/reviews';
 import { HorizontalCarousel } from '@/components/ui/HorizontalCarousel';
+import { MoodIndicators } from '@/components/reviews/MoodIndicators';
 
 // ============================================================
 // TYPES
@@ -141,6 +142,7 @@ export default function ReviewsPage() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [viewMode, setViewMode] = useState<"sections" | "grid">("sections");
+  const [activeMood, setActiveMood] = useState<string | undefined>();
 
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -150,6 +152,11 @@ export default function ReviewsPage() {
     const director = searchParams.get("director");
     const genre = searchParams.get("genre");
     const language = searchParams.get("language");
+    const mood = searchParams.get("mood");
+
+    if (mood) {
+      setActiveMood(mood);
+    }
 
     if (actor || director || genre || language) {
       const urlFilters: ReviewFilters = {
@@ -839,6 +846,18 @@ export default function ReviewsPage() {
                   </HorizontalCarousel>
                 </section>
               )}
+
+              {/* Mood-Based Browse */}
+              <section className="mb-8">
+                <MoodIndicators 
+                  compact 
+                  activeMood={activeMood}
+                  onMoodSelect={(mood) => {
+                    setActiveMood(mood === activeMood ? undefined : mood);
+                    // TODO: Filter sections by mood
+                  }}
+                />
+              </section>
 
               {/* Dynamic Sections */}
               {sections.map((section) => (

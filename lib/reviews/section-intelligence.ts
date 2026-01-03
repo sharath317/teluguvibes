@@ -65,6 +65,13 @@ export interface SpotlightSection {
   link: string;
 }
 
+export interface SectionLimits {
+  hero: number;        // Hero sections (Recently Released, Trending, Top Rated)
+  standard: number;    // Standard sections (Blockbusters, Classics, Hidden Gems)
+  genre: number;       // Genre sections
+  spotlight: number;   // Actor spotlights
+}
+
 export interface SectionConfig {
   recentDays: number;        // Days for "Recently Released"
   upcomingDays: number;      // Days ahead for "Upcoming"
@@ -72,7 +79,7 @@ export interface SectionConfig {
   classicMinRating: number;  // Min rating for classics
   genreMinMovies: number;    // Min movies for a genre section
   spotlightMinMovies: number; // Min movies for spotlight
-  maxMoviesPerSection: number;
+  maxMoviesPerSection: SectionLimits;  // ✅ Now tiered!
   language?: string;         // Language filter (defaults to 'Telugu')
 }
 
@@ -80,10 +87,15 @@ const DEFAULT_CONFIG: SectionConfig = {
   recentDays: 60,
   upcomingDays: 90,
   classicYearThreshold: 2000,
-  classicMinRating: 7.5,
+  classicMinRating: 7.0,  // ✅ Relaxed from 7.5 to 7.0
   genreMinMovies: 5,
   spotlightMinMovies: 3,
-  maxMoviesPerSection: 12,
+  maxMoviesPerSection: {
+    hero: 24,        // Show 24 movies in top sections
+    standard: 18,    // Show 18 in standard sections
+    genre: 15,       // Show 15 in genre sections
+    spotlight: 12,   // Show 12 in actor spotlights
+  },
   language: 'Telugu',
 };
 
@@ -121,7 +133,7 @@ export async function getRecentlyReleased(config: SectionConfig = DEFAULT_CONFIG
     .gte('release_year', currentYear - 2)
     .order('release_year', { ascending: false })
     .order('avg_rating', { ascending: false })
-    .limit(config.maxMoviesPerSection);
+    .limit(config.maxMoviesPerSection.hero); // ✅ Hero section
 
   return {
     id: 'recently-released',
@@ -153,7 +165,7 @@ export async function getUpcoming(config: SectionConfig = DEFAULT_CONFIG): Promi
     .eq('language', language) // ✅ FILTER BY LANGUAGE
     .or(`release_date.gt.${today},and(release_date.is.null,release_year.gt.${currentYear})`)
     .order('release_date', { ascending: true, nullsFirst: false })
-    .limit(config.maxMoviesPerSection);
+    .limit(config.maxMoviesPerSection.standard); // ✅ Standard section
 
   // Map with isUpcoming flag for special rendering
   const upcomingMovies = (movies || []).map(m => ({
@@ -192,7 +204,7 @@ export async function getTrending(config: SectionConfig = DEFAULT_CONFIG): Promi
     .not('avg_rating', 'is', null)
     .order('avg_rating', { ascending: false })
     .order('total_reviews', { ascending: false })
-    .limit(12);
+    .limit(config.maxMoviesPerSection.hero); // ✅ Hero section
 
   return {
     id: 'trending',
@@ -222,7 +234,7 @@ export async function getClassics(config: SectionConfig = DEFAULT_CONFIG): Promi
     .eq('language', language)
     .eq('is_classic', true)
     .order('release_year', { ascending: false })
-    .limit(config.maxMoviesPerSection);
+    .limit(config.maxMoviesPerSection.standard); // ✅ Standard section
 
   return {
     id: 'classics',
@@ -251,7 +263,7 @@ export async function getBlockbusters(config: SectionConfig = DEFAULT_CONFIG): P
     .eq('language', language)
     .eq('is_blockbuster', true)
     .order('avg_rating', { ascending: false })
-    .limit(12);
+    .limit(config.maxMoviesPerSection.standard); // ✅ Standard section
 
   return {
     id: 'blockbusters',
@@ -280,7 +292,7 @@ export async function getHiddenGems(config: SectionConfig = DEFAULT_CONFIG): Pro
     .eq('language', language)
     .eq('is_underrated', true)
     .order('avg_rating', { ascending: false })
-    .limit(12);
+    .limit(config.maxMoviesPerSection.standard); // ✅ Standard section
 
   return {
     id: 'hidden-gems',
@@ -309,7 +321,7 @@ export async function getCultClassics(config: SectionConfig = DEFAULT_CONFIG): P
     .eq('language', language)
     .contains('tags', ['cult-classic'])
     .order('release_year', { ascending: false })
-    .limit(12);
+    .limit(config.maxMoviesPerSection.standard); // ✅ Standard section
 
   return {
     id: 'cult-classics',
@@ -321,6 +333,53 @@ export async function getCultClassics(config: SectionConfig = DEFAULT_CONFIG): P
     icon: '🎭',
     priority: 7,
     isVisible: (movies?.length || 0) >= 1,
+  };
+}
+
+/**
+ * Top 10 Movies - highest rated movies overall
+ */
+export async function getTop10(
+  timeframe: 'all-time' | 'decade' | 'year' = 'all-time',
+  config: SectionConfig = DEFAULT_CONFIG
+): Promise<ReviewSection> {
+  const supabase = getSupabaseClient();
+  const language = config.language || 'Telugu';
+  const currentYear = new Date().getFullYear();
+  
+  let query = supabase
+    .from('movies')
+    .select('id, title_en, title_te, slug, poster_url, release_year, release_date, genres, director, hero, heroine, avg_rating, total_reviews')
+    .eq('is_published', true)
+    .eq('language', language)
+    .not('avg_rating', 'is', null)
+    .gte('avg_rating', 7.0);
+  
+  // Apply timeframe filters
+  if (timeframe === 'decade') {
+    query = query.gte('release_year', currentYear - 10);
+  } else if (timeframe === 'year') {
+    query = query.eq('release_year', currentYear);
+  }
+  
+  const { data: movies } = await query
+    .order('avg_rating', { ascending: false })
+    .order('total_reviews', { ascending: false })
+    .limit(10);
+  
+  const titleSuffix = timeframe === 'decade' ? ' (Last Decade)' : 
+                      timeframe === 'year' ? ` (${currentYear})` : '';
+  
+  return {
+    id: `top-10-${timeframe}`,
+    title: `Top 10 Movies${titleSuffix}`,
+    title_te: 'టాప్ 10 సినిమాలు',
+    type: 'custom',
+    movies: (movies || []).map(mapToMovieCard),
+    viewAllLink: `/reviews?sortBy=rating&timeframe=${timeframe}`,
+    icon: '🏆',
+    priority: 2.5,
+    isVisible: (movies?.length || 0) >= 5,
   };
 }
 
@@ -340,10 +399,10 @@ export async function getMostRecommended(config: SectionConfig = DEFAULT_CONFIG)
     .not('avg_rating', 'is', null)
     .gte('avg_rating', 7)
     .order('avg_rating', { ascending: false })
-    .limit(24);
+    .limit(config.maxMoviesPerSection.hero * 2); // ✅ Fetch double for shuffling
 
   // Shuffle to create rotation effect
-  const shuffled = (movies || []).sort(() => Math.random() - 0.5).slice(0, 12);
+  const shuffled = (movies || []).sort(() => Math.random() - 0.5).slice(0, config.maxMoviesPerSection.hero);
 
   return {
     id: 'most-recommended',
@@ -387,7 +446,7 @@ export async function getGenreSections(config: SectionConfig = DEFAULT_CONFIG): 
       .eq('language', language)
       .contains('genres', [genre])
       .order('avg_rating', { ascending: false })
-      .limit(config.maxMoviesPerSection);
+      .limit(config.maxMoviesPerSection.genre); // ✅ Genre section
 
     if ((movies?.length || 0) >= 1) {
       sections.push({
@@ -444,7 +503,7 @@ export async function getSpotlightSections(config: SectionConfig = DEFAULT_CONFI
         .eq('language', language)
         .eq('hero', heroName)
         .order('avg_rating', { ascending: false })
-        .limit(8);
+        .limit(config.maxMoviesPerSection.spotlight); // ✅ Spotlight section
 
       const avgRating = (movies && movies.length > 0)
         ? movies.reduce((sum, m) => sum + (m.avg_rating || 0), 0) / movies.length
@@ -499,7 +558,7 @@ export async function getSpotlightSections(config: SectionConfig = DEFAULT_CONFI
         .eq('language', language)
         .eq('heroine', heroineName)
         .order('avg_rating', { ascending: false })
-        .limit(8);
+        .limit(config.maxMoviesPerSection.spotlight); // ✅ Spotlight section
 
       const avgRating = (movies && movies.length > 0)
         ? movies.reduce((sum, m) => sum + (m.avg_rating || 0), 0) / movies.length
@@ -538,6 +597,7 @@ export async function getAllReviewSections(config: SectionConfig = DEFAULT_CONFI
   const [
     recentlyReleased,
     upcoming,
+    top10AllTime,
     trending,
     mostRecommended,
     blockbusters,
@@ -549,6 +609,7 @@ export async function getAllReviewSections(config: SectionConfig = DEFAULT_CONFI
   ] = await Promise.all([
     getRecentlyReleased(config),
     getUpcoming(config),
+    getTop10('all-time', config),
     getTrending(config),
     getMostRecommended(config),
     getBlockbusters(config),
@@ -563,6 +624,7 @@ export async function getAllReviewSections(config: SectionConfig = DEFAULT_CONFI
   const allSections = [
     recentlyReleased,
     upcoming,
+    top10AllTime,
     trending,
     mostRecommended,
     blockbusters,

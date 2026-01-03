@@ -11,6 +11,12 @@ import { createClient } from '@supabase/supabase-js';
 import { SchemaScript } from '@/components/seo/SchemaScript';
 import { generateMovieSchema, generateBreadcrumbSchema } from '@/lib/seo/schema-generator';
 import { ReviewInsightsPanel } from "@/components/reviews/ReviewInsightsPanel";
+import { CompactSynopsis } from "@/components/reviews/CompactSynopsis";
+import { QuickVerdictCard } from "@/components/reviews/QuickVerdictCard";
+import { CompactRatings } from "@/components/reviews/CompactRatings";
+import { CompactCast } from "@/components/reviews/CompactCast";
+import { ReviewAccordion, PerformanceContent, StoryContent, DirectionContent, CulturalContent, AwardsContent } from "@/components/reviews/ReviewAccordion";
+import { MovieBadges } from "@/components/reviews/MovieBadges";
 import type { Movie, MovieReview } from '@/types/reviews';
 import type { ReviewInsights } from "@/lib/reviews/review-insights";
 
@@ -82,7 +88,16 @@ async function getMovieData(slug: string) {
     insights = featuredReview.insights as ReviewInsights;
   }
 
-  return { movie, reviews: reviews || [], similar: similar || [], insights };
+  // Extract editorial review from dimensions_json if available
+  let editorialReview: any = null;
+  if (featuredReview?.dimensions_json) {
+    const dims = featuredReview.dimensions_json as any;
+    if (dims._type === 'editorial_review_v2') {
+      editorialReview = dims;
+    }
+  }
+
+  return { movie, reviews: reviews || [], similar: similar || [], insights, editorialReview };
 }
 
 export default async function MovieReviewPage({ params }: PageProps) {
@@ -91,11 +106,15 @@ export default async function MovieReviewPage({ params }: PageProps) {
 
   if (!data) notFound();
 
-  const { movie, reviews, similar, insights } = data;
+  const { movie, reviews, similar, insights, editorialReview } = data;
   const featuredReview = reviews.find(r => r.is_featured) || reviews[0];
   
-  // Use review's overall_rating if movie has no avg_rating
-  const displayRating = movie.avg_rating || movie.our_rating || featuredReview?.overall_rating || 0;
+  // Priority: Editorial review rating > Our rating > Featured review > Movie avg (TMDB can be inflated)
+  const displayRating = editorialReview?.verdict?.final_rating 
+    || movie.our_rating 
+    || featuredReview?.overall_rating 
+    || Math.min(movie.avg_rating || 0, 8.5) // Cap TMDB rating at 8.5 to prevent inflation
+    || 0;
 
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
@@ -123,12 +142,12 @@ export default async function MovieReviewPage({ params }: PageProps) {
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent" />
         </div>
 
-        {/* Content */}
-        <div className="relative max-w-7xl mx-auto px-4 pt-8 pb-12">
-          <div className="flex flex-col md:flex-row gap-8">
-            {/* Poster */}
-            <div className="flex-shrink-0">
-              <div className="relative w-64 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl mx-auto md:mx-0">
+        {/* Content - 3 Column Layout */}
+        <div className="relative max-w-7xl mx-auto px-4 pt-6 pb-8">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Left: Poster + Trailer */}
+            <div className="flex-shrink-0 lg:w-48">
+              <div className="relative w-48 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl mx-auto lg:mx-0">
                 {movie.poster_url ? (
                   <Image
                     src={movie.poster_url}
@@ -139,184 +158,208 @@ export default async function MovieReviewPage({ params }: PageProps) {
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                    <Film className="w-16 h-16 text-gray-600" />
+                    <Film className="w-12 h-12 text-gray-600" />
                   </div>
                 )}
               </div>
 
-              {/* Trailer Button */}
+              {/* Trailer Button - Compact */}
               {movie.trailer_url && (
                 <a
                   href={movie.trailer_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-64 mt-4 mx-auto md:mx-0 px-4 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-500 transition-colors"
+                  className="flex items-center justify-center gap-2 w-48 mt-3 mx-auto lg:mx-0 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-500 transition-colors"
                 >
-                  <Play className="w-5 h-5 fill-current" />
-                  Watch Trailer
+                  <Play className="w-4 h-4 fill-current" />
+                  Trailer
                 </a>
               )}
             </div>
 
-            {/* Info */}
-            <div className="flex-1">
-              {/* Title */}
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
-                {movie.title_en}
-              </h1>
-              {movie.title_te && (
-                <p className="text-2xl text-yellow-500 mb-4">
-                  {movie.title_te}
-                </p>
-              )}
-
-              {/* Badges */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {movie.is_blockbuster && (
-                  <span className="px-3 py-1 bg-orange-500 text-white text-sm font-bold rounded-full">
-                    🎬 Blockbuster
-                  </span>
-                )}
-                {movie.is_underrated && (
-                  <span className="px-3 py-1 bg-purple-500 text-white text-sm font-bold rounded-full">
-                    💎 Underrated Gem
-                  </span>
-                )}
-                {movie.is_classic && (
-                  <span className="px-3 py-1 bg-yellow-500 text-black text-sm font-bold rounded-full">
-                    ⭐ Classic
-                  </span>
+            {/* Middle: Info */}
+            <div className="flex-1 min-w-0">
+              {/* Title Row */}
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <div>
+                  <h1 className="text-3xl lg:text-4xl font-bold text-white">
+                    {movie.title_en}
+                  </h1>
+                  {movie.title_te && (
+                    <p className="text-xl text-yellow-500 mt-1">{movie.title_te}</p>
+                  )}
+                </div>
+                {/* Rating Badge - Only show if NO editorial review (verdict card shows it) */}
+                {displayRating > 0 && !editorialReview && (
+                  <div className="flex-shrink-0 flex items-center gap-1 px-3 py-2 bg-yellow-500 rounded-lg">
+                    <Star className="w-4 h-4 text-black fill-black" />
+                    <span className="text-lg font-bold text-black">{displayRating.toFixed(1)}</span>
+                  </div>
                 )}
               </div>
 
-              {/* Meta */}
-              <div className="flex flex-wrap items-center gap-4 text-gray-400 mb-6">
+              {/* Meta Row */}
+              <div className="flex flex-wrap items-center gap-3 mb-3">
                 {movie.release_year && (
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
+                  <span className="flex items-center gap-1.5 text-gray-400 text-sm">
+                    <Calendar className="w-3.5 h-3.5" />
                     {movie.release_year}
                   </span>
                 )}
                 {movie.runtime_minutes && (
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {Math.floor(movie.runtime_minutes / 60)}h{" "}
-                    {movie.runtime_minutes % 60}m
+                  <span className="flex items-center gap-1.5 text-gray-400 text-sm">
+                    <Clock className="w-3.5 h-3.5" />
+                    {Math.floor(movie.runtime_minutes / 60)}h {movie.runtime_minutes % 60}m
                   </span>
                 )}
                 {movie.certification && (
-                  <span className="px-2 py-0.5 border border-gray-600 rounded text-sm">
+                  <span className="px-2 py-0.5 border border-gray-600/50 rounded text-xs text-gray-400 bg-gray-800/50">
                     {movie.certification}
                   </span>
                 )}
               </div>
 
-              {/* Rating */}
-              {displayRating > 0 && (
-                <div className="flex items-center gap-6 mb-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 h-16 rounded-full bg-yellow-500 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-black">
-                        {displayRating.toFixed(1)}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`w-5 h-5 ${
-                              star <= displayRating / 2
-                                ? "text-yellow-500 fill-yellow-500"
-                                : "text-gray-600"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-gray-400 text-sm">
-                        {reviews.length > 0
-                          ? `${reviews.length} review${
-                              reviews.length > 1 ? "s" : ""
-                            }`
-                          : "No reviews yet"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Badges Row - New Component */}
+              <div className="mb-4">
+                <MovieBadges 
+                  isBlockbuster={movie.is_blockbuster}
+                  isUnderrated={movie.is_underrated}
+                  isClassic={movie.is_classic}
+                  isHit={displayRating >= 7 && !movie.is_blockbuster}
+                />
+              </div>
 
-              {/* Genres */}
-              <div className="flex flex-wrap gap-2 mb-6">
-                {movie.genres.map((genre: string) => (
+              {/* Genres - Compact */}
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {movie.genres.slice(0, 5).map((genre: string) => (
                   <Link
                     key={genre}
                     href={`/reviews?genre=${genre}`}
-                    className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-full text-gray-300 text-sm transition-colors"
+                    className="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 text-xs transition-colors"
                   >
                     {genre}
                   </Link>
                 ))}
               </div>
 
-              {/* Synopsis */}
-              {movie.synopsis && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-bold text-white mb-2">
+              {/* Cast - Compact Inline */}
+              <div className="mb-4">
+                <CompactCast 
+                  cast={[
+                    { role: 'Director', name: movie.director || '', icon: 'director' },
+                    { role: 'Hero', name: movie.hero || '', icon: 'actor' },
+                    { role: 'Heroine', name: movie.heroine || '', icon: 'actress' },
+                    { role: 'Music', name: movie.music_director || '', icon: 'music' },
+                  ]}
+                  performances={editorialReview?.performances}
+                />
+              </div>
+
+              {/* Synopsis - Compact with Show More */}
+              {(editorialReview?.synopsis?.en || movie.synopsis) && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
                     Synopsis
                   </h3>
-                  <p className="text-gray-400 leading-relaxed">
-                    {movie.synopsis}
-                  </p>
+                  <CompactSynopsis 
+                    text={editorialReview?.synopsis?.en || movie.synopsis || ''} 
+                    teluguText={editorialReview?.synopsis?.te}
+                    maxLines={3}
+                  />
                 </div>
               )}
+
+              {/* Compact Ratings - Under Synopsis */}
+              {editorialReview && (
+                <CompactRatings 
+                  ratings={[
+                    { label: 'Story', score: editorialReview.story_screenplay?.story_score || 0, icon: 'story' },
+                    { label: 'Direction', score: editorialReview.direction_technicals?.direction_score || 0, icon: 'direction' },
+                    { label: 'Music', score: editorialReview.direction_technicals?.music_score || 0, icon: 'music' },
+                    { label: 'Cinematography', score: editorialReview.direction_technicals?.cinematography_score || 0, icon: 'camera' },
+                    { label: 'Pacing', score: editorialReview.story_screenplay?.pacing_score || 0, icon: 'pacing' },
+                    { label: 'Emotion', score: editorialReview.story_screenplay?.emotional_score || 0, icon: 'emotion' },
+                    { label: 'Originality', score: editorialReview.story_screenplay?.originality_score || 0, icon: 'original' },
+                    { label: 'Editing', score: editorialReview.direction_technicals?.editing_score || 0, icon: 'editing' },
+                  ]}
+                  overallRating={undefined} /* Rating shown in verdict card only */
+                />
+              )}
+            </div>
+
+            {/* Right: Quick Verdict Card */}
+            <div className="hidden lg:block w-80 flex-shrink-0">
+              <div className="sticky top-4 space-y-4">
+                <QuickVerdictCard 
+                  whyWatch={editorialReview?.why_watch}
+                  whySkip={editorialReview?.why_skip}
+                  verdict={editorialReview?.verdict}
+                  qualityScore={editorialReview?._quality_score}
+                />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Cast & Crew */}
-      <section className="max-w-7xl mx-auto px-4 py-8 border-t border-gray-800">
-        <h2 className="text-2xl font-bold text-white mb-6">Cast & Crew</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {movie.director && (
-            <CrewCard
-              icon={<Clapperboard />}
-              role="Director"
-              name={movie.director}
-            />
-          )}
-          {movie.hero && (
-            <CrewCard icon={<User />} role="Lead Actor" name={movie.hero} />
-          )}
-          {movie.heroine && (
-            <CrewCard
-              icon={<User />}
-              role="Lead Actress"
-              name={movie.heroine}
-            />
-          )}
-          {movie.music_director && (
-            <CrewCard
-              icon={<Music />}
-              role="Music"
-              name={movie.music_director}
-            />
-          )}
-          {movie.cinematographer && (
-            <CrewCard
-              icon={<Camera />}
-              role="Cinematography"
-              name={movie.cinematographer}
-            />
-          )}
-          {movie.writer && (
-            <CrewCard icon={<Film />} role="Writer" name={movie.writer} />
-          )}
-        </div>
-      </section>
+      {/* Mobile: Quick Verdict (shown below hero on mobile) */}
+      <div className="lg:hidden max-w-7xl mx-auto px-4 -mt-4 mb-4">
+        <QuickVerdictCard 
+          whyWatch={editorialReview?.why_watch}
+          whySkip={editorialReview?.why_skip}
+          verdict={editorialReview?.verdict}
+          qualityScore={editorialReview?._quality_score}
+        />
+      </div>
+
+      {/* Editorial Review - Accordion Style */}
+      {editorialReview && (editorialReview.performances || editorialReview.story_screenplay || editorialReview.direction_technicals || editorialReview.cultural_impact) && (
+        <section className="max-w-7xl mx-auto px-4 py-6 border-t border-gray-800">
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <Award className="w-5 h-5 text-yellow-500" />
+            Deep Dive
+          </h2>
+
+          <ReviewAccordion 
+            defaultOpen="performances"
+            sections={[
+              ...(editorialReview.performances?.lead_actors?.length > 0 ? [{
+                id: 'performances',
+                title: 'Performances',
+                icon: 'performances' as const,
+                content: <PerformanceContent performances={editorialReview.performances} />
+              }] : []),
+              ...(editorialReview.story_screenplay ? [{
+                id: 'story',
+                title: 'Story & Screenplay',
+                icon: 'story' as const,
+                content: <StoryContent story={editorialReview.story_screenplay} />
+              }] : []),
+              ...(editorialReview.direction_technicals ? [{
+                id: 'direction',
+                title: 'Direction & Technicals',
+                icon: 'direction' as const,
+                content: <DirectionContent direction={editorialReview.direction_technicals} />
+              }] : []),
+              ...(editorialReview.cultural_impact ? [{
+                id: 'cultural',
+                title: 'Cultural Impact',
+                icon: 'cultural' as const,
+                content: <CulturalContent cultural={editorialReview.cultural_impact} />
+              }] : []),
+              ...(editorialReview.awards ? [{
+                id: 'awards',
+                title: 'Awards & Achievements',
+                icon: 'awards' as const,
+                content: <AwardsContent awards={editorialReview.awards} />
+              }] : []),
+            ]}
+          />
+        </section>
+      )}
 
       {/* Featured Review */}
-      {featuredReview && (
+      {featuredReview && !editorialReview && (
         <section className="max-w-7xl mx-auto px-4 py-8 border-t border-gray-800">
           <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
             <Award className="w-6 h-6 text-yellow-500" />
@@ -326,114 +369,68 @@ export default async function MovieReviewPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Rating Breakdown */}
-      {featuredReview &&
-        (featuredReview.dimensions || featuredReview.direction_rating) && (
-          <section className="max-w-7xl mx-auto px-4 py-8 border-t border-gray-800">
-            <h2 className="text-2xl font-bold text-white mb-6">
-              Rating Breakdown
-            </h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {featuredReview.dimensions ? (
-                // Use dimensions from template reviews
-                <>
-                  {Object.entries(featuredReview.dimensions).map(
-                    ([key, dim]: [string, any]) => (
-                      <RatingBar
-                        key={key}
-                        label={dim.name_te || dim.name}
-                        rating={dim.score}
-                        icon={
-                          key.includes("music") ? (
-                            <Music />
-                          ) : key.includes("direct") ? (
-                            <Clapperboard />
-                          ) : (
-                            <Film />
-                          )
-                        }
-                      />
-                    )
-                  )}
-                </>
+      {/* Rating Breakdown - Only for non-editorial reviews */}
+      {!editorialReview && (featuredReview?.dimensions || featuredReview?.direction_rating) && (
+          <section className="max-w-7xl mx-auto px-4 py-6 border-t border-gray-800">
+            <h2 className="text-lg font-bold text-white mb-4">Rating Breakdown</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {featuredReview?.dimensions ? (
+                Object.entries(featuredReview.dimensions).slice(0, 8).map(
+                  ([key, dim]: [string, any]) => (
+                    <RatingBar
+                      key={key}
+                      label={dim.name_te || dim.name}
+                      rating={dim.score}
+                      icon={
+                        key.includes("music") ? <Music /> : 
+                        key.includes("direct") ? <Clapperboard /> : <Film />
+                      }
+                    />
+                  )
+                )
               ) : (
-                // Use direct rating fields
                 <>
-                  <RatingBar
-                    label="Direction"
-                    rating={featuredReview.direction_rating}
-                    icon={<Clapperboard />}
-                  />
-                  <RatingBar
-                    label="Screenplay"
-                    rating={featuredReview.screenplay_rating}
-                    icon={<Film />}
-                  />
-                  <RatingBar
-                    label="Acting"
-                    rating={featuredReview.acting_rating}
-                    icon={<User />}
-                  />
-                  <RatingBar
-                    label="Music"
-                    rating={featuredReview.music_rating}
-                    icon={<Music />}
-                  />
-                  <RatingBar
-                    label="Cinematography"
-                    rating={featuredReview.cinematography_rating}
-                    icon={<Camera />}
-                  />
-                  <RatingBar
-                    label="Production"
-                    rating={featuredReview.production_rating}
-                    icon={<Award />}
-                  />
-                  <RatingBar
-                    label="Entertainment"
-                    rating={featuredReview.entertainment_rating}
-                    icon={<Heart />}
-                  />
+                  <RatingBar label="Direction" rating={featuredReview?.direction_rating} icon={<Clapperboard />} />
+                  <RatingBar label="Screenplay" rating={featuredReview?.screenplay_rating} icon={<Film />} />
+                  <RatingBar label="Acting" rating={featuredReview?.acting_rating} icon={<User />} />
+                  <RatingBar label="Music" rating={featuredReview.music_rating} icon={<Music />} />
                 </>
               )}
             </div>
           </section>
         )}
 
-      {/* Director's Vision */}
-      {featuredReview?.directors_vision && (
-        <section className="max-w-7xl mx-auto px-4 py-8 border-t border-gray-800">
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-            <Eye className="w-6 h-6 text-yellow-500" />
+      {/* Director's Vision - Only for non-editorial reviews */}
+      {!editorialReview && featuredReview?.directors_vision && (
+        <section className="max-w-7xl mx-auto px-4 py-6 border-t border-gray-800">
+          <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+            <Eye className="w-5 h-5 text-yellow-500" />
             Director's Vision
           </h2>
-          <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-xl p-6">
-            <p className="text-gray-300 leading-relaxed italic">
+          <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg p-4">
+            <p className="text-gray-300 leading-relaxed italic text-sm">
               "{featuredReview.directors_vision}"
             </p>
           </div>
         </section>
       )}
 
-      {/* Strengths & Weaknesses */}
-      {featuredReview &&
+      {/* Strengths & Weaknesses - Only for non-editorial reviews */}
+      {!editorialReview && featuredReview &&
         (featuredReview.strengths?.length > 0 ||
           featuredReview.weaknesses?.length > 0) && (
-          <section className="max-w-7xl mx-auto px-4 py-8 border-t border-gray-800">
-            <div className="grid md:grid-cols-2 gap-6">
+          <section className="max-w-7xl mx-auto px-4 py-6 border-t border-gray-800">
+            <div className="grid md:grid-cols-2 gap-4">
               {featuredReview.strengths?.length > 0 && (
-                <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6">
-                  <h3 className="text-lg font-bold text-green-400 mb-4 flex items-center gap-2">
-                    <ThumbsUp className="w-5 h-5" />
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                  <h3 className="text-sm font-bold text-green-400 mb-3 flex items-center gap-2">
+                    <ThumbsUp className="w-4 h-4" />
                     Strengths
                   </h3>
-                  <ul className="space-y-2">
-                    {featuredReview.strengths.map(
+                  <ul className="space-y-1.5 text-sm">
+                    {featuredReview.strengths.slice(0, 4).map(
                       (strength: string, i: number) => (
-                        <li
-                          key={i}
-                          className="text-gray-300 flex items-start gap-2"
-                        >
+                        <li key={i} className="text-gray-300 flex items-start gap-2">
                           <span className="text-green-500">✓</span>
                           {strength}
                         </li>
@@ -443,18 +440,15 @@ export default async function MovieReviewPage({ params }: PageProps) {
                 </div>
               )}
               {featuredReview.weaknesses?.length > 0 && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6">
-                  <h3 className="text-lg font-bold text-red-400 mb-4 flex items-center gap-2">
-                    <ThumbsDown className="w-5 h-5" />
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                  <h3 className="text-sm font-bold text-red-400 mb-3 flex items-center gap-2">
+                    <ThumbsDown className="w-4 h-4" />
                     Weaknesses
                   </h3>
-                  <ul className="space-y-2">
-                    {featuredReview.weaknesses.map(
+                  <ul className="space-y-1.5 text-sm">
+                    {featuredReview.weaknesses.slice(0, 4).map(
                       (weakness: string, i: number) => (
-                        <li
-                          key={i}
-                          className="text-gray-300 flex items-start gap-2"
-                        >
+                        <li key={i} className="text-gray-300 flex items-start gap-2">
                           <span className="text-red-500">✗</span>
                           {weakness}
                         </li>
@@ -467,40 +461,35 @@ export default async function MovieReviewPage({ params }: PageProps) {
           </section>
         )}
 
-      {/* Enhanced Review Insights */}
-      {insights && (
-        <section className="max-w-7xl mx-auto px-4 py-8 border-t border-gray-800">
-          <ReviewInsightsPanel insights={insights} defaultExpanded={true} />
+      {/* Enhanced Review Insights - Collapsed by default */}
+      {insights && !editorialReview && (
+        <section className="max-w-7xl mx-auto px-4 py-6 border-t border-gray-800">
+          <ReviewInsightsPanel insights={insights} defaultExpanded={false} />
         </section>
       )}
 
-      {/* Similar Movies */}
+      {/* Similar Movies - Horizontal scroll on mobile */}
       {similar.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 py-8 border-t border-gray-800">
-          <h2 className="text-2xl font-bold text-white mb-6">Similar Movies</h2>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-            {similar.map((m: any) => (
-              <Link key={m.id} href={`/reviews/${m.slug}`} className="group">
+        <section className="max-w-7xl mx-auto px-4 py-6 border-t border-gray-800">
+          <h2 className="text-lg font-bold text-white mb-4">Similar Movies</h2>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory md:grid md:grid-cols-6 md:overflow-visible">
+            {similar.slice(0, 6).map((m: any) => (
+              <Link key={m.id} href={`/reviews/${m.slug}`} className="flex-shrink-0 w-24 md:w-auto snap-start group">
                 <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-800">
                   {m.poster_url ? (
-                    <Image
-                      src={m.poster_url}
-                      alt={m.title_en}
-                      fill
-                      className="object-cover"
-                    />
+                    <Image src={m.poster_url} alt={m.title_en} fill className="object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <Film className="w-8 h-8 text-gray-600" />
+                      <Film className="w-6 h-6 text-gray-600" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="text-white font-bold">
-                      {(m.avg_rating || 0).toFixed(1)}
-                    </span>
-                  </div>
+                  {m.avg_rating > 0 && (
+                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/80 rounded text-xs text-yellow-500 font-medium">
+                      {m.avg_rating.toFixed(1)}
+                    </div>
+                  )}
                 </div>
-                <p className="text-gray-400 text-sm mt-2 truncate group-hover:text-white transition-colors">
+                <p className="text-gray-400 text-xs mt-1.5 truncate group-hover:text-white transition-colors">
                   {m.title_en}
                 </p>
               </Link>
