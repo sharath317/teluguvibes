@@ -14,6 +14,7 @@
 import { createClient } from '@supabase/supabase-js';
 import Groq from 'groq-sdk';
 import OpenAI from 'openai';
+import { smartAI } from '../ai/smart-key-manager';
 
 // ============================================================
 // AI PROVIDER CONFIGURATION
@@ -173,32 +174,17 @@ interface ReviewDataSources {
 // GENERATOR CLASS
 // ============================================================
 
-// Track last successful provider globally to avoid restarting from groq each time
-let lastSuccessfulProvider: AIProvider | null = null;
-// Track providers that are currently rate limited (cleared after cooldown)
-const rateLimitedProviders: Set<AIProvider> = new Set();
+// Smart AI client handles all key management, routing, and fallback
+// See lib/ai/smart-key-manager.ts for implementation
 
 export class EditorialReviewGenerator {
   private supabase: ReturnType<typeof createClient>;
   private preferredProvider: AIProvider;
 
   constructor() {
-    // Import key manager dynamically to avoid circular deps
-    const { keyManager } = require('../ai/key-manager');
-    keyManager.initialize();
-
-    // Use last successful provider if available, otherwise determine from env
-    const envProvider = (process.env.AI_PROVIDER as AIProvider) || 'groq';
-    this.preferredProvider = lastSuccessfulProvider || envProvider;
-    
-    const availableProviders = keyManager.getAvailableProviders();
-    console.log(`🤖 Available providers: ${availableProviders.join(', ')}`);
-    
-    if (!availableProviders.includes(this.preferredProvider) && availableProviders.length > 0) {
-      this.preferredProvider = availableProviders[0];
-    }
-    
-    console.log(`🤖 Using: ${this.preferredProvider} (with auto-rotation on errors)`);
+    // Smart AI client will be initialized on first use
+    // It handles all key management, validation, routing, and fallback
+    this.preferredProvider = (process.env.AI_PROVIDER as AIProvider) || 'groq';
 
     this.supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -317,103 +303,16 @@ export class EditorialReviewGenerator {
   }
 
   /**
-   * Make AI completion call with provider abstraction
+   * Make AI completion call using Smart Key Manager
+   * Features: Pre-validation, intelligent routing, timeout-based switching, parallel support
    */
   private async aiCompletion(prompt: string, maxTokens: number = 1000, temperature: number = 0.7): Promise<string> {
-    const { keyManager, getFailureReason } = require('../ai/key-manager');
-    const maxRetries = 2; // Reduced retries per provider since we have more providers
-    let lastError: Error | null = null;
-    
-    // Build fallback chain based on available providers, skipping rate-limited ones
-    // Priority: groq (fastest) > openai (best JSON) > cohere > huggingface
-    const allProviders: AIProvider[] = ['groq', 'openai', 'cohere', 'huggingface'];
-    
-    // Start with last successful provider if available, skip rate-limited ones
-    const startProvider = lastSuccessfulProvider && !rateLimitedProviders.has(lastSuccessfulProvider) 
-      ? lastSuccessfulProvider 
-      : allProviders.find(p => !rateLimitedProviders.has(p) && keyManager.hasKeys(p)) || this.preferredProvider;
-    
-    const providers: AIProvider[] = [startProvider];
-    
-    // Add other available providers as fallbacks (skip rate-limited)
-    for (const p of allProviders) {
-      if (p !== startProvider && keyManager.hasKeys(p) && !rateLimitedProviders.has(p)) {
-        providers.push(p);
-      }
-    }
-    
-    // If all are rate-limited, try all anyway
-    if (providers.length === 0) {
-      providers.push(...allProviders.filter(p => keyManager.hasKeys(p)));
-    }
-
-    console.log(`📋 Providers: ${providers.join(' → ')} (rate-limited: ${Array.from(rateLimitedProviders).join(', ') || 'none'})`);
-    
-    for (const provider of providers) {
-      console.log(`\n🔄 Trying provider: ${provider}`);
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const client = this.getAIClient(provider);
-        
-        if (!client.key) {
-          console.warn(`⚠️ No keys available for ${provider}`);
-          break; // Try next provider
-        }
-
-        try {
-          let result: string = '';
-          
-          if (provider === 'openai' && client.openai) {
-            const completion = await client.openai.chat.completions.create({
-              messages: [{ role: 'user', content: prompt }],
-              model: AI_CONFIG.openai.model,
-              temperature,
-              max_tokens: maxTokens,
-            });
-            result = completion.choices[0]?.message?.content || '';
-          } else if (provider === 'groq' && client.groq) {
-            const completion = await client.groq.chat.completions.create({
-              messages: [{ role: 'user', content: prompt }],
-              model: AI_CONFIG.groq.model,
-              temperature,
-              max_tokens: maxTokens,
-            });
-            result = completion.choices[0]?.message?.content || '';
-          } else if (provider === 'cohere' && client.cohereKey) {
-            result = await this.cohereCompletion(client.cohereKey, prompt, maxTokens);
-          } else if (provider === 'huggingface' && client.huggingfaceKey) {
-            result = await this.huggingfaceCompletion(client.huggingfaceKey, prompt, maxTokens);
-          }
-          
-          if (result) {
-            // Track this provider as working for future calls
-            lastSuccessfulProvider = provider;
-            return result;
-          }
-        } catch (error: any) {
-          lastError = error;
-          const reason = getFailureReason(error);
-          
-          console.warn(`⚠️ ${provider} request failed (attempt ${attempt + 1}/${maxRetries}): ${reason}`);
-          keyManager.markKeyFailed(provider, client.key, reason);
-          
-          // Mark provider as rate-limited if that's the reason
-          if (reason === 'rate_limit') {
-            rateLimitedProviders.add(provider);
-            // Clear after 60 seconds
-            setTimeout(() => rateLimitedProviders.delete(provider), 60000);
-          }
-          
-          // Small delay before retry
-          if (attempt < maxRetries - 1) {
-            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-          }
-        }
-      }
-      
-      console.log(`🔄 Switching from ${provider} to next provider...`);
-    }
-
-    throw lastError || new Error('All AI providers failed. Check your API keys.');
+    // Use the smart AI client which handles all key rotation, validation, and fallback
+    return await smartAI.complete(prompt, {
+      maxTokens,
+      temperature,
+      timeout: 60000, // 60 second timeout per request
+    });
   }
 
   /**
