@@ -17,6 +17,7 @@ import { CompactRatings } from "@/components/reviews/CompactRatings";
 import { CompactCast } from "@/components/reviews/CompactCast";
 import { ReviewAccordion, PerformanceContent, StoryContent, DirectionContent, CulturalContent } from "@/components/reviews/ReviewAccordion";
 import { SimilarMoviesCarousel } from "@/components/reviews/SimilarMoviesCarousel";
+import { getSimilarMovieSections, type SimilarSection } from "@/lib/movies/similarity-engine";
 import { MovieBadges } from "@/components/reviews/MovieBadges";
 import type { Movie, MovieReview } from '@/types/reviews';
 import type { ReviewInsights } from "@/lib/reviews/review-insights";
@@ -73,62 +74,22 @@ async function getMovieData(slug: string) {
     .order("is_featured", { ascending: false })
     .order("created_at", { ascending: false });
 
-  // Find similar movies with fallback strategies
-  let similar: any[] = [];
-  
-  // Strategy 1: Genre overlap (if movie has genres)
-  if (movie.genres && movie.genres.length > 0) {
-    const { data: genreSimilar } = await supabase
-      .from("movies")
-      .select("id, title_en, title_te, slug, poster_url, avg_rating, release_year, runtime_minutes, genres")
-      .eq("is_published", true)
-      .neq("id", movie.id)
-      .overlaps("genres", movie.genres)
-      .order("avg_rating", { ascending: false })
-      .limit(12);
-    similar = genreSimilar || [];
-  }
-  
-  // Strategy 2: Fallback to same director or era if no genre matches
-  if (similar.length < 6) {
-    const fallbackQuery = supabase
-      .from("movies")
-      .select("id, title_en, title_te, slug, poster_url, avg_rating, release_year, runtime_minutes, genres")
-      .eq("is_published", true)
-      .eq("language", movie.language || "Telugu")
-      .neq("id", movie.id)
-      .not("poster_url", "is", null)
-      .order("avg_rating", { ascending: false })
-      .limit(12 - similar.length);
-    
-    // Prefer same director if available
-    if (movie.director) {
-      const { data: directorSimilar } = await fallbackQuery.eq("director", movie.director);
-      if (directorSimilar && directorSimilar.length > 0) {
-        const existingIds = new Set(similar.map(m => m.id));
-        similar = [...similar, ...directorSimilar.filter(m => !existingIds.has(m.id))];
-      }
-    }
-    
-    // If still not enough, get top-rated from same language
-    if (similar.length < 6) {
-      const { data: topRated } = await supabase
-        .from("movies")
-        .select("id, title_en, title_te, slug, poster_url, avg_rating, release_year, runtime_minutes, genres")
-        .eq("is_published", true)
-        .eq("language", movie.language || "Telugu")
-        .neq("id", movie.id)
-        .not("poster_url", "is", null)
-        .gte("avg_rating", 7)
-        .order("avg_rating", { ascending: false })
-        .limit(12 - similar.length);
-      
-      if (topRated) {
-        const existingIds = new Set(similar.map(m => m.id));
-        similar = [...similar, ...topRated.filter(m => !existingIds.has(m.id))];
-      }
-    }
-  }
+  // Get smart similar movie sections using the similarity engine
+  const similarSections = await getSimilarMovieSections({
+    id: movie.id,
+    title_en: movie.title_en,
+    director: movie.director,
+    hero: movie.hero,
+    heroine: movie.heroine,
+    genres: movie.genres,
+    release_year: movie.release_year,
+    language: movie.language,
+    is_blockbuster: movie.is_blockbuster,
+    is_classic: movie.is_classic,
+    is_underrated: movie.is_underrated,
+    our_rating: movie.our_rating,
+    avg_rating: movie.avg_rating,
+  });
 
   // Fetch review insights if available (from featured review or movie)
   let insights: ReviewInsights | null = null;
@@ -146,7 +107,7 @@ async function getMovieData(slug: string) {
     }
   }
 
-  return { movie, reviews: reviews || [], similar: similar || [], insights, editorialReview };
+  return { movie, reviews: reviews || [], similarSections, insights, editorialReview };
 }
 
 export default async function MovieReviewPage({ params }: PageProps) {
@@ -155,7 +116,7 @@ export default async function MovieReviewPage({ params }: PageProps) {
 
   if (!data) notFound();
 
-  const { movie, reviews, similar, insights, editorialReview } = data;
+  const { movie, reviews, similarSections, insights, editorialReview } = data;
   const featuredReview = reviews.find(r => r.is_featured) || reviews[0];
   
   // Priority: Editorial review rating > Our rating > Featured review > Movie avg (TMDB can be inflated)
@@ -521,10 +482,11 @@ export default async function MovieReviewPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Similar Movies - Netflix-style Carousel */}
-      {similar.length > 0 && (
+      {/* Similar Movies - Smart Multi-Row Carousel */}
+      {similarSections.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 py-6 border-t border-gray-800">
-          <SimilarMoviesCarousel movies={similar} title="Similar Movies" />
+          <h2 className="text-lg font-bold text-white mb-4">Discover More</h2>
+          <SimilarMoviesCarousel sections={similarSections} />
         </section>
       )}
     </main>
