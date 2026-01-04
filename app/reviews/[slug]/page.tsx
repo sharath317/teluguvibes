@@ -81,6 +81,7 @@ async function getMovieData(slug: string) {
     director: movie.director,
     hero: movie.hero,
     heroine: movie.heroine,
+    music_director: movie.music_director,
     genres: movie.genres,
     release_year: movie.release_year,
     language: movie.language,

@@ -13,6 +13,8 @@ export interface SimilarMovie {
   genres?: string[];
   director?: string;
   hero?: string;
+  heroine?: string;
+  music_director?: string;
   relevanceScore?: number;
 }
 
@@ -21,7 +23,7 @@ export interface SimilarSection {
   title: string;
   subtitle?: string;
   movies: SimilarMovie[];
-  matchType: 'best' | 'director' | 'hero' | 'genre' | 'era' | 'tags' | 'rating';
+  matchType: 'best' | 'director' | 'hero' | 'heroine' | 'genre' | 'era' | 'tags' | 'rating' | 'classics' | 'blockbusters' | 'recent' | 'music';
   priority: number;
 }
 
@@ -31,6 +33,7 @@ export interface SourceMovie {
   director?: string;
   hero?: string;
   heroine?: string;
+  music_director?: string;
   genres?: string[];
   release_year?: number;
   language?: string;
@@ -40,6 +43,11 @@ export interface SourceMovie {
   our_rating?: number;
   avg_rating?: number;
 }
+
+// Configuration
+const MIN_MOVIES_FOR_SECTION = 3;
+const MAX_SECTIONS = 8;
+const MOVIES_PER_SECTION = 8;
 
 // Weights for relevance scoring
 const WEIGHTS = {
@@ -153,12 +161,12 @@ function getSupabase() {
 // Base query fields for similar movies
 const MOVIE_SELECT_FIELDS = `
   id, title_en, title_te, slug, poster_url, avg_rating, our_rating,
-  release_year, runtime_minutes, genres, director, hero,
+  release_year, runtime_minutes, genres, director, hero, heroine, music_director,
   is_blockbuster, is_classic, is_underrated, language
 `;
 
 // Find similar movies by category
-async function findByDirector(source: SourceMovie, limit: number = 8): Promise<SimilarMovie[]> {
+async function findByDirector(source: SourceMovie, limit: number = MOVIES_PER_SECTION): Promise<SimilarMovie[]> {
   if (!source.director) return [];
   
   const supabase = getSupabase();
@@ -175,7 +183,7 @@ async function findByDirector(source: SourceMovie, limit: number = 8): Promise<S
   return data || [];
 }
 
-async function findByHero(source: SourceMovie, limit: number = 8): Promise<SimilarMovie[]> {
+async function findByHero(source: SourceMovie, limit: number = MOVIES_PER_SECTION): Promise<SimilarMovie[]> {
   if (!source.hero) return [];
   
   const supabase = getSupabase();
@@ -192,9 +200,41 @@ async function findByHero(source: SourceMovie, limit: number = 8): Promise<Simil
   return data || [];
 }
 
-async function findByGenre(source: SourceMovie, limit: number = 8): Promise<SimilarMovie[]> {
-  if (!source.genres?.length) return [];
+async function findByHeroine(source: SourceMovie, limit: number = MOVIES_PER_SECTION): Promise<SimilarMovie[]> {
+  if (!source.heroine) return [];
   
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from('movies')
+    .select(MOVIE_SELECT_FIELDS)
+    .eq('is_published', true)
+    .eq('heroine', source.heroine)
+    .neq('id', source.id)
+    .not('poster_url', 'is', null)
+    .order('avg_rating', { ascending: false })
+    .limit(limit);
+  
+  return data || [];
+}
+
+async function findByMusicDirector(source: SourceMovie, limit: number = MOVIES_PER_SECTION): Promise<SimilarMovie[]> {
+  if (!source.music_director) return [];
+  
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from('movies')
+    .select(MOVIE_SELECT_FIELDS)
+    .eq('is_published', true)
+    .eq('music_director', source.music_director)
+    .neq('id', source.id)
+    .not('poster_url', 'is', null)
+    .order('avg_rating', { ascending: false })
+    .limit(limit);
+  
+  return data || [];
+}
+
+async function findByGenre(source: SourceMovie, primaryGenre: string, limit: number = MOVIES_PER_SECTION): Promise<SimilarMovie[]> {
   const supabase = getSupabase();
   const { data } = await supabase
     .from('movies')
@@ -202,14 +242,14 @@ async function findByGenre(source: SourceMovie, limit: number = 8): Promise<Simi
     .eq('is_published', true)
     .neq('id', source.id)
     .not('poster_url', 'is', null)
-    .overlaps('genres', source.genres)
+    .contains('genres', [primaryGenre])
     .order('avg_rating', { ascending: false })
     .limit(limit);
   
   return data || [];
 }
 
-async function findByEra(source: SourceMovie, limit: number = 8): Promise<SimilarMovie[]> {
+async function findByEra(source: SourceMovie, limit: number = MOVIES_PER_SECTION): Promise<SimilarMovie[]> {
   if (!source.release_year) return [];
   
   const decade = Math.floor(source.release_year / 10) * 10;
@@ -229,40 +269,56 @@ async function findByEra(source: SourceMovie, limit: number = 8): Promise<Simila
   return data || [];
 }
 
-async function findByTags(source: SourceMovie, limit: number = 8): Promise<{ movies: SimilarMovie[]; tagType: string }> {
+// Fallback sections - always available
+async function findClassics(source: SourceMovie, limit: number = MOVIES_PER_SECTION): Promise<SimilarMovie[]> {
   const supabase = getSupabase();
-  
-  // Determine which tag to match
-  let tagFilter: { field: string; value: boolean; label: string } | null = null;
-  
-  if (source.is_blockbuster) {
-    tagFilter = { field: 'is_blockbuster', value: true, label: 'Blockbusters' };
-  } else if (source.is_classic) {
-    tagFilter = { field: 'is_classic', value: true, label: 'Classics' };
-  } else if (source.is_underrated) {
-    tagFilter = { field: 'is_underrated', value: true, label: 'Hidden Gems' };
-  }
-  
-  if (!tagFilter) {
-    return { movies: [], tagType: '' };
-  }
-  
-  const query = supabase
+  const { data } = await supabase
     .from('movies')
     .select(MOVIE_SELECT_FIELDS)
     .eq('is_published', true)
     .eq('language', source.language || 'Telugu')
+    .eq('is_classic', true)
     .neq('id', source.id)
     .not('poster_url', 'is', null)
-    .eq(tagFilter.field, tagFilter.value)
     .order('avg_rating', { ascending: false })
     .limit(limit);
   
-  const { data } = await query;
-  return { movies: data || [], tagType: tagFilter.label };
+  return data || [];
 }
 
-async function findHighlyRated(source: SourceMovie, limit: number = 8): Promise<SimilarMovie[]> {
+async function findBlockbusters(source: SourceMovie, limit: number = MOVIES_PER_SECTION): Promise<SimilarMovie[]> {
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from('movies')
+    .select(MOVIE_SELECT_FIELDS)
+    .eq('is_published', true)
+    .eq('language', source.language || 'Telugu')
+    .eq('is_blockbuster', true)
+    .neq('id', source.id)
+    .not('poster_url', 'is', null)
+    .order('avg_rating', { ascending: false })
+    .limit(limit);
+  
+  return data || [];
+}
+
+async function findHiddenGems(source: SourceMovie, limit: number = MOVIES_PER_SECTION): Promise<SimilarMovie[]> {
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from('movies')
+    .select(MOVIE_SELECT_FIELDS)
+    .eq('is_published', true)
+    .eq('language', source.language || 'Telugu')
+    .eq('is_underrated', true)
+    .neq('id', source.id)
+    .not('poster_url', 'is', null)
+    .order('avg_rating', { ascending: false })
+    .limit(limit);
+  
+  return data || [];
+}
+
+async function findHighlyRated(source: SourceMovie, limit: number = MOVIES_PER_SECTION): Promise<SimilarMovie[]> {
   const supabase = getSupabase();
   const { data } = await supabase
     .from('movies')
@@ -271,40 +327,78 @@ async function findHighlyRated(source: SourceMovie, limit: number = 8): Promise<
     .eq('language', source.language || 'Telugu')
     .neq('id', source.id)
     .not('poster_url', 'is', null)
-    .gte('avg_rating', 7.5)
+    .gte('avg_rating', 7.0)
     .order('avg_rating', { ascending: false })
     .limit(limit);
   
   return data || [];
 }
 
-// Main function: Get all similar movie sections
-export async function getSimilarMovieSections(source: SourceMovie): Promise<SimilarSection[]> {
-  const MIN_MOVIES_FOR_SECTION = 3;
-  const MAX_SECTIONS = 3;
+async function findRecentHits(source: SourceMovie, limit: number = MOVIES_PER_SECTION): Promise<SimilarMovie[]> {
+  const currentYear = new Date().getFullYear();
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from('movies')
+    .select(MOVIE_SELECT_FIELDS)
+    .eq('is_published', true)
+    .eq('language', source.language || 'Telugu')
+    .neq('id', source.id)
+    .not('poster_url', 'is', null)
+    .gte('release_year', currentYear - 5)
+    .gte('avg_rating', 6.5)
+    .order('release_year', { ascending: false })
+    .order('avg_rating', { ascending: false })
+    .limit(limit);
   
-  // Run all category queries in parallel
+  return data || [];
+}
+
+// Main function: Get all similar movie sections (target: 6-8 sections, 30-40+ movies)
+export async function getSimilarMovieSections(source: SourceMovie): Promise<SimilarSection[]> {
+  const primaryGenre = source.genres?.[0];
+  const secondaryGenre = source.genres?.[1];
+  
+  // Run all category queries in parallel for maximum data gathering
   const [
     directorMovies,
     heroMovies,
-    genreMovies,
+    heroineMovies,
+    musicDirectorMovies,
+    primaryGenreMovies,
+    secondaryGenreMovies,
     eraMovies,
-    tagsResult,
+    classicsMovies,
+    blockbustersMovies,
+    hiddenGemsMovies,
     highlyRatedMovies,
+    recentHitsMovies,
   ] = await Promise.all([
     findByDirector(source),
     findByHero(source),
-    findByGenre(source),
+    findByHeroine(source),
+    findByMusicDirector(source),
+    primaryGenre ? findByGenre(source, primaryGenre) : Promise.resolve([]),
+    secondaryGenre ? findByGenre(source, secondaryGenre) : Promise.resolve([]),
     findByEra(source),
-    findByTags(source),
+    findClassics(source),
+    findBlockbusters(source),
+    findHiddenGems(source),
     findHighlyRated(source),
+    findRecentHits(source),
   ]);
   
   // Calculate relevance scores for best matches
   const allCandidates = new Map<string, any>();
   
-  // Collect all unique movies
-  [...directorMovies, ...heroMovies, ...genreMovies, ...eraMovies, ...tagsResult.movies, ...highlyRatedMovies].forEach(movie => {
+  // Collect all unique movies for best matches scoring
+  [
+    ...directorMovies, 
+    ...heroMovies, 
+    ...heroineMovies,
+    ...primaryGenreMovies, 
+    ...eraMovies, 
+    ...highlyRatedMovies
+  ].forEach(movie => {
     if (!allCandidates.has(movie.id)) {
       allCandidates.set(movie.id, {
         ...movie,
@@ -316,127 +410,222 @@ export async function getSimilarMovieSections(source: SourceMovie): Promise<Simi
   // Sort by relevance score for best matches
   const bestMatches = Array.from(allCandidates.values())
     .sort((a, b) => b.relevanceScore - a.relevanceScore)
-    .slice(0, 8);
+    .slice(0, MOVIES_PER_SECTION);
   
-  // Build sections array
-  const sections: SimilarSection[] = [];
+  // Track used movie IDs to avoid duplicates across sections
   const usedMovieIds = new Set<string>();
   
-  // Section 1: Best Matches (always first if we have enough)
+  // Helper to get unique movies
+  const getUniqueMovies = (movies: SimilarMovie[], markAsUsed = false): SimilarMovie[] => {
+    const unique = movies.filter(m => !usedMovieIds.has(m.id));
+    if (markAsUsed) {
+      unique.forEach(m => usedMovieIds.add(m.id));
+    }
+    return unique;
+  };
+  
+  // Build all potential sections
+  const allSections: SimilarSection[] = [];
+  
+  // 1. Best Matches (always first, highest priority)
   if (bestMatches.length >= MIN_MOVIES_FOR_SECTION) {
-    sections.push({
+    bestMatches.forEach(m => usedMovieIds.add(m.id));
+    allSections.push({
       id: 'best-matches',
       title: 'You May Also Like',
-      subtitle: 'Based on your viewing',
+      subtitle: 'Based on similarity',
       movies: bestMatches,
       matchType: 'best',
       priority: 100,
     });
-    bestMatches.forEach(m => usedMovieIds.add(m.id));
   }
   
-  // Build category sections with priority
-  const categorySections: SimilarSection[] = [];
-  
-  // Director section
-  if (directorMovies.length >= MIN_MOVIES_FOR_SECTION && source.director) {
-    const uniqueMovies = directorMovies.filter(m => !usedMovieIds.has(m.id));
+  // 2. Director section
+  if (source.director && directorMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(directorMovies, true);
     if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
-      categorySections.push({
+      allSections.push({
         id: 'director',
         title: `More from ${source.director}`,
         subtitle: 'Same director',
-        movies: uniqueMovies,
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
         matchType: 'director',
+        priority: 95,
+      });
+    }
+  }
+  
+  // 3. Hero section
+  if (source.hero && heroMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(heroMovies, true);
+    if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
+      allSections.push({
+        id: 'hero',
+        title: `More with ${source.hero}`,
+        subtitle: 'Same lead actor',
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
+        matchType: 'hero',
         priority: 90,
       });
     }
   }
   
-  // Hero section
-  if (heroMovies.length >= MIN_MOVIES_FOR_SECTION && source.hero) {
-    const uniqueMovies = heroMovies.filter(m => !usedMovieIds.has(m.id));
+  // 4. Heroine section
+  if (source.heroine && heroineMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(heroineMovies, true);
     if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
-      categorySections.push({
-        id: 'hero',
-        title: `More with ${source.hero}`,
-        subtitle: 'Same lead actor',
-        movies: uniqueMovies,
-        matchType: 'hero',
+      allSections.push({
+        id: 'heroine',
+        title: `Films with ${source.heroine}`,
+        subtitle: 'Same lead actress',
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
+        matchType: 'heroine',
         priority: 85,
       });
     }
   }
   
-  // Genre section
-  if (genreMovies.length >= MIN_MOVIES_FOR_SECTION && source.genres?.length) {
-    const uniqueMovies = genreMovies.filter(m => !usedMovieIds.has(m.id));
-    const primaryGenre = source.genres[0];
+  // 5. Primary genre section
+  if (primaryGenre && primaryGenreMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(primaryGenreMovies, true);
     if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
-      categorySections.push({
-        id: 'genre',
-        title: `Similar ${primaryGenre} Movies`,
+      allSections.push({
+        id: 'genre-primary',
+        title: `${primaryGenre} Movies`,
         subtitle: 'Same genre',
-        movies: uniqueMovies,
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
         matchType: 'genre',
         priority: 80,
       });
     }
   }
   
-  // Era section
-  if (eraMovies.length >= MIN_MOVIES_FOR_SECTION && source.release_year) {
-    const uniqueMovies = eraMovies.filter(m => !usedMovieIds.has(m.id));
+  // 6. Era section
+  if (source.release_year && eraMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(eraMovies, true);
     const decade = getDecade(source.release_year);
     if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
-      categorySections.push({
+      allSections.push({
         id: 'era',
         title: `${decade} Telugu Hits`,
         subtitle: 'Same era',
-        movies: uniqueMovies,
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
         matchType: 'era',
+        priority: 75,
+      });
+    }
+  }
+  
+  // 7. Music Director section
+  if (source.music_director && musicDirectorMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(musicDirectorMovies, true);
+    if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
+      allSections.push({
+        id: 'music',
+        title: `Music by ${source.music_director}`,
+        subtitle: 'Same composer',
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
+        matchType: 'music',
         priority: 70,
       });
     }
   }
   
-  // Tags section
-  if (tagsResult.movies.length >= MIN_MOVIES_FOR_SECTION && tagsResult.tagType) {
-    const uniqueMovies = tagsResult.movies.filter(m => !usedMovieIds.has(m.id));
+  // 8. Secondary genre section (if primary is already used)
+  if (secondaryGenre && secondaryGenreMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(secondaryGenreMovies, true);
     if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
-      categorySections.push({
-        id: 'tags',
-        title: `More ${tagsResult.tagType}`,
-        subtitle: tagsResult.tagType === 'Hidden Gems' ? 'Underrated picks' : 'Top performers',
-        movies: uniqueMovies,
-        matchType: 'tags',
+      allSections.push({
+        id: 'genre-secondary',
+        title: `${secondaryGenre} Movies`,
+        subtitle: 'Related genre',
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
+        matchType: 'genre',
         priority: 65,
       });
     }
   }
   
-  // Highly Rated fallback
-  if (categorySections.length < 2 && highlyRatedMovies.length >= MIN_MOVIES_FOR_SECTION) {
-    const uniqueMovies = highlyRatedMovies.filter(m => !usedMovieIds.has(m.id));
+  // FALLBACK SECTIONS (always try to add these if we need more sections)
+  
+  // 9. Telugu Classics
+  if (classicsMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(classicsMovies, true);
     if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
-      categorySections.push({
-        id: 'highly-rated',
-        title: 'Highly Rated Telugu Movies',
-        subtitle: 'Top picks',
-        movies: uniqueMovies,
-        matchType: 'rating',
+      allSections.push({
+        id: 'classics',
+        title: 'Telugu Classics',
+        subtitle: 'Timeless masterpieces',
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
+        matchType: 'classics',
         priority: 60,
       });
     }
   }
   
-  // Sort category sections by priority and take top ones
-  categorySections.sort((a, b) => b.priority - a.priority);
+  // 10. Blockbusters
+  if (blockbustersMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(blockbustersMovies, true);
+    if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
+      allSections.push({
+        id: 'blockbusters',
+        title: 'Blockbuster Hits',
+        subtitle: 'Box office champions',
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
+        matchType: 'blockbusters',
+        priority: 55,
+      });
+    }
+  }
   
-  // Add top category sections (up to MAX_SECTIONS total including best matches)
-  const remainingSlots = MAX_SECTIONS - sections.length;
-  sections.push(...categorySections.slice(0, remainingSlots));
+  // 11. Hidden Gems
+  if (hiddenGemsMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(hiddenGemsMovies, true);
+    if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
+      allSections.push({
+        id: 'hidden-gems',
+        title: 'Hidden Gems',
+        subtitle: 'Underrated picks',
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
+        matchType: 'tags',
+        priority: 50,
+      });
+    }
+  }
   
-  return sections;
+  // 12. Highly Rated
+  if (highlyRatedMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(highlyRatedMovies, true);
+    if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
+      allSections.push({
+        id: 'highly-rated',
+        title: 'Top Rated Telugu',
+        subtitle: 'Critics favorites',
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
+        matchType: 'rating',
+        priority: 45,
+      });
+    }
+  }
+  
+  // 13. Recent Hits
+  if (recentHitsMovies.length >= MIN_MOVIES_FOR_SECTION) {
+    const uniqueMovies = getUniqueMovies(recentHitsMovies, true);
+    if (uniqueMovies.length >= MIN_MOVIES_FOR_SECTION) {
+      allSections.push({
+        id: 'recent-hits',
+        title: 'Recent Hits',
+        subtitle: 'Latest releases',
+        movies: uniqueMovies.slice(0, MOVIES_PER_SECTION),
+        matchType: 'recent',
+        priority: 40,
+      });
+    }
+  }
+  
+  // Sort by priority and return top MAX_SECTIONS
+  allSections.sort((a, b) => b.priority - a.priority);
+  
+  return allSections.slice(0, MAX_SECTIONS);
 }
 

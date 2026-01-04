@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Star, Clock, Film, Clapperboard, User, Tag, Calendar, Trophy, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, Clock, Film, Clapperboard, User, Tag, Calendar, Trophy, Sparkles, Heart, Music, Flame, Award } from 'lucide-react';
 
 interface SimilarMovie {
   id: string;
@@ -23,7 +23,7 @@ export interface SimilarSection {
   title: string;
   subtitle?: string;
   movies: SimilarMovie[];
-  matchType: 'best' | 'director' | 'hero' | 'genre' | 'era' | 'tags' | 'rating';
+  matchType: 'best' | 'director' | 'hero' | 'heroine' | 'genre' | 'era' | 'tags' | 'rating' | 'classics' | 'blockbusters' | 'recent' | 'music';
   priority: number;
 }
 
@@ -33,7 +33,7 @@ interface SimilarMoviesCarouselProps {
   title?: string;
 }
 
-// Section styling configuration
+// Section styling configuration - expanded with more types
 const sectionStyles: Record<string, {
   icon: React.ReactNode;
   gradient: string;
@@ -42,69 +42,102 @@ const sectionStyles: Record<string, {
   accent: string;
 }> = {
   best: {
-    icon: <Sparkles className="w-4 h-4" />,
-    gradient: 'from-amber-950/40 via-gray-900/60 to-gray-900/40',
-    border: 'border-amber-800/30',
-    iconBg: 'bg-amber-500/20',
+    icon: <Sparkles className="w-3.5 h-3.5" />,
+    gradient: 'from-amber-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-amber-700/40',
+    iconBg: 'bg-amber-500/25',
     accent: 'text-amber-400',
   },
   director: {
-    icon: <Clapperboard className="w-4 h-4" />,
-    gradient: 'from-violet-950/40 via-gray-900/60 to-gray-900/40',
-    border: 'border-violet-800/30',
-    iconBg: 'bg-violet-500/20',
+    icon: <Clapperboard className="w-3.5 h-3.5" />,
+    gradient: 'from-violet-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-violet-700/40',
+    iconBg: 'bg-violet-500/25',
     accent: 'text-violet-400',
   },
   hero: {
-    icon: <User className="w-4 h-4" />,
-    gradient: 'from-blue-950/40 via-gray-900/60 to-gray-900/40',
-    border: 'border-blue-800/30',
-    iconBg: 'bg-blue-500/20',
+    icon: <User className="w-3.5 h-3.5" />,
+    gradient: 'from-blue-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-blue-700/40',
+    iconBg: 'bg-blue-500/25',
     accent: 'text-blue-400',
   },
+  heroine: {
+    icon: <Heart className="w-3.5 h-3.5" />,
+    gradient: 'from-rose-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-rose-700/40',
+    iconBg: 'bg-rose-500/25',
+    accent: 'text-rose-400',
+  },
   genre: {
-    icon: <Tag className="w-4 h-4" />,
-    gradient: 'from-emerald-950/40 via-gray-900/60 to-gray-900/40',
-    border: 'border-emerald-800/30',
-    iconBg: 'bg-emerald-500/20',
+    icon: <Tag className="w-3.5 h-3.5" />,
+    gradient: 'from-emerald-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-emerald-700/40',
+    iconBg: 'bg-emerald-500/25',
     accent: 'text-emerald-400',
   },
   era: {
-    icon: <Calendar className="w-4 h-4" />,
-    gradient: 'from-orange-950/40 via-gray-900/60 to-gray-900/40',
-    border: 'border-orange-800/30',
-    iconBg: 'bg-orange-500/20',
+    icon: <Calendar className="w-3.5 h-3.5" />,
+    gradient: 'from-orange-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-orange-700/40',
+    iconBg: 'bg-orange-500/25',
     accent: 'text-orange-400',
   },
   tags: {
-    icon: <Trophy className="w-4 h-4" />,
-    gradient: 'from-pink-950/40 via-gray-900/60 to-gray-900/40',
-    border: 'border-pink-800/30',
-    iconBg: 'bg-pink-500/20',
+    icon: <Trophy className="w-3.5 h-3.5" />,
+    gradient: 'from-pink-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-pink-700/40',
+    iconBg: 'bg-pink-500/25',
     accent: 'text-pink-400',
   },
   rating: {
-    icon: <Star className="w-4 h-4" />,
-    gradient: 'from-yellow-950/40 via-gray-900/60 to-gray-900/40',
-    border: 'border-yellow-800/30',
-    iconBg: 'bg-yellow-500/20',
+    icon: <Star className="w-3.5 h-3.5" />,
+    gradient: 'from-yellow-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-yellow-700/40',
+    iconBg: 'bg-yellow-500/25',
     accent: 'text-yellow-400',
+  },
+  classics: {
+    icon: <Award className="w-3.5 h-3.5" />,
+    gradient: 'from-indigo-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-indigo-700/40',
+    iconBg: 'bg-indigo-500/25',
+    accent: 'text-indigo-400',
+  },
+  blockbusters: {
+    icon: <Flame className="w-3.5 h-3.5" />,
+    gradient: 'from-red-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-red-700/40',
+    iconBg: 'bg-red-500/25',
+    accent: 'text-red-400',
+  },
+  recent: {
+    icon: <Sparkles className="w-3.5 h-3.5" />,
+    gradient: 'from-cyan-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-cyan-700/40',
+    iconBg: 'bg-cyan-500/25',
+    accent: 'text-cyan-400',
+  },
+  music: {
+    icon: <Music className="w-3.5 h-3.5" />,
+    gradient: 'from-fuchsia-950/50 via-gray-900/70 to-gray-900/50',
+    border: 'border-fuchsia-700/40',
+    iconBg: 'bg-fuchsia-500/25',
+    accent: 'text-fuchsia-400',
   },
 };
 
-// Single section carousel component
+// Single section carousel component - compact design for 50% width grid
 function SectionCarousel({ 
   movies, 
   title, 
   subtitle,
   matchType = 'best',
-  isCompact = false,
 }: { 
   movies: SimilarMovie[]; 
   title: string;
   subtitle?: string;
   matchType?: string;
-  isCompact?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -114,8 +147,8 @@ function SectionCarousel({
   const checkScroll = () => {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setCanScrollLeft(scrollLeft > 10);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+      setCanScrollLeft(scrollLeft > 5);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
     }
   };
 
@@ -134,7 +167,7 @@ function SectionCarousel({
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
-      const scrollAmount = scrollRef.current.clientWidth * 0.7;
+      const scrollAmount = scrollRef.current.clientWidth * 0.6;
       scrollRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth',
@@ -153,53 +186,54 @@ function SectionCarousel({
 
   const style = sectionStyles[matchType] || sectionStyles.best;
   
-  // Card sizes based on compact mode
-  const cardWidth = isCompact ? 'w-28 md:w-32' : 'w-32 md:w-36';
-  const posterSize = isCompact ? '(max-width: 768px) 112px, 128px' : '(max-width: 768px) 128px, 144px';
+  // Compact card sizes for 50% width layout
+  const cardWidth = 'w-24 md:w-28';
+  const posterSize = '(max-width: 768px) 96px, 112px';
 
   return (
-    <div className={`rounded-xl border ${style.border} bg-gradient-to-br ${style.gradient} overflow-hidden`}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${style.iconBg}`}>
+    <div className={`rounded-lg border ${style.border} bg-gradient-to-br ${style.gradient} overflow-hidden h-full`}>
+      {/* Header - Fixed layout to prevent overflow */}
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/5 min-w-0">
+        {/* Title section with flex-shrink */}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className={`p-1.5 rounded-md ${style.iconBg} flex-shrink-0`}>
             <span className={style.accent}>
               {style.icon}
             </span>
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-white">{title}</h3>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs font-semibold text-white truncate">{title}</h3>
             {subtitle && (
-              <p className="text-xs text-gray-500">{subtitle}</p>
+              <p className="text-[10px] text-gray-500 truncate">{subtitle}</p>
             )}
           </div>
         </div>
         
-        {/* Scroll buttons */}
-        <div className="flex items-center gap-1.5">
+        {/* Scroll buttons - fixed width, no shrink */}
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={() => scroll('left')}
             disabled={!canScrollLeft}
-            className={`p-1.5 rounded-full transition-all ${
+            className={`p-1 rounded-full transition-all ${
               canScrollLeft
                 ? 'bg-white/10 hover:bg-white/20 text-white'
                 : 'bg-white/5 text-gray-600 cursor-not-allowed'
             }`}
             aria-label="Scroll left"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => scroll('right')}
             disabled={!canScrollRight}
-            className={`p-1.5 rounded-full transition-all ${
+            className={`p-1 rounded-full transition-all ${
               canScrollRight
                 ? 'bg-white/10 hover:bg-white/20 text-white'
                 : 'bg-white/5 text-gray-600 cursor-not-allowed'
             }`}
             aria-label="Scroll right"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -209,7 +243,7 @@ function SectionCarousel({
         {/* Scrollable Container */}
         <div
           ref={scrollRef}
-          className="flex gap-3 overflow-x-auto p-4 scrollbar-hide scroll-smooth snap-x snap-mandatory"
+          className="flex gap-2 overflow-x-auto p-3 scrollbar-hide scroll-smooth snap-x snap-mandatory"
         >
           {movies.map((movie) => (
             <div
@@ -218,14 +252,14 @@ function SectionCarousel({
               onMouseEnter={() => setHoveredId(movie.id)}
               onMouseLeave={() => setHoveredId(null)}
             >
-              {/* Card */}
+              {/* Card - compact for 50% width sections */}
               <div
-                className={`relative ${cardWidth} transition-transform duration-300 ease-out ${
+                className={`relative ${cardWidth} transition-transform duration-200 ease-out ${
                   hoveredId === movie.id ? 'md:scale-105 md:z-20' : 'z-0'
                 }`}
               >
                 <Link href={`/reviews/${movie.slug}`} className="block group">
-                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-800/50 ring-1 ring-white/10 group-hover:ring-white/25 transition-all shadow-lg">
+                  <div className="relative aspect-[2/3] rounded-md overflow-hidden bg-gray-800/50 ring-1 ring-white/10 group-hover:ring-white/30 transition-all shadow-md">
                     {movie.poster_url ? (
                       <Image
                         src={movie.poster_url}
@@ -236,67 +270,46 @@ function SectionCarousel({
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Film className="w-8 h-8 text-gray-600" />
+                        <Film className="w-6 h-6 text-gray-600" />
                       </div>
                     )}
 
                     {/* Rating Badge */}
                     {movie.avg_rating && movie.avg_rating > 0 && (
-                      <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-black/70 backdrop-blur-sm rounded-md text-[10px] font-semibold">
-                        <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                      <div className="absolute top-1 right-1 flex items-center gap-0.5 px-1 py-0.5 bg-black/75 backdrop-blur-sm rounded text-[9px] font-semibold">
+                        <Star className="w-2 h-2 text-amber-400 fill-amber-400" />
                         <span className="text-white">{movie.avg_rating.toFixed(1)}</span>
                       </div>
                     )}
 
                     {/* Hover Overlay */}
                     <div
-                      className={`absolute inset-0 flex flex-col justify-end p-2 bg-gradient-to-t from-black via-black/70 to-transparent transition-opacity duration-200 ${
-                        hoveredId === movie.id ? 'opacity-100' : 'opacity-0 md:opacity-0'
+                      className={`absolute inset-0 flex flex-col justify-end p-1.5 bg-gradient-to-t from-black via-black/60 to-transparent transition-opacity duration-150 ${
+                        hoveredId === movie.id ? 'opacity-100' : 'opacity-0'
                       }`}
                     >
-                      <h4 className="text-white font-semibold text-[11px] leading-tight mb-0.5 line-clamp-2">
+                      <h4 className="text-white font-medium text-[10px] leading-tight line-clamp-2">
                         {movie.title_en}
                       </h4>
                       
-                      {movie.title_te && (
-                        <p className="text-amber-400 text-[9px] mb-1 truncate">{movie.title_te}</p>
-                      )}
-                      
-                      <div className="flex items-center gap-1 text-gray-400 text-[9px]">
+                      <div className="flex items-center gap-1 text-gray-400 text-[8px] mt-0.5">
                         {movie.release_year && <span>{movie.release_year}</span>}
-                        {movie.runtime_minutes && (
+                        {movie.genres && movie.genres[0] && (
                           <>
                             <span className="text-gray-600">•</span>
-                            <span className="flex items-center gap-0.5">
-                              <Clock className="w-2 h-2" />
-                              {formatRuntime(movie.runtime_minutes)}
-                            </span>
+                            <span className="truncate">{movie.genres[0]}</span>
                           </>
                         )}
                       </div>
-
-                      {movie.genres && movie.genres.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {movie.genres.slice(0, 2).map((genre) => (
-                            <span
-                              key={genre}
-                              className="px-1.5 py-0.5 bg-white/15 rounded text-[8px] text-gray-300"
-                            >
-                              {genre}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </Link>
 
                 {/* Title below poster */}
-                <div className={`mt-2 transition-opacity duration-200 ${hoveredId === movie.id ? 'md:opacity-0' : 'opacity-100'}`}>
-                  <p className="text-gray-200 text-[11px] font-medium truncate">{movie.title_en}</p>
-                  <p className="text-gray-500 text-[10px] truncate">
+                <div className={`mt-1.5 transition-opacity duration-150 ${hoveredId === movie.id ? 'md:opacity-0' : 'opacity-100'}`}>
+                  <p className="text-gray-200 text-[10px] font-medium truncate">{movie.title_en}</p>
+                  <p className="text-gray-500 text-[9px] truncate">
                     {movie.release_year}
-                    {movie.genres && movie.genres[0] && ` • ${movie.genres[0]}`}
                   </p>
                 </div>
               </div>
@@ -308,55 +321,39 @@ function SectionCarousel({
   );
 }
 
-// Main component with flexible layout
+// Main component - all sections at 50% width in 2-column grid
 export function SimilarMoviesCarousel({ movies, sections, title = "Similar Movies" }: SimilarMoviesCarouselProps) {
   if (sections && sections.length > 0) {
-    // Separate sections into full-width (8+) and compact (7 or fewer)
-    const fullWidthSections = sections.filter(s => s.movies.length >= 8);
-    const compactSections = sections.filter(s => s.movies.length < 8 && s.movies.length >= 3);
+    // Filter sections with at least 3 movies
+    const validSections = sections.filter(s => s.movies.length >= 3);
+    
+    if (validSections.length === 0) return null;
     
     return (
-      <div className="space-y-4">
-        {/* Full-width sections */}
-        {fullWidthSections.map((section) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {validSections.map((section) => (
           <SectionCarousel
             key={section.id}
             movies={section.movies}
             title={section.title}
             subtitle={section.subtitle}
             matchType={section.matchType}
-            isCompact={false}
           />
         ))}
-        
-        {/* Compact sections in a 2-column grid on desktop */}
-        {compactSections.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {compactSections.map((section) => (
-              <SectionCarousel
-                key={section.id}
-                movies={section.movies}
-                title={section.title}
-                subtitle={section.subtitle}
-                matchType={section.matchType}
-                isCompact={true}
-              />
-            ))}
-          </div>
-        )}
       </div>
     );
   }
   
-  // Fallback: single section
+  // Fallback: single section wrapped in grid
   if (movies && movies.length > 0) {
     return (
-      <SectionCarousel
-        movies={movies}
-        title={title}
-        matchType="best"
-        isCompact={movies.length < 8}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <SectionCarousel
+          movies={movies}
+          title={title}
+          matchType="best"
+        />
+      </div>
     );
   }
   
