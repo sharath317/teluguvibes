@@ -484,8 +484,7 @@ export default async function MovieReviewPage({ params }: PageProps) {
 
       {/* Similar Movies - Smart Multi-Row Carousel */}
       {similarSections.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 py-6 border-t border-gray-800">
-          <h2 className="text-lg font-bold text-white mb-4">Discover More</h2>
+        <section className="max-w-7xl mx-auto px-4 py-8 border-t border-gray-800/50">
           <SimilarMoviesCarousel sections={similarSections} />
         </section>
       )}
