@@ -959,13 +959,12 @@ Return ONLY valid JSON:
     
     // Determine movie attributes for category classification
     const tmdbRating = sources.movie.avg_rating || 5.0;
-    const boxOffice = sources.movie.worldwide_gross_inr || 0;
     const releaseYear = sources.movie.release_year || 2020;
     const isOldClassic = releaseYear < 1990;
-    const isBlockbuster = boxOffice > 1000000000 || tmdbRating >= 8.5 || sources.movie.is_blockbuster;
+    const isBlockbuster = sources.movie.is_blockbuster || tmdbRating >= 8.5;
     const isClassic = isOldClassic || sources.movie.is_classic;
-    const isCultClassic = culturalImpact.cult_status || (isOldClassic && tmdbRating >= 7.0);
-    const isHiddenGem = sources.movie.is_underrated || (tmdbRating >= 7.0 && boxOffice < 100000000);
+    const isCultClassic = culturalImpact.cult_status || (isOldClassic && tmdbRating >= 7.0) || sources.movie.is_classic;
+    const isHiddenGem = sources.movie.is_underrated;
     
     // Determine category based on rating and attributes
     let category: EditorialReview['verdict']['category'] = 'one-time-watch';
@@ -1020,24 +1019,30 @@ Return ONLY valid JSON:
   ): number {
     // Determine movie category for differentiated scoring
     const tmdbRating = sources.movie.avg_rating || 5.0;
-    const boxOffice = sources.movie.worldwide_gross_inr || 0;
     const releaseYear = sources.movie.release_year || 2020;
     const isOldClassic = releaseYear < 1990;
-    const isBlockbuster = boxOffice > 1000000000 || tmdbRating >= 8.5; // 100 crore+ or high TMDB
-    const isHit = boxOffice > 500000000 || tmdbRating >= 7.5;
-    const isCultClassic = isOldClassic && tmdbRating >= 7.0;
+    // Use is_blockbuster flag or high TMDB rating (no box office data available)
+    const isBlockbuster = sources.movie.is_blockbuster || tmdbRating >= 8.5;
+    const isHit = tmdbRating >= 7.5;
+    const isCultClassic = (isOldClassic && tmdbRating >= 7.0) || sources.movie.is_classic;
     
-    // Calculate category boost
+    // Calculate category boost (refined to prevent over-inflation)
     let categoryBoost = 0;
     let categoryName = 'regular';
     if (isBlockbuster) {
-      categoryBoost = 0.8;
+      // Only movies with explicit blockbuster flag or very high TMDB rating
+      categoryBoost = 0.6;
       categoryName = 'blockbuster';
-    } else if (isCultClassic || isOldClassic) {
-      categoryBoost = 1.0;
+    } else if (isCultClassic && tmdbRating >= 7.5) {
+      // Classics must also have good ratings to get boost
+      categoryBoost = 0.7;
       categoryName = 'classic';
+    } else if (isOldClassic && tmdbRating >= 7.0) {
+      // Old movies with decent ratings
+      categoryBoost = 0.4;
+      categoryName = 'older-classic';
     } else if (isHit) {
-      categoryBoost = 0.5;
+      categoryBoost = 0.3;
       categoryName = 'hit';
     }
     
