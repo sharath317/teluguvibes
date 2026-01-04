@@ -74,9 +74,10 @@ const PROVIDER_CONFIG = {
 } as const;
 
 const COOLDOWN_DURATIONS = {
-  rate_limit: 60 * 1000,      // 1 minute
-  slow: 5 * 60 * 1000,        // 5 minutes
-  error: 2 * 60 * 60 * 1000,  // 2 hours for auth/unknown errors
+  rate_limit: 5 * 60 * 1000,       // 5 minutes (increased from 1 min)
+  rate_limit_extended: 30 * 60 * 1000, // 30 minutes for TPM limits
+  slow: 5 * 60 * 1000,             // 5 minutes
+  error: 2 * 60 * 60 * 1000,       // 2 hours for auth/unknown errors
 };
 
 const SLOW_THRESHOLD_MS = 15000; // Consider response slow if > 15s
@@ -370,8 +371,22 @@ class SmartKeyManager {
 
     if (status === 429 || message.includes('rate limit') || message.includes('Rate limit')) {
       keyMetrics.health = 'rate_limited';
-      keyMetrics.cooldownUntil = Date.now() + COOLDOWN_DURATIONS.rate_limit;
-      console.log(`⏳ ${provider} key rate limited, cooldown 1 min`);
+      
+      // Parse retry time from OpenAI error if available (e.g., "try again in 25m29.28s")
+      const retryMatch = message.match(/try again in (\d+)m/i);
+      if (retryMatch) {
+        const retryMinutes = parseInt(retryMatch[1], 10);
+        const cooldownMs = (retryMinutes + 1) * 60 * 1000; // Add 1 minute buffer
+        keyMetrics.cooldownUntil = Date.now() + cooldownMs;
+        console.log(`⏳ ${provider} key rate limited, cooldown ${retryMinutes + 1} min`);
+      } else if (message.includes('TPM') || message.includes('tokens per min')) {
+        // Token per minute limit - needs longer cooldown
+        keyMetrics.cooldownUntil = Date.now() + COOLDOWN_DURATIONS.rate_limit_extended;
+        console.log(`⏳ ${provider} key TPM limited, cooldown 30 min`);
+      } else {
+        keyMetrics.cooldownUntil = Date.now() + COOLDOWN_DURATIONS.rate_limit;
+        console.log(`⏳ ${provider} key rate limited, cooldown 5 min`);
+      }
     } else if (status === 401 || status === 403 || message.includes('invalid_api_key')) {
       keyMetrics.health = 'error';
       keyMetrics.cooldownUntil = Date.now() + COOLDOWN_DURATIONS.error;
@@ -430,6 +445,25 @@ class SmartKeyManager {
    */
   hasAvailableProvider(): boolean {
     return this.getBestProvider() !== null;
+  }
+
+  /**
+   * Get next available time (when shortest cooldown expires)
+   */
+  getNextAvailableTime(): number | null {
+    let nextTime: number | null = null;
+    
+    for (const [_, metrics] of this.providers) {
+      for (const key of metrics.keys) {
+        if (key.cooldownUntil && key.health !== 'error') {
+          if (!nextTime || key.cooldownUntil < nextTime) {
+            nextTime = key.cooldownUntil;
+          }
+        }
+      }
+    }
+    
+    return nextTime;
   }
 }
 
@@ -527,6 +561,54 @@ export class SmartAIClient {
         
         // Small delay before retry
         await new Promise(r => setTimeout(r, 500));
+      }
+    }
+
+    // All providers exhausted - wait for shortest cooldown and retry ONCE
+    const nextAvailable = this.keyManager.getNextAvailableTime();
+    if (nextAvailable) {
+      const waitTime = nextAvailable - Date.now();
+      if (waitTime > 0 && waitTime < 10 * 60 * 1000) { // Only wait up to 10 minutes
+        console.log(`\n⏰ All keys exhausted. Waiting ${Math.ceil(waitTime / 1000)}s for cooldown...`);
+        await new Promise(r => setTimeout(r, waitTime + 1000)); // Add 1s buffer
+        
+        // Try one more time
+        const retryProviders = this.keyManager.getPrioritizedProviders();
+        for (const provider of retryProviders) {
+          const key = this.keyManager.getAvailableKey(provider);
+          if (!key) continue;
+          
+          const client = this.getClient(provider, key);
+          if (!client) continue;
+          
+          try {
+            let result = '';
+            if (provider === 'groq') {
+              const completion = await client.chat.completions.create({
+                messages: [{ role: 'user', content: prompt }],
+                model: PROVIDER_CONFIG.groq.model,
+                temperature,
+                max_tokens: maxTokens,
+              });
+              result = completion.choices[0]?.message?.content || '';
+            } else if (provider === 'openai') {
+              const completion = await client.chat.completions.create({
+                messages: [{ role: 'user', content: prompt }],
+                model: PROVIDER_CONFIG.openai.model,
+                temperature,
+                max_tokens: maxTokens,
+              });
+              result = completion.choices[0]?.message?.content || '';
+            }
+            
+            if (result) {
+              this.keyManager.recordSuccess(provider, key, Date.now());
+              return result;
+            }
+          } catch (e) {
+            this.keyManager.recordFailure(provider, key, e);
+          }
+        }
       }
     }
 
