@@ -15,6 +15,9 @@ import { createClient } from '@supabase/supabase-js';
 import Groq from 'groq-sdk';
 import OpenAI from 'openai';
 import { smartAI } from '../ai/smart-key-manager';
+import { modelRouter, TaskType } from '../ai/model-router';
+import { aiCache } from '../ai/cache';
+import { aiMetrics } from '../ai/metrics';
 
 // ============================================================
 // AI PROVIDER CONFIGURATION
@@ -368,7 +371,37 @@ export class EditorialReviewGenerator {
   }
 
   /**
+   * AI completion with caching support
+   */
+  private async cachedAiCompletion(
+    cacheKey: string,
+    task: TaskType,
+    prompt: string,
+    options?: { skipCache?: boolean }
+  ): Promise<string> {
+    const route = modelRouter.route(task);
+    
+    const result = await aiCache.getOrGenerate(
+      cacheKey,
+      async () => {
+        return await this.aiCompletion(prompt, route.maxTokens, route.temperature);
+      },
+      {
+        category: task as any,
+        skipCache: options?.skipCache,
+      }
+    );
+    
+    return result.value;
+  }
+
+  /**
    * Generate a comprehensive editorial review for a movie
+   * 
+   * OPTIMIZED: Uses parallel batched calls (3 batches instead of 11 sequential)
+   * - Batch 1 (Premium): Synopsis + Cultural Impact
+   * - Batch 2 (Standard): Story + Performances + Direction
+   * - Batch 3 (Light): Perspectives + Why Watch/Skip + Awards + Verdict
    */
   async generateReview(movieId: string): Promise<EditorialReview> {
     console.log(`\n🎬 Generating editorial review for movie: ${movieId}`);
@@ -376,18 +409,28 @@ export class EditorialReviewGenerator {
     // 1. Gather all data sources
     const sources = await this.gatherDataSources(movieId);
     
-    // 2. Generate each section using AI
-    const synopsis = await this.generateSynopsis(sources);
-    const storyScreenplay = await this.generateStoryScreenplay(sources);
-    const performances = await this.generatePerformances(sources);
-    const directionTechnicals = await this.generateDirectionTechnicals(sources);
-    const perspectives = await this.generatePerspectives(sources);
-    const whyWatch = await this.generateWhyWatch(sources);
-    const whySkip = await this.generateWhySkip(sources);
-    const culturalImpact = await this.generateCulturalImpact(sources);
-    const awards = await this.generateAwards(sources);
+    // 2. BATCH 1: Premium content (synopsis + cultural) - needs quality
+    const [synopsis, culturalImpact] = await Promise.all([
+      this.generateSynopsis(sources),
+      this.generateCulturalImpact(sources),
+    ]);
     
-    // 3. Generate verdict with calculated scores from other sections
+    // 3. BATCH 2: Standard analysis (story + performances + direction)
+    const [storyScreenplay, performances, directionTechnicals] = await Promise.all([
+      this.generateStoryScreenplay(sources),
+      this.generatePerformances(sources),
+      this.generateDirectionTechnicals(sources),
+    ]);
+    
+    // 4. BATCH 3: Light extraction (perspectives + watch/skip + awards)
+    const [perspectives, whyWatch, whySkip, awards] = await Promise.all([
+      this.generatePerspectives(sources),
+      this.generateWhyWatch(sources),
+      this.generateWhySkip(sources),
+      this.generateAwards(sources),
+    ]);
+    
+    // 5. Generate verdict with calculated scores from other sections
     const generatedScores = {
       storyScore: storyScreenplay?.score || storyScreenplay?.originality_score || 0,
       directionScore: directionTechnicals?.score || directionTechnicals?.direction_score || 0,
@@ -413,7 +456,7 @@ export class EditorialReviewGenerator {
       quality_score: 0, // Will be calculated
     };
 
-    // 4. Calculate quality score
+    // 6. Calculate quality score
     review.quality_score = this.calculateQualityScore(review);
 
     return review;
@@ -767,29 +810,15 @@ Return ONLY valid JSON (no markdown):
 
   /**
    * Generate Audience vs Critics POV section (100-150 words)
+   * OPTIMIZED: Compact prompt, reduced tokens
    */
   private async generatePerspectives(sources: ReviewDataSources): Promise<EditorialReview['perspectives']> {
-    const audienceSignals = sources.audience_signals;
-    
-    const prompt = `Analyze audience vs critics perspectives for ${sources.movie.title_en}.
-
-RATING: ${sources.movie.avg_rating || 'N/A'}/10
-${audienceSignals ? `AUDIENCE SIGNALS: ${JSON.stringify(audienceSignals)}` : ''}
-
-Write 100-150 words analyzing:
-1. Audience reception (mass appeal, family-friendly, etc.)
-2. Critic consensus
-3. Divergence points (where opinions differ)
-
-Return ONLY valid JSON:
-{
-  "audience_reception": "Analysis (50 words)",
-  "critic_consensus": "Analysis (50 words)",
-  "divergence_points": ["Point 1", "Point 2"]
-}`;
+    // Compact prompt for light tier
+    const prompt = `${sources.movie.title_en} (${sources.movie.avg_rating || 7}/10): Audience vs critics.
+JSON:{"audience_reception":"50w","critic_consensus":"50w","divergence_points":["",""]}`; 
 
     try {
-      const content = await this.aiCompletion(prompt, 600, 0.6);
+      const content = await this.aiCompletion(prompt, 250, 0.4); // Reduced from 600
       return this.parseAIResponse(content);
     } catch (error) {
       console.error('Error generating perspectives:', error);
@@ -803,23 +832,15 @@ Return ONLY valid JSON:
 
   /**
    * Generate Why You Should Watch section (80-100 words)
+   * OPTIMIZED: Compact prompt, reduced tokens
    */
   private async generateWhyWatch(sources: ReviewDataSources): Promise<EditorialReview['why_watch']> {
-    const prompt = `List reasons to watch ${sources.movie.title_en}.
-
-GENRES: ${sources.movie.genres?.join(', ')}
-RATING: ${sources.movie.avg_rating || 'N/A'}/10
-
-Provide 3-5 honest reasons and best audience types.
-
-Return ONLY valid JSON:
-{
-  "reasons": ["Reason 1", "Reason 2", "Reason 3"],
-  "best_for": ["family audience", "action fans", "etc."]
-}`;
+    // Compact prompt for light tier
+    const prompt = `${sources.movie.title_en} (${sources.movie.genres?.[0]}): 3-5 watch reasons + audience types.
+JSON:{"reasons":["","",""],"best_for":["",""]}`;
 
     try {
-      const content = await this.aiCompletion(prompt, 400, 0.6);
+      const content = await this.aiCompletion(prompt, 200, 0.5); // Reduced from 400
       return this.parseAIResponse(content);
     } catch (error) {
       console.error('Error generating why watch:', error);
@@ -832,20 +853,15 @@ Return ONLY valid JSON:
 
   /**
    * Generate Why You May Skip section (60-80 words)
+   * OPTIMIZED: Compact prompt, reduced tokens
    */
   private async generateWhySkip(sources: ReviewDataSources): Promise<EditorialReview['why_skip']> {
-    const prompt = `List valid drawbacks for ${sources.movie.title_en}.
-
-Be honest about weaknesses (pacing, predictability, etc.).
-
-Return ONLY valid JSON:
-{
-  "drawbacks": ["Drawback 1", "Drawback 2"],
-  "not_for": ["slow pacing lovers", "etc."]
-}`;
+    // Compact prompt for light tier
+    const prompt = `${sources.movie.title_en}: 2-3 honest drawbacks + not suitable for.
+JSON:{"drawbacks":["",""],"not_for":[""]}`;
 
     try {
-      const content = await this.aiCompletion(prompt, 400, 0.6);
+      const content = await this.aiCompletion(prompt, 150, 0.4); // Reduced from 400
       return this.parseAIResponse(content);
     } catch (error) {
       console.error('Error generating why skip:', error);
@@ -858,37 +874,20 @@ Return ONLY valid JSON:
 
   /**
    * Generate Cultural/Legacy Value section (100-150 words)
+   * OPTIMIZED: Compact prompt, reduced tokens
    */
   private async generateCulturalImpact(sources: ReviewDataSources): Promise<EditorialReview['cultural_impact']> {
     const isOld = sources.movie.release_year && sources.movie.release_year < 2010;
     const isBlockbuster = sources.movie.is_blockbuster;
     const isClassic = sources.movie.is_classic;
+    const legacyStatus = isBlockbuster ? 'Blockbuster' : isClassic ? 'Classic' : 'Notable Film';
     
-    const prompt = `Analyze cultural impact and legacy of ${sources.movie.title_en} (${sources.movie.release_year}).
-
-MOVIE TYPE: ${isOld ? 'Classic film' : 'Recent film'}
-IS BLOCKBUSTER: ${isBlockbuster ? 'Yes' : 'No'}
-IS CLASSIC: ${isClassic ? 'Yes' : 'No'}
-HERO: ${sources.movie.hero}
-GENRES: ${sources.movie.genres?.join(', ')}
-
-Write 100-150 words analyzing:
-1. Cultural significance in Telugu cinema
-2. Memorable elements (iconic dialogues, scenes, songs, catchphrases)
-3. Influence on later films or trends
-4. Legacy status (Cult Classic, Industry Hit, Fan Favorite, etc.)
-
-Return ONLY valid JSON:
-{
-  "cultural_significance": "How this film impacted Telugu cinema culture (50 words)",
-  "influence_on_cinema": "How it influenced later films or trends (40 words)",
-  "memorable_elements": ["Iconic dialogue 1", "Famous scene", "Popular song"],
-  "legacy_status": "${isBlockbuster ? 'Blockbuster' : isClassic ? 'Classic' : 'Notable Film'}",
-  "cult_status": ${isOld || isBlockbuster}
-}`;
+    // OPTIMIZED: Compact prompt for premium tier but still reduced
+    const prompt = `Cultural impact of ${sources.movie.title_en} (${sources.movie.release_year}). Hero: ${sources.movie.hero}. ${isOld ? 'Classic.' : ''} ${isBlockbuster ? 'Blockbuster.' : ''}
+JSON:{"cultural_significance":"50w","influence_on_cinema":"40w","memorable_elements":["",""],"legacy_status":"${legacyStatus}","cult_status":${isOld || isBlockbuster}}`;
 
     try {
-      const content = await this.aiCompletion(prompt, 600, 0.6);
+      const content = await this.aiCompletion(prompt, 300, 0.6); // Reduced from 600
       return this.parseAIResponse(content);
     } catch (error) {
       console.error('Error generating cultural impact:', error);
@@ -914,24 +913,12 @@ Return ONLY valid JSON:
       return undefined;
     }
 
-    const prompt = `List known awards and achievements for ${sources.movie.title_en} (${sources.movie.release_year}).
-
-HERO: ${sources.movie.hero}
-DIRECTOR: ${sources.movie.director}
-MUSIC: ${sources.movie.music_director}
-IS BLOCKBUSTER: ${isBlockbuster ? 'Yes' : 'No'}
-
-Return ONLY valid JSON. If no known awards, return empty arrays:
-{
-  "national_awards": [],
-  "filmfare_awards": ["Best Actor - ${sources.movie.hero}"],
-  "nandi_awards": [],
-  "other_awards": [],
-  "box_office_records": ["Highest grosser of the year"]
-}`;
+    // OPTIMIZED: Compact prompt for light tier
+    const prompt = `${sources.movie.title_en} (${sources.movie.release_year}) awards. Hero: ${sources.movie.hero}
+JSON:{"national_awards":[],"filmfare_awards":[],"nandi_awards":[],"box_office_records":[]}`;
 
     try {
-      const content = await this.aiCompletion(prompt, 400, 0.5);
+      const content = await this.aiCompletion(prompt, 150, 0.3); // Reduced from 400
       const parsed = this.parseAIResponse(content);
       
       // Only return if there are actual awards
@@ -976,27 +963,12 @@ Return ONLY valid JSON. If no known awards, return empty arrays:
     else if (rating >= 5.0) category = 'average';
     else category = 'skippable';
 
-    const prompt = `Write a final verdict for ${sources.movie.title_en} (${sources.movie.release_year}).
-
-CALCULATED RATING: ${rating.toFixed(1)}/10
-CATEGORY: ${category}
-IS BLOCKBUSTER: ${isBlockbuster ? 'Yes' : 'No'}
-IS CLASSIC: ${isClassic ? 'Yes' : 'No'}
-
-Write 50-80 words in both Telugu and English summarizing the film's overall quality.
-Be honest and balanced. Match the tone to the rating (don't oversell a 6/10 movie).
-
-Return ONLY valid JSON:
-{
-  "category": "${category}",
-  "final_rating": ${rating.toFixed(1)},
-  "en": "English verdict (50-80 words)",
-  "te": "Telugu verdict (50-80 words)",
-  "confidence_score": 0.85
-}`;
+    // OPTIMIZED: Compact prompt for light tier
+    const prompt = `Verdict for ${sources.movie.title_en} (${rating.toFixed(1)}/10, ${category}). 50-80w summary.
+JSON:{"category":"${category}","final_rating":${rating.toFixed(1)},"en":"","te":"","confidence_score":0.85}`;
 
     try {
-      const content = await this.aiCompletion(prompt, 400, 0.6);
+      const content = await this.aiCompletion(prompt, 200, 0.5); // Reduced from 400
       const parsed = this.parseAIResponse(content);
       // Ensure category and rating match our logic
       parsed.category = category;

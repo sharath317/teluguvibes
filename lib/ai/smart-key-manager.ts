@@ -14,6 +14,7 @@
 import dotenv from 'dotenv';
 import Groq from 'groq-sdk';
 import OpenAI from 'openai';
+import { aiMetrics } from './metrics';
 
 dotenv.config({ path: '.env.local' });
 
@@ -553,11 +554,39 @@ export class SmartAIClient {
         if (result) {
           const responseTime = Date.now() - startTime;
           this.keyManager.recordSuccess(provider, key, responseTime);
+          
+          // Track metrics
+          const inputTokens = Math.ceil(prompt.length / 3.5);
+          const outputTokens = Math.ceil(result.length / 3.5);
+          aiMetrics.record({
+            provider,
+            model: PROVIDER_CONFIG[provider].model,
+            feature: 'ai_completion',
+            inputTokens,
+            outputTokens,
+            latencyMs: responseTime,
+            cached: false,
+            success: true,
+          });
+          
           return result;
         }
       } catch (error: any) {
         lastError = error;
         this.keyManager.recordFailure(provider, key, error);
+        
+        // Track failed request
+        aiMetrics.record({
+          provider,
+          model: PROVIDER_CONFIG[provider].model,
+          feature: 'ai_completion',
+          inputTokens: Math.ceil(prompt.length / 3.5),
+          outputTokens: 0,
+          latencyMs: Date.now() - startTime,
+          cached: false,
+          success: false,
+          error: error.message,
+        });
         
         // Small delay before retry
         await new Promise(r => setTimeout(r, 500));
