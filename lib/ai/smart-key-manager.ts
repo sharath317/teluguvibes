@@ -182,10 +182,10 @@ class SmartKeyManager {
         const response = await Promise.race([
           client.chat.completions.create({
             messages: [{ role: 'user', content: testPrompt }],
-            model: PROVIDER_CONFIG.groq.model,
+            model: 'llama-3.1-8b-instant', // Use fast model for validation
             max_tokens: 10,
           }),
-          this.timeout(5000), // 5 second validation timeout
+          this.timeout(3000), // 3 second validation timeout
         ]);
         success = !!response;
       } else if (provider === 'openai') {
