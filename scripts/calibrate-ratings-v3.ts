@@ -152,7 +152,7 @@ function calculateRatingV3(
   } else if (finalRating >= 8.5) {
     category = 'must-watch';
   } else if (finalRating >= 8.0) {
-    category = 'blockbuster';
+    category = 'mass-classic';
   } else if (finalRating >= 7.5) {
     category = 'highly-recommended';
   } else if (finalRating >= 7.0) {

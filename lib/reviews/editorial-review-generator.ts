@@ -128,7 +128,7 @@ export interface EditorialReview {
   
   // 10. Final Verdict (50-80 words)
   verdict: {
-    category: 'blockbuster' | 'classic' | 'cult' | 'hidden-gem' | 'must-watch' | 'one-time-watch' | 'skippable' | 'average' | 'recommended';
+    category: 'masterpiece' | 'must-watch' | 'mass-classic' | 'highly-recommended' | 'recommended' | 'watchable' | 'one-time-watch';
     en: string;
     te: string;
     final_rating: number;
@@ -656,7 +656,7 @@ GENRES: ${sources.movie.genres?.join(', ') || 'Drama'}
 ${perfScores ? `EXISTING PERFORMANCE DATA: ${JSON.stringify(perfScores)}` : ''}
 
 Analyze lead performances with scores that reflect the movie's success:
-- For a ${isHit ? 'hit/blockbuster' : 'regular'} movie with ${movieRating}/10 rating
+- For a ${isHit ? 'hit/mass-classic' : 'regular'} movie with ${movieRating}/10 rating
 - Hero score should be between ${minActorScore}-10
 - Heroine score should be between ${minActressScore}-10
 
@@ -883,10 +883,10 @@ Return ONLY valid JSON:
     const isOld = sources.movie.release_year && sources.movie.release_year < 2010;
     const isBlockbuster = sources.movie.is_blockbuster;
     const isClassic = sources.movie.is_classic;
-    const legacyStatus = isBlockbuster ? 'Blockbuster' : isClassic ? 'Classic' : 'Notable Film';
+    const legacyStatus = isBlockbuster ? 'Mass Classic' : isClassic ? 'Classic' : 'Notable Film';
     
     // OPTIMIZED: Compact but explicit JSON prompt
-    const prompt = `Analyze cultural impact of ${sources.movie.title_en} (${sources.movie.release_year}) starring ${sources.movie.hero}. ${isOld ? 'Classic film.' : ''} ${isBlockbuster ? 'Blockbuster.' : ''}
+    const prompt = `Analyze cultural impact of ${sources.movie.title_en} (${sources.movie.release_year}) starring ${sources.movie.hero}. ${isOld ? 'Classic film.' : ''} ${isBlockbuster ? 'Mass classic.' : ''}
 
 Return ONLY valid JSON:
 {"cultural_significance":"50 word analysis","influence_on_cinema":"40 word analysis","memorable_elements":["iconic moment1","iconic moment2"],"legacy_status":"${legacyStatus}","cult_status":${isOld || isBlockbuster}}`;
@@ -900,7 +900,7 @@ Return ONLY valid JSON:
         cultural_significance: `${sources.movie.title_en} has made its mark in Telugu cinema with memorable performances.`,
         influence_on_cinema: 'The film has influenced subsequent films in the genre.',
         memorable_elements: [],
-        legacy_status: isBlockbuster ? 'Blockbuster' : 'Notable Film',
+        legacy_status: isBlockbuster ? 'Mass Classic' : 'Notable Film',
         cult_status: false,
       };
     }
@@ -961,24 +961,21 @@ Return ONLY valid JSON:
     const tmdbRating = sources.movie.avg_rating || 5.0;
     const releaseYear = sources.movie.release_year || 2020;
     const isOldClassic = releaseYear < 1990;
-    const isBlockbuster = sources.movie.is_blockbuster || tmdbRating >= 8.5;
+    const isMassClassic = sources.movie.is_blockbuster || tmdbRating >= 8.5;
     const isClassic = isOldClassic || sources.movie.is_classic;
     const isCultClassic = culturalImpact.cult_status || (isOldClassic && tmdbRating >= 7.0) || sources.movie.is_classic;
     const isHiddenGem = sources.movie.is_underrated;
     
-    // Determine category based on rating and attributes
+    // Determine category based on rating and attributes (aligned with editorial audit categories)
     let category: EditorialReview['verdict']['category'] = 'one-time-watch';
     
-    if (rating >= 9.0) category = 'must-watch';
-    else if (rating >= 8.5 && (isBlockbuster || isClassic)) category = 'must-watch';
-    else if (rating >= 8.0 && isBlockbuster) category = 'blockbuster';
-    else if (rating >= 8.0 && isCultClassic) category = 'cult';
-    else if (rating >= 7.5 && isHiddenGem) category = 'hidden-gem';
-    else if (rating >= 7.5) category = 'blockbuster';
+    if (rating >= 9.0) category = 'masterpiece';
+    else if (rating >= 8.5) category = 'must-watch';
+    else if (rating >= 8.0) category = 'mass-classic';
+    else if (rating >= 7.5) category = 'highly-recommended';
     else if (rating >= 7.0) category = 'recommended';
-    else if (rating >= 6.0) category = 'one-time-watch';
-    else if (rating >= 5.0) category = 'average';
-    else category = 'skippable';
+    else if (rating >= 6.5) category = 'watchable';
+    else category = 'one-time-watch';
 
     // OPTIMIZED: Compact but explicit JSON prompt
     const prompt = `Write final verdict for ${sources.movie.title_en} rated ${rating.toFixed(1)}/10 (${category}).
@@ -1022,17 +1019,17 @@ Return ONLY valid JSON:
     const releaseYear = sources.movie.release_year || 2020;
     const isOldClassic = releaseYear < 1990;
     // Use is_blockbuster flag or high TMDB rating (no box office data available)
-    const isBlockbuster = sources.movie.is_blockbuster || tmdbRating >= 8.5;
+    const isMassClassic = sources.movie.is_blockbuster || tmdbRating >= 8.5;
     const isHit = tmdbRating >= 7.5;
     const isCultClassic = (isOldClassic && tmdbRating >= 7.0) || sources.movie.is_classic;
     
     // Calculate category boost (refined to prevent over-inflation)
     let categoryBoost = 0;
     let categoryName = 'regular';
-    if (isBlockbuster) {
-      // Only movies with explicit blockbuster flag or very high TMDB rating
+    if (isMassClassic) {
+      // Only movies with explicit mass-classic flag or very high TMDB rating
       categoryBoost = 0.6;
-      categoryName = 'blockbuster';
+      categoryName = 'mass-classic';
     } else if (isCultClassic && tmdbRating >= 7.5) {
       // Classics must also have good ratings to get boost
       categoryBoost = 0.7;
@@ -1070,7 +1067,7 @@ Return ONLY valid JSON:
     }
     
     // 4. TMDB rating (weight: 20%) - audience consensus
-    // For blockbusters/classics: allow up to 9.5 (minimal cap)
+    // For mass-classics/masterpieces: allow up to 9.5 (minimal cap)
     // For regular movies: cap at 8.5 to prevent inflation
     const cappedTmdb = isBlockbuster || isCultClassic 
       ? Math.min(tmdbRating, 9.5)

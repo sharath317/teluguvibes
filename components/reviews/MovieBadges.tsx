@@ -3,10 +3,11 @@
 import { Gem, Trophy, Crown, Flame, Star, Heart, Sparkles } from 'lucide-react';
 
 interface MovieBadgesProps {
-  isBlockbuster?: boolean;
+  isMassClassic?: boolean;
+  isMasterpiece?: boolean;
   isUnderrated?: boolean;
   isClassic?: boolean;
-  isCultClassic?: boolean;
+  isCult?: boolean;
   isHit?: boolean;
   isMustWatch?: boolean;
   compact?: boolean;
@@ -20,11 +21,23 @@ interface BadgeConfig {
 }
 
 const badges: Record<string, BadgeConfig> = {
-  blockbuster: {
+  'mass-classic': {
     icon: <Gem className="w-3 h-3" />,
-    label: 'Blockbuster',
-    shortLabel: 'BB',
+    label: 'Mass Classic',
+    shortLabel: 'MC',
     className: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-purple-500/30',
+  },
+  masterpiece: {
+    icon: <Crown className="w-3 h-3" />,
+    label: 'Masterpiece',
+    shortLabel: 'MP',
+    className: 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black shadow-yellow-500/30',
+  },
+  cult: {
+    icon: <Flame className="w-3 h-3" />,
+    label: 'Cult',
+    shortLabel: 'Cult',
+    className: 'bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-red-500/30',
   },
   hit: {
     icon: <Trophy className="w-3 h-3" />,
@@ -59,21 +72,23 @@ const badges: Record<string, BadgeConfig> = {
 };
 
 export function MovieBadges({ 
-  isBlockbuster, 
+  isMassClassic, 
+  isMasterpiece,
   isUnderrated, 
   isClassic, 
-  isCultClassic, 
+  isCult, 
   isHit,
   isMustWatch,
   compact = false 
 }: MovieBadgesProps) {
   const activeBadges: string[] = [];
   
-  if (isBlockbuster) activeBadges.push('blockbuster');
-  if (isHit && !isBlockbuster) activeBadges.push('hit');
+  if (isMasterpiece) activeBadges.push('masterpiece');
+  if (isMassClassic) activeBadges.push('mass-classic');
+  if (isHit && !isMassClassic) activeBadges.push('hit');
   if (isClassic) activeBadges.push('classic');
   if (isUnderrated) activeBadges.push('underrated');
-  if (isCultClassic) activeBadges.push('cultClassic');
+  if (isCult) activeBadges.push('cult');
   if (isMustWatch) activeBadges.push('mustWatch');
   
   if (activeBadges.length === 0) return null;

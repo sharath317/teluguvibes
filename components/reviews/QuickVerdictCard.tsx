@@ -20,6 +20,7 @@ interface QuickVerdictProps {
     te?: string;
     category?: string;
     final_rating?: number;
+    cult?: boolean;
   };
   qualityScore?: number;
 }
@@ -33,53 +34,61 @@ const categoryStyles: Record<string, {
   glow: string;
   label: string;
 }> = {
-  'blockbuster': {
-    icon: <Gem className="w-4 h-4" />,
-    bg: 'bg-gradient-to-r from-purple-600 to-pink-600',
-    text: 'text-white',
-    border: 'border-purple-500/50',
-    glow: 'shadow-purple-500/20',
-    label: '💎 BLOCKBUSTER'
+  'masterpiece': {
+    icon: <Crown className="w-4 h-4" />,
+    bg: 'bg-gradient-to-r from-yellow-400 to-amber-500',
+    text: 'text-black',
+    border: 'border-yellow-400/50',
+    glow: 'shadow-yellow-500/20',
+    label: '🏆 MASTERPIECE'
   },
   'must-watch': {
-    icon: <Crown className="w-4 h-4" />,
+    icon: <Sparkles className="w-4 h-4" />,
     bg: 'bg-gradient-to-r from-amber-500 to-yellow-500',
     text: 'text-black',
     border: 'border-amber-400/50',
     glow: 'shadow-amber-500/20',
     label: '👑 MUST WATCH'
   },
-  'hit': {
-    icon: <Trophy className="w-4 h-4" />,
-    bg: 'bg-gradient-to-r from-yellow-500 to-orange-500',
-    text: 'text-black',
-    border: 'border-yellow-400/50',
-    glow: 'shadow-yellow-500/20',
-    label: '🏆 HIT'
+  'mass-classic': {
+    icon: <Gem className="w-4 h-4" />,
+    bg: 'bg-gradient-to-r from-purple-600 to-pink-600',
+    text: 'text-white',
+    border: 'border-purple-500/50',
+    glow: 'shadow-purple-500/20',
+    label: '💎 MASS CLASSIC'
   },
-  'recommended': {
-    icon: <Medal className="w-4 h-4" />,
+  'highly-recommended': {
+    icon: <Star className="w-4 h-4" />,
     bg: 'bg-gradient-to-r from-blue-500 to-cyan-500',
     text: 'text-white',
     border: 'border-blue-400/50',
     glow: 'shadow-blue-500/20',
+    label: '⭐ HIGHLY RECOMMENDED'
+  },
+  'recommended': {
+    icon: <Medal className="w-4 h-4" />,
+    bg: 'bg-gradient-to-r from-sky-500 to-blue-500',
+    text: 'text-white',
+    border: 'border-sky-400/50',
+    glow: 'shadow-sky-500/20',
     label: '🎖️ RECOMMENDED'
   },
-  'average': {
+  'watchable': {
     icon: <Star className="w-4 h-4" />,
     bg: 'bg-gradient-to-r from-gray-500 to-gray-600',
     text: 'text-white',
     border: 'border-gray-500/50',
     glow: 'shadow-gray-500/20',
-    label: '⭐ AVERAGE'
+    label: '📺 WATCHABLE'
   },
-  'cult-classic': {
-    icon: <Flame className="w-4 h-4" />,
-    bg: 'bg-gradient-to-r from-red-600 to-orange-600',
+  'one-time-watch': {
+    icon: <Star className="w-4 h-4" />,
+    bg: 'bg-gradient-to-r from-gray-600 to-gray-700',
     text: 'text-white',
-    border: 'border-red-500/50',
-    glow: 'shadow-red-500/20',
-    label: '🔥 CULT CLASSIC'
+    border: 'border-gray-600/50',
+    glow: 'shadow-gray-600/20',
+    label: '📽️ ONE-TIME WATCH'
   },
   'hidden-gem': {
     icon: <Heart className="w-4 h-4" />,
@@ -117,11 +126,19 @@ export function QuickVerdictCard({ whyWatch, whySkip, verdict, qualityScore }: Q
       {hasVerdict && (
         <div className="p-4 border-b border-gray-800/50 bg-gradient-to-r from-gray-800/30 to-transparent">
           <div className="flex items-center justify-between gap-3">
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${style.bg} ${style.text} shadow-lg`}>
-              {style.icon}
-              <span className="text-xs font-bold tracking-wide">
-                {style.label}
-              </span>
+            <div className="flex items-center gap-2">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${style.bg} ${style.text} shadow-lg`}>
+                {style.icon}
+                <span className="text-xs font-bold tracking-wide">
+                  {style.label}
+                </span>
+              </div>
+              {verdict?.cult && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-lg">
+                  <Flame className="w-3.5 h-3.5" />
+                  <span className="text-xs font-bold">CULT</span>
+                </div>
+              )}
             </div>
             {verdict?.final_rating && (
               <div className="flex items-center gap-1.5 px-2 py-1 bg-yellow-500/20 rounded-lg">
