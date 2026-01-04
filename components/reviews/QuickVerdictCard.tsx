@@ -24,10 +24,10 @@ interface QuickVerdictProps {
   };
   qualityScore?: number;
   awards?: {
-    national_awards?: string[];
-    filmfare_awards?: string[];
-    nandi_awards?: string[];
-    other_awards?: string[];
+    national_awards?: (string | { award?: string; winner?: string })[];
+    filmfare_awards?: (string | { award?: string; winner?: string })[];
+    nandi_awards?: (string | { award?: string; winner?: string })[];
+    other_awards?: (string | { award?: string; winner?: string })[];
     box_office_records?: string[];
   };
   culturalHighlights?: {
@@ -124,13 +124,20 @@ export function QuickVerdictCard({ whyWatch, whySkip, verdict, qualityScore, awa
   const hasSkipReasons = whySkip?.reasons && whySkip.reasons.length > 0;
   const hasVerdict = verdict?.en || verdict?.category;
   
+  // Helper to extract award text (handles both string and {award, winner} objects)
+  const getAwardText = (a: string | { award?: string; winner?: string }): string => {
+    if (typeof a === 'string') return a;
+    if (a.award && a.winner) return `${a.award} (${a.winner})`;
+    return a.award || '';
+  };
+  
   // Collect all awards into a flat list for compact display
   const allAwards = [
-    ...(awards?.national_awards || []).map(a => ({ type: 'National', award: a })),
-    ...(awards?.filmfare_awards || []).map(a => ({ type: 'Filmfare', award: a })),
-    ...(awards?.nandi_awards || []).map(a => ({ type: 'Nandi', award: a })),
-    ...(awards?.other_awards || []).map(a => ({ type: 'Award', award: a })),
-  ];
+    ...(awards?.national_awards || []).map(a => ({ type: 'National', award: getAwardText(a) })),
+    ...(awards?.filmfare_awards || []).map(a => ({ type: 'Filmfare', award: getAwardText(a) })),
+    ...(awards?.nandi_awards || []).map(a => ({ type: 'Nandi', award: getAwardText(a) })),
+    ...(awards?.other_awards || []).map(a => ({ type: 'Award', award: getAwardText(a) })),
+  ].filter(a => a.award); // Filter out empty awards
   const hasAwards = allAwards.length > 0;
   const hasCulturalHighlights = culturalHighlights?.legacy_status || culturalHighlights?.cult_status;
   
