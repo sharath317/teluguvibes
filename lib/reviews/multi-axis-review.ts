@@ -53,16 +53,26 @@ export interface MultiAxisReview {
   one_liner_te: string;
   one_liner_en: string;
 
-  // Dimensions
+  // Dimensions (15-dimension model v2.0)
   dimensions: {
+    // CORE NARRATIVE
     story_screenplay: ReviewDimension;
     direction: ReviewDimension;
+    dialogues_punchlines: ReviewDimension;
+    // PERFORMANCES
     acting_lead: ReviewDimension;
     acting_supporting: ReviewDimension;
+    // TECHNICAL
     music_bgm: ReviewDimension;
     cinematography: ReviewDimension;
+    action_choreography: ReviewDimension;
+    vfx_special_effects: ReviewDimension;
+    // CRAFT
     editing_pacing: ReviewDimension;
+    production_design: ReviewDimension;
+    // IMPACT
     emotional_impact: ReviewDimension;
+    comedy_timing: ReviewDimension;
     rewatch_value: ReviewDimension;
     mass_vs_class: ReviewDimension;
   };
@@ -101,59 +111,108 @@ export interface ComparablePerformance {
 }
 
 // ============================================================
-// DIMENSION DEFINITIONS
+// DIMENSION DEFINITIONS (15-Dimension Model v2.0)
 // ============================================================
 
 const DIMENSION_DEFINITIONS = {
+  // CORE NARRATIVE (30%)
   story_screenplay: {
     name: 'Story & Screenplay',
     name_te: 'కథ & స్క్రీన్‌ప్లే',
-    aspects: ['originality', 'engagement', 'logic', 'dialogues', 'twists'],
+    aspects: ['originality', 'engagement', 'logic', 'twists', 'emotional_arc'],
+    weight: 0.12,
   },
   direction: {
     name: 'Direction',
     name_te: 'దర్శకత్వం',
     aspects: ['vision', 'execution', 'style', 'consistency', 'innovation'],
+    weight: 0.10,
   },
+  dialogues_punchlines: {
+    name: 'Dialogues & Punchlines',
+    name_te: 'డైలాగ్స్ & పంచ్‌లు',
+    aspects: ['punch_dialogues', 'emotional_dialogues', 'humor', 'quotability', 'delivery'],
+    weight: 0.08,
+  },
+  
+  // PERFORMANCES (18%)
   acting_lead: {
     name: 'Lead Acting',
     name_te: 'హీరో/హీరోయిన్ నటన',
     aspects: ['intensity', 'range', 'chemistry', 'screen_presence', 'transformation'],
+    weight: 0.13,
   },
   acting_supporting: {
     name: 'Supporting Cast',
     name_te: 'సహాయ నటీనటులు',
     aspects: ['impact', 'casting', 'memorable_moments', 'balance'],
+    weight: 0.05,
   },
+  
+  // TECHNICAL (27%)
   music_bgm: {
     name: 'Music & BGM',
     name_te: 'సంగీతం & BGM',
     aspects: ['songs', 'background_score', 'sync_with_visuals', 'replay_value'],
+    weight: 0.10,
   },
   cinematography: {
     name: 'Cinematography',
     name_te: 'ఛాయాగ్రహణం',
-    aspects: ['visuals', 'lighting', 'framing', 'color_grading', 'action_sequences'],
+    aspects: ['visuals', 'lighting', 'framing', 'color_grading', 'composition'],
+    weight: 0.06,
   },
+  action_choreography: {
+    name: 'Action Choreography',
+    name_te: 'యాక్షన్ కొరియోగ్రఫీ',
+    aspects: ['fight_sequences', 'stunt_work', 'creativity', 'impact', 'safety'],
+    weight: 0.06,
+  },
+  vfx_special_effects: {
+    name: 'VFX & Special Effects',
+    name_te: 'VFX & స్పెషల్ ఎఫెక్ట్స్',
+    aspects: ['quality', 'realism', 'integration', 'innovation', 'scale'],
+    weight: 0.05,
+  },
+  
+  // CRAFT (10%)
   editing_pacing: {
     name: 'Editing & Pacing',
     name_te: 'ఎడిటింగ్ & పేసింగ్',
     aspects: ['flow', 'runtime', 'transitions', 'unnecessary_scenes'],
+    weight: 0.06,
   },
+  production_design: {
+    name: 'Production Design',
+    name_te: 'ప్రొడక్షన్ డిజైన్',
+    aspects: ['sets', 'costumes', 'props', 'authenticity', 'attention_to_detail'],
+    weight: 0.04,
+  },
+  
+  // IMPACT (15%)
   emotional_impact: {
     name: 'Emotional Impact',
     name_te: 'భావోద్వేగ ప్రభావం',
-    aspects: ['tears', 'laughter', 'thrill', 'inspiration', 'connection'],
+    aspects: ['tears', 'joy', 'thrill', 'inspiration', 'connection'],
+    weight: 0.08,
+  },
+  comedy_timing: {
+    name: 'Comedy & Timing',
+    name_te: 'కామెడీ టైమింగ్',
+    aspects: ['humor', 'timing', 'situational_comedy', 'slapstick', 'wit'],
+    weight: 0.05,
   },
   rewatch_value: {
     name: 'Rewatch Value',
     name_te: 'మళ్ళీ చూడాలనిపించే విలువ',
     aspects: ['entertainment', 'depth', 'family_friendly', 'cult_potential'],
+    weight: 0.00, // Derived
   },
   mass_vs_class: {
     name: 'Mass vs Class Appeal',
     name_te: 'మాస్ vs క్లాస్',
     aspects: ['mass_moments', 'class_elements', 'universal_appeal', 'niche'],
+    weight: 0.02, // Derived
   },
 };
 
@@ -259,11 +318,28 @@ ${movie.overview ? `SYNOPSIS: ${movie.overview}` : ''}
 ${context?.trailer_sentiment ? `TRAILER REACTION: ${context.trailer_sentiment}` : ''}
 ${context?.social_buzz ? `SOCIAL BUZZ: ${context.social_buzz}` : ''}
 
-For each dimension, provide:
+For each of these 15 dimensions, provide:
 - Score (0-10)
 - Analysis in Telugu (2-3 sentences)
 - Analysis in English (2-3 sentences)
 - 2-3 highlight points
+
+DIMENSIONS TO ANALYZE:
+1. story_screenplay - Story & Screenplay
+2. direction - Direction
+3. dialogues_punchlines - Dialogues & Punchlines (mass dialogues, emotional lines)
+4. acting_lead - Lead Acting
+5. acting_supporting - Supporting Cast
+6. music_bgm - Music & BGM
+7. cinematography - Cinematography
+8. action_choreography - Action Choreography (fight sequences, stunts)
+9. vfx_special_effects - VFX & Special Effects
+10. editing_pacing - Editing & Pacing
+11. production_design - Production Design (sets, costumes)
+12. emotional_impact - Emotional Impact
+13. comedy_timing - Comedy & Timing
+14. rewatch_value - Rewatch Value
+15. mass_vs_class - Mass vs Class Appeal
 
 Return ONLY valid JSON:
 {
@@ -274,17 +350,24 @@ Return ONLY valid JSON:
     "highlights": ["Highlight 1", "Highlight 2"]
   },
   "direction": { ... },
+  "dialogues_punchlines": { ... },
   "acting_lead": { ... },
   "acting_supporting": { ... },
   "music_bgm": { ... },
   "cinematography": { ... },
+  "action_choreography": { ... },
+  "vfx_special_effects": { ... },
   "editing_pacing": { ... },
+  "production_design": { ... },
   "emotional_impact": { ... },
+  "comedy_timing": { ... },
   "rewatch_value": { ... },
   "mass_vs_class": { ... }
 }
 
-Be honest and balanced. Telugu audiences appreciate authenticity.`;
+Be honest and balanced. Telugu audiences appreciate authenticity.
+Note: For genres without action (e.g., pure drama), score action_choreography as N/A (5).
+For non-comedy films, score comedy_timing as N/A (5).`;
 
     try {
       const completion = await this.groq.chat.completions.create({
@@ -431,27 +514,20 @@ Be honest and balanced. Telugu audiences appreciate authenticity.`;
   }
 
   /**
-   * Calculate overall score from dimensions
+   * Calculate overall score from dimensions (15-dimension model v2.0)
+   * Uses weights from DIMENSION_DEFINITIONS
    */
   private calculateOverallScore(dimensions: MultiAxisReview['dimensions']): number {
-    const weights: Record<string, number> = {
-      story_screenplay: 0.20,
-      direction: 0.15,
-      acting_lead: 0.15,
-      acting_supporting: 0.05,
-      music_bgm: 0.10,
-      cinematography: 0.08,
-      editing_pacing: 0.07,
-      emotional_impact: 0.10,
-      rewatch_value: 0.05,
-      mass_vs_class: 0.05,
-    };
-
     let totalWeight = 0;
     let weightedSum = 0;
 
     for (const [key, dim] of Object.entries(dimensions)) {
-      const weight = weights[key] || 0.05;
+      const def = DIMENSION_DEFINITIONS[key as keyof typeof DIMENSION_DEFINITIONS];
+      const weight = def?.weight || 0.05;
+      
+      // Skip derived dimensions with 0 weight
+      if (weight === 0) continue;
+      
       totalWeight += weight;
       weightedSum += dim.score * weight;
     }

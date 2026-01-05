@@ -382,56 +382,133 @@ export async function getCoverageStats(targetCoverage: number = 0.95): Promise<C
 // EXPORT DIMENSION DEFINITIONS FOR TEMPLATE REVIEWS
 // ============================================================
 
+/**
+ * 15-Dimension Review Model v2.0
+ * 
+ * CORE NARRATIVE (30%): story_screenplay, direction, dialogues_punchlines
+ * PERFORMANCES (18%): acting_lead, acting_supporting
+ * TECHNICAL (27%): music_bgm, cinematography, action_choreography, vfx_special_effects
+ * CRAFT (10%): editing_pacing, production_design
+ * IMPACT (15%): emotional_impact, comedy_timing, rewatch_value, mass_vs_class
+ * 
+ * Weights total: 100%
+ */
 export const DIMENSION_DEFINITIONS = {
+  // CORE NARRATIVE (30%)
   story_screenplay: {
     name: 'Story & Screenplay',
     name_te: 'కథ & స్క్రీన్‌ప్లే',
-    weight: 0.15,
+    weight: 0.12,
   },
   direction: {
     name: 'Direction',
     name_te: 'దర్శకత్వం',
-    weight: 0.12,
+    weight: 0.10,
   },
+  dialogues_punchlines: {
+    name: 'Dialogues & Punchlines',
+    name_te: 'డైలాగ్స్ & పంచ్‌లు',
+    weight: 0.08,
+  },
+  
+  // PERFORMANCES (18%)
   acting_lead: {
     name: 'Lead Acting',
     name_te: 'హీరో/హీరోయిన్ నటన',
-    weight: 0.12,
+    weight: 0.13,
   },
   acting_supporting: {
     name: 'Supporting Cast',
     name_te: 'సహాయ నటీనటులు',
-    weight: 0.08,
+    weight: 0.05,
   },
+  
+  // TECHNICAL (27%)
   music_bgm: {
     name: 'Music & BGM',
     name_te: 'సంగీతం & BGM',
-    weight: 0.12,
+    weight: 0.10,
   },
   cinematography: {
     name: 'Cinematography',
     name_te: 'ఛాయాగ్రహణం',
-    weight: 0.10,
+    weight: 0.06,
   },
+  action_choreography: {
+    name: 'Action Choreography',
+    name_te: 'యాక్షన్ కొరియోగ్రఫీ',
+    weight: 0.06,
+  },
+  vfx_special_effects: {
+    name: 'VFX & Special Effects',
+    name_te: 'VFX & స్పెషల్ ఎఫెక్ట్స్',
+    weight: 0.05,
+  },
+  
+  // CRAFT (10%)
   editing_pacing: {
     name: 'Editing & Pacing',
     name_te: 'ఎడిటింగ్ & పేసింగ్',
-    weight: 0.08,
+    weight: 0.06,
   },
+  production_design: {
+    name: 'Production Design',
+    name_te: 'ప్రొడక్షన్ డిజైన్',
+    weight: 0.04,
+  },
+  
+  // IMPACT (15%)
   emotional_impact: {
     name: 'Emotional Impact',
     name_te: 'భావోద్వేగ ప్రభావం',
-    weight: 0.10,
+    weight: 0.08,
+  },
+  comedy_timing: {
+    name: 'Comedy & Timing',
+    name_te: 'కామెడీ టైమింగ్',
+    weight: 0.05,
   },
   rewatch_value: {
     name: 'Rewatch Value',
     name_te: 'మళ్ళీ చూడాలనిపించే విలువ',
-    weight: 0.08,
+    weight: 0.00, // Derived, not directly scored
   },
   mass_vs_class: {
     name: 'Mass vs Class Appeal',
     name_te: 'మాస్ vs క్లాస్',
-    weight: 0.05,
+    weight: 0.02, // Derived, lower direct weight
   },
+};
+
+// Dimension keys for type safety
+export type DimensionKey = keyof typeof DIMENSION_DEFINITIONS;
+
+// Scored dimensions (excludes derived ones)
+export const SCORED_DIMENSIONS: DimensionKey[] = [
+  'story_screenplay',
+  'direction',
+  'dialogues_punchlines',
+  'acting_lead',
+  'acting_supporting',
+  'music_bgm',
+  'cinematography',
+  'action_choreography',
+  'vfx_special_effects',
+  'editing_pacing',
+  'production_design',
+  'emotional_impact',
+  'comedy_timing',
+];
+
+// Genre-specific dimension applicability
+export const GENRE_DIMENSION_APPLICABILITY: Record<string, DimensionKey[]> = {
+  Action: ['action_choreography', 'vfx_special_effects'],
+  Comedy: ['comedy_timing', 'dialogues_punchlines'],
+  Drama: ['emotional_impact', 'acting_lead'],
+  Thriller: ['editing_pacing', 'direction'],
+  Romance: ['music_bgm', 'emotional_impact'],
+  Horror: ['vfx_special_effects', 'production_design'],
+  Fantasy: ['vfx_special_effects', 'production_design', 'cinematography'],
+  Period: ['production_design', 'cinematography'],
 };
 

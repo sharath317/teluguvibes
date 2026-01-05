@@ -14,6 +14,10 @@
  *   pnpm ingest:tmdb:telugu --credits                     # Also fetch credits (slower)
  *   pnpm ingest:tmdb:telugu --status                      # Show current index status
  * 
+ * NEW v2.0 Modes:
+ *   pnpm ingest:tmdb:telugu --mode=full_index            # 99% coverage - never reject Telugu movies
+ *   pnpm ingest:tmdb:telugu --mode=quality               # Standard quality gates (default)
+ * 
  * Speed optimizations:
  *   --chunk-size=10  Break large ranges into 10-year chunks (default)
  *   --resume         Resume from last checkpoint if interrupted
@@ -38,6 +42,8 @@ import { createProgress } from '../lib/pipeline/progress-tracker';
 // CLI ARGUMENT PARSING
 // ============================================================
 
+type IngestionMode = 'quality' | 'full_index';
+
 interface CLIArgs {
   dryRun: boolean;
   year?: number;
@@ -50,6 +56,7 @@ interface CLIArgs {
   statusOnly: boolean;
   help: boolean;
   resume: boolean; // Resume from last checkpoint
+  mode: IngestionMode; // NEW: Ingestion mode
 }
 
 function parseArgs(): CLIArgs {
@@ -62,6 +69,7 @@ function parseArgs(): CLIArgs {
     help: false,
     chunkSize: 10, // Default: 10 years per chunk
     resume: false,
+    mode: 'quality', // Default: standard quality gates
   };
 
   for (const arg of args) {
@@ -87,6 +95,11 @@ function parseArgs(): CLIArgs {
       parsed.chunkSize = parseInt(arg.split('=')[1]);
     } else if (arg.startsWith('--max-pages=')) {
       parsed.maxPages = parseInt(arg.split('=')[1]);
+    } else if (arg.startsWith('--mode=')) {
+      const modeValue = arg.split('=')[1] as IngestionMode;
+      if (modeValue === 'full_index' || modeValue === 'quality') {
+        parsed.mode = modeValue;
+      }
     }
   }
 
@@ -158,8 +171,14 @@ ${chalk.yellow('Options:')}
   --resume            Resume from last checkpoint if interrupted
   --max-pages=N       Limit pages per request
   --credits           Also fetch credits (slower, better confidence)
+  --mode=MODE         Ingestion mode: 'quality' (default) or 'full_index'
   -v, --verbose       Show detailed output
   -h, --help          Show this help message
+
+${chalk.yellow('Ingestion Modes:')}
+  quality             Standard quality gates - reject low-data movies (default)
+  full_index          99% Telugu coverage - NEVER reject Telugu movies due to
+                      missing data. Creates 'partial' entries for backfill.
 
 ${chalk.yellow('Speed optimizations:')}
   --chunk-size=10     Break large year ranges into manageable chunks
@@ -283,6 +302,11 @@ async function main(): Promise<void> {
     console.log(chalk.yellow.bold('🔍 DRY RUN MODE - No data will be saved\n'));
   }
 
+  if (args.mode === 'full_index') {
+    console.log(chalk.magenta.bold('📦 FULL INDEX MODE - 99% Telugu coverage, no rejections\n'));
+    console.log(chalk.gray('   Movies with missing data will be marked as "partial" for backfill.\n'));
+  }
+
   const startTime = Date.now();
 
   try {
@@ -336,7 +360,8 @@ async function main(): Promise<void> {
           fetchCredits: args.fetchCredits,
           verbose: args.verbose,
           maxPages: args.maxPages,
-        });
+          allowPartial: args.mode === 'full_index', // NEW: Allow partial entries in full_index mode
+        } as PaginatorOptions);
         
         allResults.inserted += chunkResult.inserted;
         allResults.updated += chunkResult.updated;
@@ -374,6 +399,7 @@ async function main(): Promise<void> {
         fetchCredits: args.fetchCredits,
         verbose: args.verbose,
         maxPages: args.maxPages,
+        allowPartial: args.mode === 'full_index',
       });
     } else {
       // Full discovery
@@ -384,6 +410,7 @@ async function main(): Promise<void> {
         fetchCredits: args.fetchCredits,
         verbose: args.verbose,
         maxPages: args.maxPages,
+        allowPartial: args.mode === 'full_index',
       });
     }
 

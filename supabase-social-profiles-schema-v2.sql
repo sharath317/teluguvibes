@@ -286,3 +286,4 @@ COMMENT ON TABLE platform_capabilities IS
 
 
 
+

@@ -101,3 +101,4 @@ WHERE timestamp > NOW() - INTERVAL '7 days'
 GROUP BY feature, section
 ORDER BY total_cost_usd DESC;
 
+

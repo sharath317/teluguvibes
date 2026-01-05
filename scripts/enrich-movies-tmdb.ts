@@ -6,10 +6,13 @@
  * Works directly with movies table (doesn't require telugu_movie_index)
  * 
  * Usage:
- *   pnpm enrich:movies               # Enrich movies without TMDB data
- *   pnpm enrich:movies --dry         # Preview mode
- *   pnpm enrich:movies --limit=10    # Limit to 10 movies
- *   pnpm enrich:movies --all         # Re-enrich all movies
+ *   pnpm enrich:movies                    # Enrich movies without TMDB data
+ *   pnpm enrich:movies --dry              # Preview mode
+ *   pnpm enrich:movies --limit=10         # Limit to 10 movies
+ *   pnpm enrich:movies --all              # Re-enrich all movies
+ *   pnpm enrich:movies --missing-cast     # Enrich movies WITH tmdb_id but missing hero/heroine/director
+ *   pnpm enrich:movies --store-cast-json  # Save full cast array to cast_json column
+ *   pnpm enrich:movies --language=Telugu  # Target specific language (ignores is_published filter)
  */
 
 import { config } from 'dotenv';
@@ -93,7 +96,47 @@ interface EnrichmentResult {
   error?: string;
 }
 
-async function enrichMovie(movie: any, dryRun: boolean): Promise<EnrichmentResult> {
+interface EnrichmentOptions {
+  dryRun: boolean;
+  storeCastJson: boolean;
+}
+
+/**
+ * Extract hero (lead male actor) using TMDB gender data
+ * Gender: 1 = Female, 2 = Male, 0 = Unknown
+ */
+function extractHero(cast: any[]): string | null {
+  // Filter males (gender === 2) and sort by billing order
+  const males = cast
+    .filter((c: any) => c.gender === 2)
+    .sort((a: any, b: any) => a.order - b.order);
+  
+  if (males.length > 0) {
+    return males[0].name;
+  }
+  
+  // Fallback: if no gender data, use first cast member
+  return cast[0]?.name || null;
+}
+
+/**
+ * Extract heroine (lead female actor) using TMDB gender data
+ * Gender: 1 = Female, 2 = Male, 0 = Unknown
+ */
+function extractHeroine(cast: any[]): string | null {
+  // Filter females (gender === 1) and sort by billing order
+  const females = cast
+    .filter((c: any) => c.gender === 1)
+    .sort((a: any, b: any) => a.order - b.order);
+  
+  if (females.length > 0) {
+    return females[0].name;
+  }
+  
+  return null;
+}
+
+async function enrichMovie(movie: any, options: EnrichmentOptions): Promise<EnrichmentResult> {
   const result: EnrichmentResult = {
     movieId: movie.id,
     title: movie.title_en,
@@ -155,15 +198,23 @@ async function enrichMovie(movie: any, dryRun: boolean): Promise<EnrichmentResul
       result.changes.push('music_director');
     }
 
-    // Extract hero/heroine
+    // Extract hero/heroine using gender detection
     const cast = tmdbData.credits?.cast || [];
-    if (!movie.hero && cast[0]) {
-      updates.hero = cast[0].name;
-      result.changes.push('hero');
+    
+    if (!movie.hero) {
+      const hero = extractHero(cast);
+      if (hero) {
+        updates.hero = hero;
+        result.changes.push('hero');
+      }
     }
-    if (!movie.heroine && cast[1]) {
-      updates.heroine = cast[1].name;
-      result.changes.push('heroine');
+    
+    if (!movie.heroine) {
+      const heroine = extractHeroine(cast);
+      if (heroine) {
+        updates.heroine = heroine;
+        result.changes.push('heroine');
+      }
     }
 
     // Genres
@@ -184,7 +235,7 @@ async function enrichMovie(movie: any, dryRun: boolean): Promise<EnrichmentResul
       result.changes.push('avg_rating');
     }
 
-    // Cast members
+    // Cast members (legacy format)
     if ((!movie.cast_members || movie.cast_members.length === 0) && cast.length > 0) {
       updates.cast_members = cast.slice(0, 10).map((c: any) => ({
         name: c.name,
@@ -194,13 +245,27 @@ async function enrichMovie(movie: any, dryRun: boolean): Promise<EnrichmentResul
       result.changes.push('cast_members');
     }
 
+    // Store full cast with gender data in cast_members (for review generator)
+    // Overwrite existing cast_members with enhanced data including gender
+    if (options.storeCastJson && cast.length > 0) {
+      updates.cast_members = cast.slice(0, 15).map((c: any) => ({
+        name: c.name,
+        character: c.character,
+        order: c.order,
+        gender: c.gender,
+        tmdb_id: c.id,
+        profile_path: c.profile_path,
+      }));
+      result.changes.push('cast_members_enhanced');
+    }
+
     if (result.changes.length === 0) {
       result.success = true;
       result.changes.push('already_complete');
       return result;
     }
 
-    if (dryRun) {
+    if (options.dryRun) {
       result.success = true;
       return result;
     }
@@ -234,15 +299,23 @@ interface CLIArgs {
   all: boolean;
   limit: number;
   verbose: boolean;
+  missingCast: boolean;      // Target movies WITH tmdb_id but missing hero/heroine/director
+  storeCastJson: boolean;    // Save full cast array to cast_json column
+  language?: string;         // Target specific language (e.g., "Telugu")
 }
 
 function parseArgs(): CLIArgs {
   const args = process.argv.slice(2);
+  const languageArg = args.find(a => a.startsWith('--language='));
+  
   return {
     dryRun: args.includes('--dry') || args.includes('--dry-run'),
     all: args.includes('--all'),
     verbose: args.includes('-v') || args.includes('--verbose'),
     limit: parseInt(args.find(a => a.startsWith('--limit='))?.split('=')[1] || '50'),
+    missingCast: args.includes('--missing-cast'),
+    storeCastJson: args.includes('--store-cast-json'),
+    language: languageArg?.split('=')[1],
   };
 }
 
@@ -264,19 +337,43 @@ async function main() {
     process.exit(1);
   }
 
+  // Display mode information
   if (args.dryRun) {
-    console.log(chalk.yellow.bold('🔍 DRY RUN MODE\n'));
+    console.log(chalk.yellow.bold('🔍 DRY RUN MODE'));
   }
+  if (args.missingCast) {
+    console.log(chalk.cyan('🎭 Mode: Enriching movies WITH tmdb_id but missing cast/crew'));
+  }
+  if (args.storeCastJson) {
+    console.log(chalk.cyan('💾 Storing full cast_json for review generator'));
+  }
+  if (args.language) {
+    console.log(chalk.cyan(`🌐 Language filter: ${args.language}`));
+  }
+  console.log('');
 
-  // Get movies to enrich
+  // Build query based on flags
   let query = supabase
     .from('movies')
     .select('*')
-    .eq('is_published', true)
     .order('release_year', { ascending: false });
 
-  if (!args.all) {
-    // Only movies without TMDB data
+  // Language filter (if specified, ignore is_published)
+  if (args.language) {
+    query = query.eq('language', args.language);
+  } else {
+    // Default behavior: only published movies
+    query = query.eq('is_published', true);
+  }
+
+  // Determine which movies to target
+  if (args.missingCast) {
+    // Movies that HAVE tmdb_id but are missing hero OR heroine OR director
+    query = query
+      .not('tmdb_id', 'is', null)
+      .or('hero.is.null,heroine.is.null,director.is.null');
+  } else if (!args.all) {
+    // Default: Only movies without TMDB data
     query = query.is('tmdb_id', null);
   }
 
@@ -296,6 +393,12 @@ async function main() {
 
   console.log(chalk.cyan(`📋 Enriching ${movies.length} movies...\n`));
 
+  // Prepare enrichment options
+  const enrichmentOptions: EnrichmentOptions = {
+    dryRun: args.dryRun,
+    storeCastJson: args.storeCastJson,
+  };
+
   let success = 0;
   let failed = 0;
   let skipped = 0;
@@ -305,10 +408,10 @@ async function main() {
     const movie = movies[i];
 
     if (args.verbose) {
-      console.log(`  [${i + 1}/${movies.length}] ${movie.title_en}`);
+      console.log(`  [${i + 1}/${movies.length}] ${movie.title_en} (${movie.release_year})`);
     }
 
-    const result = await enrichMovie(movie, args.dryRun);
+    const result = await enrichMovie(movie, enrichmentOptions);
 
     if (result.success) {
       if (result.changes.includes('already_complete')) {
@@ -357,23 +460,46 @@ async function main() {
     console.log(chalk.bold('\n📊 UPDATED STATS'));
     console.log(chalk.gray('─'.repeat(50)));
 
+    // Build stats query with language filter if specified
+    let statsQuery = supabase.from('movies').select('*', { count: 'exact', head: true });
+    if (args.language) {
+      statsQuery = statsQuery.eq('language', args.language);
+    }
+
     const { count: withTmdb } = await supabase
       .from('movies')
       .select('*', { count: 'exact', head: true })
+      .eq('language', args.language || 'Telugu')
       .not('tmdb_id', 'is', null);
 
     const { count: withPoster } = await supabase
       .from('movies')
       .select('*', { count: 'exact', head: true })
+      .eq('language', args.language || 'Telugu')
       .not('poster_url', 'is', null);
+
+    const { count: withHero } = await supabase
+      .from('movies')
+      .select('*', { count: 'exact', head: true })
+      .eq('language', args.language || 'Telugu')
+      .not('hero', 'is', null);
+
+    const { count: withHeroine } = await supabase
+      .from('movies')
+      .select('*', { count: 'exact', head: true })
+      .eq('language', args.language || 'Telugu')
+      .not('heroine', 'is', null);
 
     const { count: withDirector } = await supabase
       .from('movies')
       .select('*', { count: 'exact', head: true })
+      .eq('language', args.language || 'Telugu')
       .not('director', 'is', null);
 
-    console.log(`  With TMDB ID: ${withTmdb}`);
-    console.log(`  With Poster:  ${withPoster}`);
+    console.log(`  With TMDB ID:  ${withTmdb}`);
+    console.log(`  With Poster:   ${withPoster}`);
+    console.log(`  With Hero:     ${withHero}`);
+    console.log(`  With Heroine:  ${withHeroine}`);
     console.log(`  With Director: ${withDirector}`);
   }
 

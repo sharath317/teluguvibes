@@ -37,13 +37,70 @@ The Review Intelligence System provides structured, confidence-scored movie revi
 ### 2.2 Generation Pipeline
 
 ```
-Movie → Data Sources → Editorial Generator → Enrichment → Storage
-                           ↓
-                     3 Parallel Batches:
-                     ├── Batch 1: Synopsis + Cultural Impact
-                     ├── Batch 2: Story + Performances + Direction
-                     └── Batch 3: Perspectives + Watch/Skip + Awards
+Movie → Multi-Source Data → Editorial Generator → Enrichment → Storage
+              ↓                      ↓
+        Parallel Fetches       3 AI Batches (reduced):
+        ├── Wikipedia          ├── Batch 1: Synopsis* + Cultural Impact*
+        ├── OMDb               ├── Batch 2: Story + Performances + Direction
+        ├── Wikidata           └── Batch 3: Perspectives + Watch/Skip + Awards*
+        ├── Google KG          
+        └── TMDB               * Skipped if factual data available
 ```
+
+### 2.3 Multi-Source Data Integration (Cost Reduction)
+
+The system integrates multiple external data sources to reduce AI API costs by ~60% when movies have good Wikipedia/OMDb coverage.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Multi-Source Orchestrator                         │
+│                 lib/reviews/multi-source-data.ts                     │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────┐ │
+│  │Wikipedia │  │  OMDb    │  │ Wikidata │  │Google KG │  │ TMDB  │ │
+│  │ REST API │  │   API    │  │  SPARQL  │  │   API    │  │(exist)│ │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘  └───┬───┘ │
+│       │             │             │             │            │      │
+│       ▼             ▼             ▼             ▼            ▼      │
+│  Plot,Reception  Ratings     Awards        Entity Desc   Metadata  │
+│  Legacy,Awards   IMDB,RT     Filmfare      Context       Cast,Crew │
+│                  Metacritic  Nandi,National                        │
+│                                                                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                         30-Day Cache                                 │
+│              (Factual data rarely changes)                          │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Data Source Priority
+
+| Section | Primary Source | Fallback | AI Role |
+|---------|---------------|----------|---------|
+| Synopsis | Wikipedia Plot | TMDB/OMDb | Translation only |
+| Awards | Wikidata SPARQL | OMDb text | None (factual) |
+| Critics POV | OMDb + Wikipedia Reception | TMDB | Synthesis |
+| Cultural Impact | Wikipedia Legacy | Google KG | Expansion |
+| Ratings | OMDb aggregated | TMDB | None |
+
+#### API Keys Required
+
+| Service | Env Variable | Free Tier |
+|---------|--------------|-----------|
+| OMDb | `OMDB_API_KEY` | 1,000 req/day |
+| Google KG | `GOOGLE_KG_API_KEY` | 100,000 req/day |
+| Wikipedia | None | Unlimited |
+| Wikidata | None | Unlimited |
+
+#### Files
+
+| File | Purpose |
+|------|---------|
+| `lib/sources/fetchers/omdb-fetcher.ts` | IMDB, RT, Metacritic ratings |
+| `lib/sources/fetchers/google-kg-fetcher.ts` | Entity descriptions |
+| `lib/sources/fetchers/wikidata-awards-fetcher.ts` | Telugu film awards |
+| `lib/sources/fetchers/wikipedia-fetcher.ts` | Plot, Reception, Legacy sections |
+| `lib/reviews/multi-source-data.ts` | Orchestration + caching |
 
 ---
 
@@ -407,4 +464,5 @@ All factual claims must be traceable to:
 ---
 
 *This specification is locked. Review generation logic must maintain backward compatibility.*
+
 

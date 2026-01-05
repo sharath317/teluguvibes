@@ -1,15 +1,34 @@
 /**
- * AUTO-TAG MOVIES
+ * AUTO-TAG MOVIES (Enhanced v2.0)
  * 
- * Automatically tags movies as:
- * - Blockbusters: High-profile movies, big stars, high ratings
- * - Hidden Gems: Lesser-known but well-rated movies
- * - Classics: Pre-2005 movies with good legacy
- * - Cult Classics: Movies with unique characteristics
+ * Automatically tags movies with:
+ * 
+ * LEGACY FLAGS (original):
+ * - is_blockbuster: High-profile movies, big stars, high ratings
+ * - is_underrated: Lesser-known but well-rated movies (hidden gems)
+ * - is_classic: Pre-2005 movies with good legacy
+ * - cult-classic (in tags array): Movies with unique characteristics
+ * 
+ * ENHANCED TAGS (v2.0):
+ * - box_office_category: industry-hit, blockbuster, super-hit, hit, average, below-average
+ * - mood_tags: feel-good, dark-intense, thought-provoking, patriotic, etc.
+ * - quality_tags: masterpiece, critically-acclaimed, cult-classic, hidden-gem, etc.
+ * - audience_fit: kids_friendly, family_watch, date_movie, group_watch, solo_watch
+ * - watch_recommendation: theater-must, theater-preferred, ott-friendly, any
+ * 
+ * Usage:
+ *   pnpm ts-node scripts/auto-tag-movies.ts --dry           # Preview changes
+ *   pnpm ts-node scripts/auto-tag-movies.ts --apply         # Apply legacy tags only
+ *   pnpm ts-node scripts/auto-tag-movies.ts --apply --v2    # Apply all v2 enhanced tags
+ *   pnpm ts-node scripts/auto-tag-movies.ts --apply --v2 --limit 50  # Process 50 movies
  */
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import {
+  deriveAllTags,
+  DerivedTags,
+} from '../lib/reviews/tag-derivation';
 
 dotenv.config({ path: '.env.local' });
 
@@ -33,8 +52,12 @@ const TOP_DIRECTORS = [
 interface Movie {
   id: string;
   title_en: string;
+  title_te?: string;
   release_year: number;
   avg_rating: number | null;
+  tmdb_rating?: number;
+  imdb_rating?: number;
+  popularity_score?: number;
   total_reviews: number;
   hero: string | null;
   director: string | null;
@@ -42,6 +65,10 @@ interface Movie {
   is_underrated: boolean;
   is_blockbuster: boolean;
   is_classic: boolean;
+  overview?: string;
+  tagline?: string;
+  awards?: unknown[];
+  content_flags?: Record<string, unknown>;
 }
 
 async function autoTagMovies() {
@@ -188,7 +215,132 @@ async function autoTagMovies() {
     console.log(`✅ Tagged ${Math.min(cultClassics.length, 50)} cult classics`);
   }
 
-  console.log('\n🎉 Done!');
+  console.log('\n🎉 Legacy tagging done!');
+  
+  // Check if enhanced v2 tagging is requested
+  const useV2 = process.argv.includes('--v2');
+  if (useV2) {
+    await applyEnhancedV2Tags();
+  }
+}
+
+/**
+ * Apply enhanced v2.0 tags using the tag-derivation engine
+ */
+async function applyEnhancedV2Tags() {
+  console.log('\n🚀 ENHANCED V2.0 TAGGING\n');
+  
+  // Parse limit from args
+  const limitArg = process.argv.find(arg => arg.startsWith('--limit'));
+  const limit = limitArg ? parseInt(process.argv[process.argv.indexOf(limitArg) + 1]) || 100 : 100;
+  
+  // Fetch movies to process
+  const { data: movies, error } = await supabase
+    .from('movies')
+    .select('id, title_en, title_te, release_year, avg_rating, tmdb_rating, imdb_rating, popularity_score, total_reviews, hero, director, genres, is_underrated, is_blockbuster, is_classic, overview, tagline, awards, content_flags')
+    .eq('is_published', true)
+    .is('mood_tags', null) // Only movies without mood_tags
+    .order('updated_at', { ascending: true })
+    .limit(limit);
+  
+  if (error || !movies) {
+    console.error('Error fetching movies for v2 tagging:', error);
+    return;
+  }
+  
+  console.log(`📊 Processing ${movies.length} movies for enhanced tagging...\n`);
+  
+  const stats = {
+    processed: 0,
+    failed: 0,
+    byMood: {} as Record<string, number>,
+    byQuality: {} as Record<string, number>,
+    byBoxOffice: {} as Record<string, number>,
+  };
+  
+  for (const movie of movies as Movie[]) {
+    try {
+      // Derive all tags
+      const derived: DerivedTags = deriveAllTags({
+        id: movie.id,
+        title_en: movie.title_en,
+        title_te: movie.title_te,
+        release_year: movie.release_year,
+        genres: movie.genres,
+        avg_rating: movie.avg_rating || undefined,
+        tmdb_rating: movie.tmdb_rating,
+        imdb_rating: movie.imdb_rating,
+        popularity_score: movie.popularity_score,
+        total_reviews: movie.total_reviews,
+        is_blockbuster: movie.is_blockbuster,
+        is_classic: movie.is_classic,
+        is_underrated: movie.is_underrated,
+        overview: movie.overview,
+        tagline: movie.tagline,
+        awards: movie.awards as unknown[],
+        content_flags: movie.content_flags as Record<string, unknown>,
+      });
+      
+      // Update movie with derived tags
+      const { error: updateError } = await supabase
+        .from('movies')
+        .update({
+          box_office_category: derived.box_office_category,
+          mood_tags: derived.mood_tags,
+          quality_tags: derived.quality_tags,
+          audience_fit: derived.audience_fit,
+          watch_recommendation: derived.watch_recommendation,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', movie.id);
+      
+      if (updateError) {
+        console.error(`❌ Failed to update ${movie.title_en}:`, updateError);
+        stats.failed++;
+      } else {
+        stats.processed++;
+        
+        // Track stats
+        derived.mood_tags.forEach(tag => {
+          stats.byMood[tag] = (stats.byMood[tag] || 0) + 1;
+        });
+        derived.quality_tags.forEach(tag => {
+          stats.byQuality[tag] = (stats.byQuality[tag] || 0) + 1;
+        });
+        if (derived.box_office_category) {
+          stats.byBoxOffice[derived.box_office_category] = (stats.byBoxOffice[derived.box_office_category] || 0) + 1;
+        }
+        
+        console.log(`✅ ${movie.title_en}: ${derived.mood_tags.join(', ') || 'no mood'} | ${derived.quality_tags.join(', ') || 'no quality'}`);
+      }
+    } catch (err) {
+      console.error(`❌ Error processing ${movie.title_en}:`, err);
+      stats.failed++;
+    }
+  }
+  
+  // Print summary
+  console.log('\n📊 V2 TAGGING SUMMARY');
+  console.log('====================');
+  console.log(`Processed: ${stats.processed}`);
+  console.log(`Failed: ${stats.failed}`);
+  
+  console.log('\nMood Tags Distribution:');
+  Object.entries(stats.byMood)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([tag, count]) => console.log(`  ${tag}: ${count}`));
+  
+  console.log('\nQuality Tags Distribution:');
+  Object.entries(stats.byQuality)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([tag, count]) => console.log(`  ${tag}: ${count}`));
+  
+  console.log('\nBox Office Categories:');
+  Object.entries(stats.byBoxOffice)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([cat, count]) => console.log(`  ${cat}: ${count}`));
+  
+  console.log('\n🎉 Enhanced v2.0 tagging complete!');
 }
 
 autoTagMovies().catch(console.error);

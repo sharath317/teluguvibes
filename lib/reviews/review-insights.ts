@@ -106,6 +106,9 @@ export interface ReviewInsights {
   audience_fit?: AudienceFit;
   comparable_movies?: ComparableMovie[];
   
+  // NEW: Crew insights (v2.0)
+  crew_insights?: CrewInsight[];
+  
   // Confidence scores per section
   section_confidence: {
     performances: number;
@@ -115,6 +118,7 @@ export interface ReviewInsights {
     scenes: number;
     audience: number;
     comparables: number;
+    crew: number;  // NEW
   };
   
   // Validation
@@ -142,6 +146,23 @@ export interface MovieContext {
   runtime_minutes?: number;
   awards?: string[];
   production_context?: string;
+  // NEW: Crew data for enhanced insights
+  music_director?: string;
+  cinematographer?: string;
+  writer?: string;
+  producer?: string;
+  editor?: string;
+}
+
+// NEW: Crew insight for detailed crew analysis
+export interface CrewInsight {
+  crew_type: 'music_director' | 'cinematographer' | 'writer' | 'editor' | 'producer' | 'action_director';
+  name: string;
+  note_en: string;
+  note_te: string;
+  previous_works?: string[];
+  signature_style?: string;
+  confidence: number;
 }
 
 // ============================================================
@@ -230,7 +251,8 @@ export async function fetchMovieContext(movieId: string): Promise<MovieContext |
     .select(`
       id, title_en, title_te, director, hero, heroine,
       cast_members, genres, release_year, tags,
-      avg_rating, runtime_minutes, tmdb_id
+      avg_rating, runtime_minutes, tmdb_id,
+      music_director, cinematographer, writer, producer, editor
     `)
     .eq('id', movieId)
     .single();
@@ -259,7 +281,13 @@ export async function fetchMovieContext(movieId: string): Promise<MovieContext |
     release_year: movie.release_year,
     keywords: movie.tags || [],  // Use tags as keywords
     tmdb_rating: movie.avg_rating,  // Use avg_rating as tmdb_rating
-    runtime_minutes: movie.runtime_minutes
+    runtime_minutes: movie.runtime_minutes,
+    // NEW: Crew data
+    music_director: movie.music_director,
+    cinematographer: movie.cinematographer,
+    writer: movie.writer,
+    producer: movie.producer,
+    editor: movie.editor,
   };
 }
 
@@ -799,6 +827,164 @@ async function generateComparableMovies(context: MovieContext): Promise<Comparab
 }
 
 /**
+ * Calculate confidence for crew insights
+ */
+function calculateCrewConfidence(context: MovieContext): number {
+  let confidence = 0;
+  
+  // Each crew member adds to confidence
+  if (context.music_director) confidence += 0.25;
+  if (context.cinematographer) confidence += 0.20;
+  if (context.writer) confidence += 0.20;
+  if (context.editor) confidence += 0.15;
+  if (context.producer) confidence += 0.10;
+  
+  // Genres that benefit from crew insights
+  const crewHeavyGenres = ['Action', 'Thriller', 'Fantasy', 'Period', 'Musical'];
+  if (context.genres?.some(g => crewHeavyGenres.includes(g))) {
+    confidence += 0.10;
+  }
+  
+  return Math.min(1, confidence);
+}
+
+/**
+ * Generate crew insights based on available crew data
+ */
+function generateCrewInsights(context: MovieContext): CrewInsight[] {
+  const insights: CrewInsight[] = [];
+  const genres = context.genres || [];
+  const rating = context.tmdb_rating || 0;
+  
+  // Music Director insight
+  if (context.music_director) {
+    const isMusicHeavy = genres.includes('Musical') || genres.includes('Romance');
+    const isHighRated = rating >= 7;
+    
+    let noteEn = '';
+    let noteTe = '';
+    let style = '';
+    
+    if (isMusicHeavy && isHighRated) {
+      noteEn = `Music by ${context.music_director} is a major highlight, with songs and BGM that elevate the narrative.`;
+      noteTe = `${context.music_director} సంగీతం సినిమాకు ప్రాణం పోసింది.`;
+      style = 'melodic and impactful';
+    } else if (genres.includes('Action')) {
+      noteEn = `${context.music_director}'s background score adds punch to the action sequences.`;
+      noteTe = `${context.music_director} BGM యాక్షన్ సీన్లకు ప్రాణం.`;
+      style = 'pulsating BGM';
+    } else {
+      noteEn = `${context.music_director} delivers a score that complements the film's tone.`;
+      noteTe = `${context.music_director} సంగీతం సినిమాకు తగ్గట్టుగా ఉంది.`;
+      style = 'situational';
+    }
+    
+    insights.push({
+      crew_type: 'music_director',
+      name: context.music_director,
+      note_en: noteEn,
+      note_te: noteTe,
+      signature_style: style,
+      confidence: isMusicHeavy ? 0.90 : 0.75,
+    });
+  }
+  
+  // Cinematographer insight
+  if (context.cinematographer) {
+    const isVisualGenre = genres.includes('Action') || genres.includes('Fantasy') || genres.includes('Period');
+    const isHighRated = rating >= 7.5;
+    
+    let noteEn = '';
+    let noteTe = '';
+    let style = '';
+    
+    if (isVisualGenre && isHighRated) {
+      noteEn = `Cinematography by ${context.cinematographer} is stunning, with frames that deserve to be posters.`;
+      noteTe = `${context.cinematographer} ఛాయాగ్రహణం అద్భుతం, ప్రతి ఫ్రేమ్ కళాఖండం.`;
+      style = 'epic visual storytelling';
+    } else if (genres.includes('Thriller') || genres.includes('Horror')) {
+      noteEn = `${context.cinematographer}'s camera work creates the right atmosphere and tension.`;
+      noteTe = `${context.cinematographer} కెమెరా వర్క్ సస్పెన్స్ క్రియేట్ చేసింది.`;
+      style = 'atmospheric';
+    } else {
+      noteEn = `${context.cinematographer} captures the visuals effectively.`;
+      noteTe = `${context.cinematographer} ఛాయాగ్రహణం బాగుంది.`;
+      style = 'functional';
+    }
+    
+    insights.push({
+      crew_type: 'cinematographer',
+      name: context.cinematographer,
+      note_en: noteEn,
+      note_te: noteTe,
+      signature_style: style,
+      confidence: isVisualGenre ? 0.85 : 0.70,
+    });
+  }
+  
+  // Writer insight
+  if (context.writer) {
+    const isDialogueHeavy = genres.includes('Drama') || genres.includes('Comedy');
+    const isHighRated = rating >= 7;
+    
+    let noteEn = '';
+    let noteTe = '';
+    
+    if (isDialogueHeavy && isHighRated) {
+      noteEn = `Written by ${context.writer}, the dialogues are sharp and memorable, adding depth to the narrative.`;
+      noteTe = `${context.writer} రాసిన డైలాగులు మనసులో నిలిచిపోతాయి.`;
+    } else if (genres.includes('Action')) {
+      noteEn = `${context.writer}'s screenplay balances action with story effectively.`;
+      noteTe = `${context.writer} స్క్రీన్‌ప్లే యాక్షన్ మరియు కథను బాగా బాలెన్స్ చేసింది.`;
+    } else {
+      noteEn = `${context.writer} crafts a screenplay that serves the film's purpose.`;
+      noteTe = `${context.writer} స్క్రీన్‌ప్లే సినిమాకు తగ్గట్టుగా ఉంది.`;
+    }
+    
+    insights.push({
+      crew_type: 'writer',
+      name: context.writer,
+      note_en: noteEn,
+      note_te: noteTe,
+      confidence: isDialogueHeavy ? 0.80 : 0.65,
+    });
+  }
+  
+  // Editor insight (for films where pacing is notable)
+  if (context.editor && context.runtime_minutes) {
+    const isLongFilm = context.runtime_minutes >= 150;
+    const isShortFilm = context.runtime_minutes <= 120;
+    const isHighRated = rating >= 7;
+    
+    if (isLongFilm || isHighRated) {
+      let noteEn = '';
+      let noteTe = '';
+      
+      if (isLongFilm && isHighRated) {
+        noteEn = `Despite the runtime, ${context.editor}'s editing keeps the narrative engaging throughout.`;
+        noteTe = `రన్‌టైమ్ ఎక్కువ అయినా ${context.editor} ఎడిటింగ్ వల్ల బోర్ కొట్టదు.`;
+      } else if (isShortFilm) {
+        noteEn = `${context.editor}'s crisp editing maintains a tight pace.`;
+        noteTe = `${context.editor} ఎడిటింగ్ క్రిస్ప్‌గా ఉంది.`;
+      } else {
+        noteEn = `${context.editor}'s editing work serves the story well.`;
+        noteTe = `${context.editor} ఎడిటింగ్ బాగుంది.`;
+      }
+      
+      insights.push({
+        crew_type: 'editor',
+        name: context.editor,
+        note_en: noteEn,
+        note_te: noteTe,
+        confidence: 0.70,
+      });
+    }
+  }
+  
+  return insights;
+}
+
+/**
  * Calculate confidence for new sections
  */
 function calculateScenesConfidence(context: MovieContext): number {
@@ -906,7 +1092,7 @@ export async function generateReviewInsights(
     return null;
   }
   
-  // Calculate section confidences (including Phase 2 sections)
+  // Calculate section confidences (including Phase 2 sections and crew)
   const sectionConfidence = {
     performances: calculatePerformanceConfidence(context),
     direction: calculateDirectionConfidence(context),
@@ -914,7 +1100,8 @@ export async function generateReviewInsights(
     themes: calculateThemeConfidence(context),
     scenes: calculateScenesConfidence(context),
     audience: calculateAudienceConfidence(context),
-    comparables: calculateComparablesConfidence(context)
+    comparables: calculateComparablesConfidence(context),
+    crew: calculateCrewConfidence(context),  // NEW
   };
   
   // Initialize insights
@@ -965,6 +1152,14 @@ export async function generateReviewInsights(
   
   if (sectionConfidence.comparables >= threshold) {
     insights.comparable_movies = await generateComparableMovies(context);
+  }
+  
+  // NEW: Generate crew insights
+  if (sectionConfidence.crew >= threshold) {
+    const crewInsights = generateCrewInsights(context);
+    if (crewInsights.length > 0) {
+      insights.crew_insights = crewInsights;
+    }
   }
   
   // Calculate density score
@@ -1086,6 +1281,158 @@ export async function batchGenerateInsights(
   }
   
   return stats;
+}
+
+// ============================================================
+// CREW FILMOGRAPHY COMPARISON
+// ============================================================
+
+export interface CrewFilmography {
+  crew_type: 'director' | 'music_director' | 'cinematographer' | 'writer';
+  name: string;
+  total_films: number;
+  avg_rating: number;
+  notable_works: Array<{
+    movie_id: string;
+    title: string;
+    year: number;
+    rating: number;
+  }>;
+  comparison_note_en: string;
+  comparison_note_te: string;
+}
+
+/**
+ * Fetch a crew member's filmography and compare with current movie
+ */
+export async function getCrewFilmography(
+  crewName: string,
+  crewType: 'director' | 'music_director' | 'cinematographer' | 'writer',
+  currentMovieId: string
+): Promise<CrewFilmography | null> {
+  const supabase = getSupabaseClient();
+  
+  // Map crew type to column
+  const columnMap: Record<string, string> = {
+    director: 'director',
+    music_director: 'music_director',
+    cinematographer: 'cinematographer',
+    writer: 'writer',
+  };
+  
+  const column = columnMap[crewType];
+  if (!column) return null;
+  
+  // Fetch all movies by this crew member
+  const { data: movies, error } = await supabase
+    .from('movies')
+    .select('id, title_en, release_year, avg_rating')
+    .ilike(column, crewName)
+    .neq('id', currentMovieId)
+    .order('avg_rating', { ascending: false })
+    .limit(10);
+  
+  if (error || !movies || movies.length === 0) return null;
+  
+  // Calculate stats
+  const totalFilms = movies.length;
+  const ratings = movies.filter(m => m.avg_rating).map(m => m.avg_rating!);
+  const avgRating = ratings.length > 0 
+    ? ratings.reduce((a, b) => a + b, 0) / ratings.length 
+    : 0;
+  
+  // Get notable works (top 3 by rating)
+  const notableWorks = movies
+    .filter(m => m.avg_rating && m.avg_rating >= 6.5)
+    .slice(0, 3)
+    .map(m => ({
+      movie_id: m.id,
+      title: m.title_en,
+      year: m.release_year,
+      rating: m.avg_rating || 0,
+    }));
+  
+  // Generate comparison notes
+  let comparisonEn = '';
+  let comparisonTe = '';
+  
+  const roleLabel = crewType === 'music_director' ? 'music director' : crewType;
+  
+  if (avgRating >= 7.5) {
+    comparisonEn = `${crewName} has an impressive track record as ${roleLabel}, with an average rating of ${avgRating.toFixed(1)}. Notable works include ${notableWorks.map(w => w.title).join(', ')}.`;
+    comparisonTe = `${crewName} యొక్క ట్రాక్ రికార్డ్ అద్భుతం. వారి ప్రసిద్ధ సినిమాలు: ${notableWorks.map(w => w.title).join(', ')}.`;
+  } else if (avgRating >= 6) {
+    comparisonEn = `${crewName} brings solid experience with ${totalFilms} films as ${roleLabel}.`;
+    comparisonTe = `${crewName} కు ${totalFilms} సినిమాల అనుభవం ఉంది.`;
+  } else {
+    comparisonEn = `${crewName} has worked on ${totalFilms} films in Telugu cinema.`;
+    comparisonTe = `${crewName} తెలుగులో ${totalFilms} సినిమాలు చేశారు.`;
+  }
+  
+  return {
+    crew_type: crewType,
+    name: crewName,
+    total_films: totalFilms,
+    avg_rating: Math.round(avgRating * 10) / 10,
+    notable_works: notableWorks,
+    comparison_note_en: comparisonEn,
+    comparison_note_te: comparisonTe,
+  };
+}
+
+/**
+ * Compare current movie with crew's previous works
+ */
+export async function compareWithCrewPrevious(movieId: string): Promise<{
+  director?: CrewFilmography;
+  music_director?: CrewFilmography;
+  cinematographer?: CrewFilmography;
+  writer?: CrewFilmography;
+}> {
+  const context = await fetchMovieContext(movieId);
+  if (!context) return {};
+  
+  const result: {
+    director?: CrewFilmography;
+    music_director?: CrewFilmography;
+    cinematographer?: CrewFilmography;
+    writer?: CrewFilmography;
+  } = {};
+  
+  // Fetch filmographies in parallel
+  const promises: Promise<void>[] = [];
+  
+  if (context.director) {
+    promises.push(
+      getCrewFilmography(context.director, 'director', movieId)
+        .then(f => { if (f) result.director = f; })
+    );
+  }
+  
+  if (context.music_director) {
+    promises.push(
+      getCrewFilmography(context.music_director, 'music_director', movieId)
+        .then(f => { if (f) result.music_director = f; })
+    );
+  }
+  
+  if (context.cinematographer) {
+    promises.push(
+      getCrewFilmography(context.cinematographer, 'cinematographer', movieId)
+        .then(f => { if (f) result.cinematographer = f; })
+    );
+  }
+  
+  if (context.writer) {
+    promises.push(
+      getCrewFilmography(context.writer, 'writer', movieId)
+        .then(f => { if (f) result.writer = f; })
+    );
+  }
+  
+  await Promise.all(promises);
+  
+  return result;
 }
 
 // ============================================================

@@ -51,6 +51,21 @@ export interface TemplateReview {
   // Entity links for knowledge graph
   linked_celebrities?: LinkedCelebrity[];
   linked_movies?: LinkedMovie[];  // Similar movies with confidence
+  
+  // v2.0: Why Watch / Why Skip sections
+  why_watch?: string[];    // 3-5 bullet points
+  why_skip?: string[];     // 2-3 honest negatives
+  critic_audience_gap?: {
+    critic_lean: 'positive' | 'negative' | 'neutral';
+    audience_lean: 'positive' | 'negative' | 'neutral';
+    divergence_note?: string;
+  };
+  cultural_context?: string;  // For classics
+  production_notes?: {
+    budget_tier: 'low' | 'medium' | 'high' | 'mega';
+    shooting_locations?: string[];
+    production_duration?: string;
+  };
 }
 
 // Phase 5.1: Performance highlight for individual actors
@@ -158,10 +173,35 @@ const GENRE_ANALYSIS_TEMPLATES: Record<string, Record<string, string[]>> = {
       'స్టైలిష్ మేకింగ్, విజువల్ ట్రీట్.',
       'పేసింగ్ బాగుంది, మసాలా ఎలిమెంట్స్ బాలెన్స్.',
     ],
+    dialogues_punchlines: [
+      'మాస్ డైలాగులు ఎలివేషన్ ఇచ్చాయి, ఫ్యాన్స్ థియేటర్లో ఆనందించారు.',
+      'పంచ్ డైలాగులు ఓకే, కొన్ని హిట్ అయ్యాయి.',
+      'డైలాగులు సగటం, పంచ్‌లు వర్క్ అవ్వలేదు.',
+    ],
     music_bgm: [
       'BGM మాస్ మూమెంట్స్‌ను ఎలివేట్ చేసింది.',
       'బ్యాక్‌గ్రౌండ్ స్కోర్ థ్రిల్లింగ్‌గా ఉంది.',
       'పాటలు సగటు, BGM హైలైట్.',
+    ],
+    action_choreography: [
+      'ఫైట్ సీక్వెన్సులు హాలీవుడ్ స్టాండర్డ్‌లో ఉన్నాయి, స్టంట్ వర్క్ అద్భుతం.',
+      'యాక్షన్ బ్లాక్స్ మాస్ ఆడియెన్స్‌ను థ్రిల్ చేస్తాయి.',
+      'స్టంట్స్ సేఫ్‌గా కానీ ఇంప్రెసివ్‌గా ఉన్నాయి.',
+    ],
+    vfx_special_effects: [
+      'VFX వర్క్ వరల్డ్ క్లాస్, విజువల్ ఎక్స్‌పీరియన్స్ అద్భుతం.',
+      'స్పెషల్ ఎఫెక్ట్స్ సినిమాను ఎలివేట్ చేశాయి.',
+      'VFX సీన్లు అప్పుడప్పుడు కృత్రిమంగా కనిపిస్తాయి.',
+    ],
+    production_design: [
+      'సెట్స్ మరియు కాస్ట్యూమ్స్ గ్రాండ్‌గా ఉన్నాయి.',
+      'ప్రొడక్షన్ వాల్యూస్ మంచిగా ఉన్నాయి.',
+      'బడ్జెట్ కన్‌స్ట్రెయింట్స్ కనిపిస్తున్నాయి.',
+    ],
+    comedy_timing: [
+      'యాక్షన్ మధ్యలో కామెడీ రిలీఫ్ బాగా వర్క్ అయ్యింది.',
+      'కామెడీ ట్రాక్ ఓకే, కొన్ని సీన్లు నవ్వించాయి.',
+      'కామెడీ ఫోర్స్‌డ్‌గా అనిపించింది.',
     ],
   },
   Romance: {
@@ -175,10 +215,25 @@ const GENRE_ANALYSIS_TEMPLATES: Record<string, Record<string, string[]>> = {
       'ఎమోషన్స్ బాగా క్యాప్చర్ చేశారు.',
       'లొకేషన్స్ అందంగా ఉన్నాయి.',
     ],
+    dialogues_punchlines: [
+      'రొమాంటిక్ డైలాగులు హృదయాన్ని తాకుతాయి, కోటబుల్ లైన్స్ ఉన్నాయి.',
+      'ప్రేమ సంభాషణలు బాగున్నాయి.',
+      'డైలాగులు సగటం, డెప్త్ తక్కువ.',
+    ],
     music_bgm: [
       'మెలోడియస్ సాంగ్స్ హైలైట్.',
       'పాటలు హిట్ అయ్యే ఛాన్స్ ఉంది.',
       'రొమాంటిక్ BGM బాగుంది.',
+    ],
+    production_design: [
+      'లొకేషన్స్ మరియు కాస్ట్యూమ్స్ రొమాంటిక్ వైబ్ క్రియేట్ చేశాయి.',
+      'సెట్స్ అందంగా ఉన్నాయి.',
+      'ప్రొడక్షన్ సగటం.',
+    ],
+    comedy_timing: [
+      'లైట్ కామెడీ మూమెంట్స్ రిఫ్రెషింగ్‌గా ఉన్నాయి.',
+      'కామెడీ ట్రాక్ ఓకే.',
+      'కామెడీ అవసరం లేకుండా ఉండేది.',
     ],
   },
   Drama: {
@@ -192,10 +247,20 @@ const GENRE_ANALYSIS_TEMPLATES: Record<string, Record<string, string[]>> = {
       'నేరేటివ్ పద్ధతి ఆసక్తికరంగా ఉంది.',
       'స్లో బర్న్ డ్రామా, పేషెన్స్ అవసరం.',
     ],
+    dialogues_punchlines: [
+      'ఎమోషనల్ డైలాగులు హృదయాన్ని కదిలిస్తాయి, మెమొరబుల్ లైన్స్ ఉన్నాయి.',
+      'డైలాగులు సిచ్యుయేషన్‌కు తగ్గట్టుగా ఉన్నాయి.',
+      'కొన్ని డైలాగులు ఓవర్‌గా అనిపించాయి.',
+    ],
     music_bgm: [
       'బ్యాక్‌గ్రౌండ్ స్కోర్ ఎమోషన్స్‌ను సపోర్ట్ చేసింది.',
       'పాటలు సందర్భోచితంగా ఉన్నాయి.',
       'సంగీతం సినిమాకు తగ్గట్టుగా ఉంది.',
+    ],
+    production_design: [
+      'పీరియడ్ సెట్టింగ్ ఆథెంటిక్‌గా ఉంది.',
+      'కాస్ట్యూమ్స్ మరియు సెట్స్ కథకు తగ్గట్టుగా ఉన్నాయి.',
+      'ప్రొడక్షన్ సగటం.',
     ],
   },
   Comedy: {
@@ -209,15 +274,123 @@ const GENRE_ANALYSIS_TEMPLATES: Record<string, Record<string, string[]>> = {
       'లైట్-హార్టెడ్ ట్రీట్‌మెంట్.',
       'ఎంటర్‌టైన్‌మెంట్ క్వోషియంట్ హై.',
     ],
+    dialogues_punchlines: [
+      'పంచ్ డైలాగులు థియేటర్‌లో నవ్వుల వర్షం కురిపించాయి.',
+      'కామెడీ పంచ్‌లు బాగా వర్క్ అయ్యాయి.',
+      'కొన్ని పంచ్‌లు మిస్ అయ్యాయి.',
+    ],
     music_bgm: [
       'ఫన్ పాటలు బాగున్నాయి.',
       'BGM కామెడీ సీన్లకు తగ్గట్టుగా ఉంది.',
       'క్యాచీ సాంగ్స్.',
     ],
+    comedy_timing: [
+      'కామెడీ టైమింగ్ పర్ఫెక్ట్, నవ్వులు గ్యారంటీ.',
+      'పంచ్‌లు బాగా వర్క్ అయ్యాయి.',
+      'కామెడీ సీన్లు మిస్ అయ్యాయి.',
+    ],
+  },
+  Thriller: {
+    story_screenplay: [
+      'థ్రిల్లర్ ఎలిమెంట్స్ బాగా వర్క్ అయ్యాయి, ట్విస్ట్స్ షాక్ చేస్తాయి.',
+      'సస్పెన్స్ బాగా మెయింటెయిన్ అయ్యింది.',
+      'క్లైమాక్స్ ఊహించగలిగాం, సర్‌ప్రైజ్ లేదు.',
+    ],
+    direction: [
+      'దర్శకుడు టెన్షన్ బాగా బిల్ట్ చేశారు.',
+      'పేసింగ్ క్రిస్ప్‌గా ఉంది.',
+      'సస్పెన్స్ కొన్ని చోట్ల లీక్ అయ్యింది.',
+    ],
+    dialogues_punchlines: [
+      'ఇంటెన్స్ డైలాగులు థ్రిల్ క్రియేట్ చేశాయి.',
+      'డైలాగులు సిచ్యుయేషన్‌కు తగ్గట్టుగా ఉన్నాయి.',
+      'డైలాగులు సగటం.',
+    ],
+    editing_pacing: [
+      'ఎడిటింగ్ షార్ప్‌గా ఉంది, పేసింగ్ థ్రిల్లింగ్.',
+      'ఎడిటింగ్ బాగుంది, కొన్ని స్లో మూమెంట్స్ ఉన్నాయి.',
+      'ఎడిటింగ్ మెరుగుపడాలి.',
+    ],
+    vfx_special_effects: [
+      'థ్రిల్ సీన్లలో VFX బాగా వర్క్ అయ్యింది.',
+      'VFX ఓకే.',
+      'VFX అవసరం లేదు.',
+    ],
+  },
+  Horror: {
+    story_screenplay: [
+      'హారర్ ఎలిమెంట్స్ భయపెట్టాయి, కథ ఆసక్తికరంగా ఉంది.',
+      'జంప్ స్కేర్స్ వర్క్ అయ్యాయి.',
+      'హారర్ క్లిషేలు ఎక్కువ.',
+    ],
+    direction: [
+      'అట్మాస్ఫియర్ బిల్డింగ్ బాగుంది.',
+      'హారర్ సీన్లు ఎఫెక్టివ్‌గా ఉన్నాయి.',
+      'హారర్ ఫీల్ తక్కువగా ఉంది.',
+    ],
+    vfx_special_effects: [
+      'VFX హారర్ ఎలిమెంట్స్‌ను రియలిస్టిక్‌గా చూపించింది.',
+      'స్పెషల్ ఎఫెక్ట్స్ ఓకే.',
+      'VFX చీప్‌గా కనిపించింది.',
+    ],
+    production_design: [
+      'సెట్స్ క్రీపీ అట్మాస్ఫియర్ క్రియేట్ చేశాయి.',
+      'ప్రొడక్షన్ హారర్ మూడ్‌కు తగ్గట్టుగా ఉంది.',
+      'సెట్స్ కన్‌వెన్షనల్‌గా ఉన్నాయి.',
+    ],
+  },
+  Fantasy: {
+    story_screenplay: [
+      'ఫాంటసీ వరల్డ్ బిల్డింగ్ అద్భుతం.',
+      'ఇమాజినేటివ్ స్టోరీ లైన్.',
+      'ఫాంటసీ ఎలిమెంట్స్ కన్ఫ్యూజింగ్.',
+    ],
+    vfx_special_effects: [
+      'VFX వరల్డ్ క్లాస్, ఫాంటసీ వరల్డ్ లైఫ్‌లా కనిపించింది.',
+      'VFX బాగుంది, కొన్ని షాట్స్ అద్భుతం.',
+      'VFX క్వాలిటీ మిక్స్‌డ్.',
+    ],
+    production_design: [
+      'ప్రొడక్షన్ డిజైన్ గ్రాండియోస్, వరల్డ్ బిల్డింగ్ అద్భుతం.',
+      'సెట్స్ మరియు కాస్ట్యూమ్స్ ఇంప్రెసివ్.',
+      'ప్రొడక్షన్ సగటం.',
+    ],
+    action_choreography: [
+      'ఫాంటసీ యాక్షన్ సీన్లు స్పెక్టాక్యులర్.',
+      'యాక్షన్ బ్లాక్స్ ఓకే.',
+      'యాక్షన్ కొరియోగ్రఫీ మెరుగుపడాలి.',
+    ],
+  },
+  Period: {
+    story_screenplay: [
+      'చారిత్రక కథ ఆథెంటిక్‌గా చెప్పారు.',
+      'పీరియడ్ సెట్టింగ్ బాగుంది.',
+      'హిస్టారికల్ యాక్యురసీ తక్కువ.',
+    ],
+    production_design: [
+      'పీరియడ్ సెట్స్ మరియు కాస్ట్యూమ్స్ అద్భుతం, డీటెయిల్ వర్క్ ప్రశంసనీయం.',
+      'ప్రొడక్షన్ వాల్యూస్ హై.',
+      'పీరియడ్ ఫీల్ కన్సిస్టెంట్‌గా లేదు.',
+    ],
+    cinematography: [
+      'గ్రాండ్ విజువల్స్, ఎపిక్ స్కేల్.',
+      'కెమెరా వర్క్ ఇంప్రెసివ్.',
+      'విజువల్స్ ఓకే.',
+    ],
+    action_choreography: [
+      'పీరియడ్ వార్ సీక్వెన్సులు స్పెక్టాక్యులర్.',
+      'యాక్షన్ బాగుంది.',
+      'యాక్షన్ కొరియోగ్రఫీ మెరుగుపడాలి.',
+    ],
+    dialogues_punchlines: [
+      'చారిత్రక డైలాగులు పవర్‌ఫుల్, కోటబుల్ లైన్స్ ఉన్నాయి.',
+      'డైలాగులు పీరియడ్‌కు తగ్గట్టుగా ఉన్నాయి.',
+      'డైలాగులు మోడర్న్‌గా అనిపించాయి.',
+    ],
   },
 };
 
-// Default templates for any genre
+// Default templates for any genre (15-dimension model v2.0)
 const DEFAULT_ANALYSIS_TEMPLATES: Record<string, string[]> = {
   story_screenplay: [
     'కథ ఆసక్తికరంగా ఉంది.',
@@ -228,6 +401,11 @@ const DEFAULT_ANALYSIS_TEMPLATES: Record<string, string[]> = {
     'దర్శకుడి ప్రయత్నం కనిపిస్తుంది.',
     'సినిమాటిక్ మేకింగ్ బాగుంది.',
     'కొన్ని సీన్లలో మెరుగుపడాల్సిన అవసరం ఉంది.',
+  ],
+  dialogues_punchlines: [
+    'డైలాగులు పవర్‌ఫుల్, కోటబుల్ లైన్స్ ఉన్నాయి.',
+    'డైలాగులు సిచ్యుయేషన్‌కు తగ్గట్టుగా ఉన్నాయి.',
+    'డైలాగులు సగటం, ఇంపాక్ట్ తక్కువ.',
   ],
   acting_lead: [
     'హీరో/హీరోయిన్ నటన బాగుంది.',
@@ -249,15 +427,35 @@ const DEFAULT_ANALYSIS_TEMPLATES: Record<string, string[]> = {
     'కెమెరా వర్క్ బాగుంది.',
     'లొకేషన్స్, లైటింగ్ హైలైట్.',
   ],
+  action_choreography: [
+    'యాక్షన్ సీన్లు ఇంప్రెసివ్‌గా ఉన్నాయి.',
+    'ఫైట్ సీక్వెన్సులు ఓకే.',
+    'యాక్షన్ కొరియోగ్రఫీ సగటం.',
+  ],
+  vfx_special_effects: [
+    'VFX వర్క్ బాగుంది.',
+    'స్పెషల్ ఎఫెక్ట్స్ ఓకే.',
+    'VFX సగటం, మెరుగుపడాలి.',
+  ],
   editing_pacing: [
     'ఎడిటింగ్ క్రిస్ప్‌గా ఉంది.',
     'పేసింగ్ కొన్ని చోట్ల స్లో అవుతుంది.',
     'రన్‌టైమ్ తగ్గించి ఉంటే బాగుండేది.',
   ],
+  production_design: [
+    'ప్రొడక్షన్ వాల్యూస్ హై, అట్టెన్షన్ టు డీటెయిల్ బాగుంది.',
+    'సెట్స్ మరియు కాస్ట్యూమ్స్ ఓకే.',
+    'ప్రొడక్షన్ సగటం.',
+  ],
   emotional_impact: [
     'ఎమోషనల్ సీన్లు టచ్ చేస్తాయి.',
     'కొన్ని మూమెంట్స్ హృదయాన్ని కదిలిస్తాయి.',
     'ఎమోషన్ కనెక్ట్ సగటం.',
+  ],
+  comedy_timing: [
+    'కామెడీ బాగా వర్క్ అయ్యింది, నవ్వులు గ్యారంటీ.',
+    'కామెడీ ట్రాక్ ఓకే.',
+    'కామెడీ ఫోర్స్‌డ్‌గా అనిపించింది.',
   ],
   rewatch_value: [
     'ఒకసారి చూడొచ్చు.',
@@ -276,7 +474,7 @@ const DEFAULT_ANALYSIS_TEMPLATES: Record<string, string[]> = {
 // ============================================================
 
 /**
- * Calculate dimension scores from available ratings
+ * Calculate dimension scores from available ratings (15-dimension model v2.0)
  */
 function calculateDimensionScores(movie: Movie): Record<string, number> {
   // Start with base rating
@@ -288,20 +486,66 @@ function calculateDimensionScores(movie: Movie): Record<string, number> {
   // Apply variance based on genre and available data
   const scores: Record<string, number> = {};
   const variance = 0.8; // ±0.8 variance
+  const genres = movie.genres || [];
   
   for (const key of Object.keys(DIMENSION_DEFINITIONS)) {
     // Base score with small variance
     let score = normalizedBase + (Math.random() * variance * 2 - variance);
     
-    // Apply genre-specific adjustments
-    if (movie.genres?.includes('Action') && key === 'cinematography') {
+    // Apply genre-specific adjustments for original dimensions
+    if (genres.includes('Action') && key === 'cinematography') {
       score += 0.5;
     }
-    if (movie.genres?.includes('Romance') && key === 'emotional_impact') {
+    if (genres.includes('Romance') && key === 'emotional_impact') {
       score += 0.5;
     }
-    if (movie.genres?.includes('Comedy') && key === 'acting_supporting') {
+    if (genres.includes('Comedy') && key === 'acting_supporting') {
       score += 0.3;
+    }
+    
+    // NEW: Genre-specific adjustments for new dimensions
+    // Action Choreography
+    if (key === 'action_choreography') {
+      if (genres.includes('Action') || genres.includes('Thriller')) {
+        score += 0.5; // Boost for action films
+      } else if (!genres.includes('Fantasy') && !genres.includes('Period')) {
+        score = 5; // N/A for non-action films
+      }
+    }
+    
+    // VFX & Special Effects
+    if (key === 'vfx_special_effects') {
+      if (genres.includes('Fantasy') || genres.includes('Sci-Fi') || genres.includes('Horror')) {
+        score += 0.5;
+      } else if (genres.includes('Drama') || genres.includes('Romance')) {
+        score = 5; // N/A for non-VFX heavy films
+      }
+    }
+    
+    // Dialogues & Punchlines
+    if (key === 'dialogues_punchlines') {
+      if (genres.includes('Action') || genres.includes('Comedy')) {
+        score += 0.3; // Mass dialogues are important
+      }
+      if (genres.includes('Drama')) {
+        score += 0.2; // Emotional dialogues
+      }
+    }
+    
+    // Comedy Timing
+    if (key === 'comedy_timing') {
+      if (genres.includes('Comedy')) {
+        score += 0.5; // Primary focus
+      } else if (genres.includes('Drama') || genres.includes('Thriller') || genres.includes('Horror')) {
+        score = 5; // N/A for serious genres
+      }
+    }
+    
+    // Production Design
+    if (key === 'production_design') {
+      if (genres.includes('Period') || genres.includes('Fantasy')) {
+        score += 0.5; // Critical for period/fantasy films
+      }
     }
     
     // Clamp to valid range
@@ -385,6 +629,203 @@ function getAnalysisTemplate(
 }
 
 // ============================================================
+// WHY WATCH / WHY SKIP GENERATION
+// ============================================================
+
+/**
+ * Generate "Why Watch" reasons based on movie data and dimension scores
+ */
+function generateWhyWatch(
+  movie: Movie, 
+  dimensionScores: Record<string, number>
+): string[] {
+  const reasons: string[] = [];
+  const genres = movie.genres || [];
+  
+  // Lead actor performance
+  if (dimensionScores.acting_lead >= 8 && movie.hero) {
+    reasons.push(`${movie.hero}'s powerful performance`);
+  }
+  
+  // Music
+  if (dimensionScores.music_bgm >= 8) {
+    reasons.push('Outstanding music and BGM that stays with you');
+  }
+  
+  // Action sequences
+  if (dimensionScores.action_choreography >= 8 && genres.includes('Action')) {
+    reasons.push('Spectacular action sequences');
+  }
+  
+  // Dialogues (for mass films)
+  if (dimensionScores.dialogues_punchlines >= 8) {
+    reasons.push('Mass dialogues that will be repeated by fans');
+  }
+  
+  // Emotional impact
+  if (dimensionScores.emotional_impact >= 8) {
+    reasons.push('Emotionally moving moments that touch the heart');
+  }
+  
+  // Comedy
+  if (dimensionScores.comedy_timing >= 8 && genres.includes('Comedy')) {
+    reasons.push('Genuine laughs and well-timed comedy');
+  }
+  
+  // VFX for visual films
+  if (dimensionScores.vfx_special_effects >= 8 && (genres.includes('Fantasy') || genres.includes('Action'))) {
+    reasons.push('World-class VFX and visual spectacle');
+  }
+  
+  // Production design for period films
+  if (dimensionScores.production_design >= 8 && genres.includes('Period')) {
+    reasons.push('Stunning period sets and costumes');
+  }
+  
+  // Cinematography
+  if (dimensionScores.cinematography >= 8) {
+    reasons.push('Beautiful visuals and cinematography');
+  }
+  
+  // Story
+  if (dimensionScores.story_screenplay >= 8) {
+    reasons.push('Engaging story with good twists');
+  }
+  
+  // Direction
+  if (dimensionScores.direction >= 8 && movie.director) {
+    reasons.push(`${movie.director}'s masterful direction`);
+  }
+  
+  // If we have few reasons, add generic ones based on overall score
+  const overallScore = Object.values(dimensionScores).reduce((a, b) => a + b, 0) / Object.values(dimensionScores).length;
+  
+  if (reasons.length < 2 && overallScore >= 6.5) {
+    reasons.push('Solid entertainment value');
+  }
+  
+  if (reasons.length < 2 && genres.includes('Family')) {
+    reasons.push('Family-friendly content');
+  }
+  
+  return reasons.slice(0, 5);
+}
+
+/**
+ * Generate "Why Skip" reasons based on movie data and dimension scores
+ */
+function generateWhySkip(
+  movie: Movie,
+  dimensionScores: Record<string, number>
+): string[] {
+  const reasons: string[] = [];
+  const genres = movie.genres || [];
+  
+  // Weak story
+  if (dimensionScores.story_screenplay <= 4) {
+    reasons.push('Predictable story with weak screenplay');
+  }
+  
+  // Pacing issues
+  if (dimensionScores.editing_pacing <= 4) {
+    reasons.push('Pacing issues and unnecessary length');
+  }
+  
+  // Poor performances
+  if (dimensionScores.acting_lead <= 4) {
+    reasons.push('Unconvincing lead performances');
+  }
+  
+  // Weak direction
+  if (dimensionScores.direction <= 4) {
+    reasons.push('Lackluster direction');
+  }
+  
+  // Poor music
+  if (dimensionScores.music_bgm <= 4) {
+    reasons.push('Forgettable music');
+  }
+  
+  // Bad VFX in VFX-heavy films
+  if (dimensionScores.vfx_special_effects <= 4 && (genres.includes('Fantasy') || genres.includes('Action'))) {
+    reasons.push('Subpar VFX that distracts');
+  }
+  
+  // Forced comedy
+  if (dimensionScores.comedy_timing <= 4 && genres.includes('Comedy')) {
+    reasons.push('Forced comedy that falls flat');
+  }
+  
+  // Genre-specific skip reasons
+  if (genres.includes('Horror') && dimensionScores.emotional_impact <= 5) {
+    reasons.push('Not scary enough for horror fans');
+  }
+  
+  if (genres.includes('Thriller') && dimensionScores.editing_pacing <= 5) {
+    reasons.push('Thriller loses momentum');
+  }
+  
+  // Content warnings
+  if (genres.includes('Horror')) {
+    reasons.push('Not for those sensitive to horror elements');
+  }
+  
+  // Runtime warning for long films
+  // Note: We don't have runtime in the current Movie interface, but could add
+  
+  return reasons.slice(0, 3);
+}
+
+/**
+ * Generate critic vs audience perspective
+ */
+function generateCriticAudienceGap(
+  movie: Movie,
+  dimensionScores: Record<string, number>,
+  overallScore: number
+): { 
+  critic_lean: 'positive' | 'negative' | 'neutral';
+  audience_lean: 'positive' | 'negative' | 'neutral';
+  divergence_note?: string;
+} {
+  const genres = movie.genres || [];
+  
+  // Default to neutral
+  let critic_lean: 'positive' | 'negative' | 'neutral' = 'neutral';
+  let audience_lean: 'positive' | 'negative' | 'neutral' = 'neutral';
+  let divergence_note: string | undefined;
+  
+  // Mass entertainers: audience loves, critics mixed
+  if (genres.includes('Action') && dimensionScores.mass_vs_class >= 7) {
+    audience_lean = 'positive';
+    critic_lean = overallScore >= 7 ? 'positive' : 'neutral';
+    if (audience_lean !== critic_lean) {
+      divergence_note = 'Mass audience will enjoy more than critics appreciate';
+    }
+  }
+  
+  // Art films: critics appreciate, audience mixed
+  if (genres.includes('Drama') && dimensionScores.mass_vs_class <= 4) {
+    critic_lean = overallScore >= 7 ? 'positive' : 'neutral';
+    audience_lean = 'neutral';
+    if (overallScore >= 7) {
+      divergence_note = 'Critics will appreciate the craft; not for mainstream audience';
+    }
+  }
+  
+  // Commercial success indicator
+  if (overallScore >= 7.5) {
+    audience_lean = 'positive';
+    critic_lean = 'positive';
+  } else if (overallScore < 5) {
+    audience_lean = 'negative';
+    critic_lean = 'negative';
+  }
+  
+  return { critic_lean, audience_lean, divergence_note };
+}
+
+// ============================================================
 // MAIN GENERATOR
 // ============================================================
 
@@ -443,6 +884,17 @@ export function generateTemplateReview(movie: Movie): TemplateReview {
     dataQuality === 'low' ? 0.35 :
     0.2;
   
+  // v2.0: Generate Why Watch / Why Skip
+  const whyWatch = generateWhyWatch(movie, dimensionScores);
+  const whySkip = generateWhySkip(movie, dimensionScores);
+  const criticAudienceGap = generateCriticAudienceGap(movie, dimensionScores, overallScore);
+  
+  // Cultural context for classics
+  let culturalContext: string | undefined;
+  if (movie.release_year && movie.release_year <= 2000 && overallScore >= 7) {
+    culturalContext = `A classic from ${movie.release_year} that set benchmarks for Telugu cinema of its era.`;
+  }
+  
   return {
     movie_id: movie.id,
     movie_title: movie.title_en,
@@ -459,6 +911,11 @@ export function generateTemplateReview(movie: Movie): TemplateReview {
     confidence,
     data_quality: dataQuality,
     generated_at: new Date().toISOString(),
+    // v2.0 sections
+    why_watch: whyWatch.length > 0 ? whyWatch : undefined,
+    why_skip: whySkip.length > 0 ? whySkip : undefined,
+    critic_audience_gap: criticAudienceGap,
+    cultural_context: culturalContext,
   };
 }
 

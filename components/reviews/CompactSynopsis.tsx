@@ -44,3 +44,4 @@ export function CompactSynopsis({ text, teluguText, maxLines = 3 }: CompactSynop
   );
 }
 
+

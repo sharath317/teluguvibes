@@ -1,8 +1,17 @@
 # TeluguVibes - Complete System Architecture
 
-> **Version:** 3.0 - Unified Movie & Content Pipeline  
-> **Last Updated:** January 2025  
+> **Version:** 4.0 - Enhanced 15-Dimension Review System  
+> **Last Updated:** January 2026  
 > **GitHub:** https://github.com/sharath317/teluguvibes
+> 
+> **What's New in v4.0:**
+> - 15-dimension review model (5 new Telugu-specific dimensions)
+> - Why Watch / Why Skip sections
+> - Crew insights with filmography comparison
+> - Enhanced tagging system (40+ tags)
+> - Canonical "Best Of" lists with versioning
+> - Coverage intelligence dashboard
+> - Multi-language curated mode
 
 ---
 
@@ -165,19 +174,28 @@ CLI: pnpm ingest:movies:smart [--limit=500] [--dry] [--force]
 PHASE 4: REVIEW GENERATION
 ─────────────────────────────
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                         TEMPLATE-FIRST REVIEW SYSTEM                                     │
+│                     ENHANCED 15-DIMENSION REVIEW SYSTEM (v2.0)                           │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                          │
-│  DIMENSIONS (10-axis scoring):                                                           │
+│  CORE DIMENSIONS (10):                                                                   │
 │  ┌─────────────────────────────────────────────────────────────────────────────────┐    │
 │  │  story_screenplay  │ direction │ acting_lead │ acting_supporting │ music_bgm   │    │
 │  │  cinematography    │ editing_pacing │ emotional_impact │ mass_vs_class │ rewatch │    │
+│  └─────────────────────────────────────────────────────────────────────────────────┘    │
+│                                                                                          │
+│  NEW TELUGU-SPECIFIC DIMENSIONS (5):                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐    │
+│  │  dialogues_punchlines (8%) │ action_choreography (6%) │ comedy_timing (5%)      │    │
+│  │  production_design (4%)    │ vfx_special_effects (5%)                           │    │
 │  └─────────────────────────────────────────────────────────────────────────────────┘    │
 │                                                                                          │
 │  OUTPUT:                                                                                 │
 │  • Telugu verdict (అద్భుతం, బాగుంది, మధ్యమం, నిరాశపరిచింది)                            │
 │  • Telugu analysis per dimension                                                         │
 │  • Strengths & weaknesses list                                                           │
+│  • **Why Watch / Why Skip** sections (NEW)                                               │
+│  • **Crew Insights** with filmography comparison (NEW)                                   │
+│  • **Audience Signals** (age rating, mood, watch context) (NEW)                          │
 │  • Overall score (0-10)                                                                  │
 │  • Confidence score (0-1)                                                                │
 │                                                                                          │
@@ -453,12 +471,19 @@ telugu-portal/
 │   ├── movie-validation/             # Validation gates
 │   │   ├── movie-identity-gate.ts
 │   │   └── movie-audit-engine.ts
-│   ├── reviews/                      # Review system
-│   │   ├── coverage-engine.ts
-│   │   ├── template-reviews.ts
-│   │   └── multi-axis-review.ts
+│   ├── reviews/                      # Review system (ENHANCED)
+│   │   ├── coverage-engine.ts        # 15-dimension scoring
+│   │   ├── template-reviews.ts       # Why Watch/Skip generation
+│   │   ├── multi-axis-review.ts      # AI-powered analysis
+│   │   ├── review-insights.ts        # Crew insights, comparisons
+│   │   ├── audience-signals.ts       # Age rating, mood derivation
+│   │   ├── coverage-intelligence.ts  # Coverage dashboard data
+│   │   └── tag-derivation.ts         # Auto-tagging rules
 │   ├── story-engine/                 # Story arcs
 │   │   └── connected-stories.ts
+│   ├── lists/                        # Canonical lists (NEW)
+│   │   ├── canonical-lists.ts
+│   │   └── index.ts
 │   ├── intelligence/                 # Learning engine
 │   │   ├── trend-ingestion.ts
 │   │   ├── learning-engine.ts
@@ -487,7 +512,10 @@ telugu-portal/
 │   ├── MovieCard.tsx
 │   ├── ReviewCard.tsx
 │   ├── CelebrityCard.tsx
-│   └── seo/SchemaScript.tsx
+│   ├── seo/SchemaScript.tsx
+│   └── stories/                      # Story timeline UI (NEW)
+│       ├── StoryTimelineCard.tsx     # Connected story cards
+│       └── index.ts
 │
 ├── docs/                             # Documentation
 │   ├── COMPLETE-ARCHITECTURE.md      # This file
@@ -1096,17 +1124,37 @@ pnpm intel:normalize:celebs  # Normalize names
 
 ---
 
-## 📝 Review Enhancement Structure
+## 📝 Review Enhancement Structure (v2.0)
 
-### Template Review Dimensions
+### 15-Dimension Review Model
 
-| Dimension | Weight | Source |
-|-----------|--------|--------|
-| Performance | 25% | Cast analysis |
-| Direction | 20% | Director + TMDB score |
-| Technical | 20% | Production values |
-| Story | 20% | Genre + narrative |
-| Music | 15% | Music director |
+| Dimension | Weight | Source | Description |
+|-----------|--------|--------|-------------|
+| story_screenplay | 12% | Genre + narrative | Script quality, narrative flow |
+| direction | 10% | Director + TMDB | Vision, execution, pacing control |
+| acting_lead | 10% | Cast analysis | Lead performance depth |
+| acting_supporting | 8% | Cast analysis | Supporting cast contributions |
+| music_bgm | 10% | Music director | Songs + background score |
+| cinematography | 8% | DOP analysis | Visual storytelling, framing |
+| editing_pacing | 6% | Technical | Rhythm, transitions, length |
+| emotional_impact | 6% | Sentiment analysis | Emotional resonance |
+| mass_vs_class | 5% | Genre + audience | Commercial vs artistic balance |
+| rewatch_value | 4% | Engagement data | Re-watch potential |
+| **dialogues_punchlines** | 8% | Telugu-specific | Punch lines, quotable dialogue |
+| **action_choreography** | 6% | Genre-specific | Fight sequences, stunts |
+| **comedy_timing** | 5% | Genre-specific | Humor execution, comic relief |
+| **production_design** | 4% | Technical | Sets, costumes, art direction |
+| **vfx_special_effects** | 5% | Technical | Visual effects quality |
+
+### Enhanced Review Sections
+
+| Section | Content | Logic |
+|---------|---------|-------|
+| Why Watch | 3-5 bullet points | Strengths + unique selling points |
+| Why Skip | 2-3 honest negatives | Fair warnings for audiences |
+| Crew Insights | Director/Music comparison | Filmography comparison with past works |
+| Audience Signals | Watch context recommendations | Age rating, mood, ideal viewing scenario |
+| Critic vs Audience Gap | Divergence analysis | Where critics and audience opinions differ |
 
 ### Connected Content (Mini-Story) Logic
 
@@ -1156,6 +1204,138 @@ Each review auto-links to:
 | `entities-normalize.ts` | Normalize names/titles | ✅ |
 | `movies-enrich-media.ts` | Fill missing images | ✅ |
 | `reviews-enhance.ts` | Add structured review sections | ✅ |
+
+---
+
+## 📊 Enhanced Tagging System (v2.0)
+
+### Box Office Tags
+
+Movies are auto-tagged based on rating + popularity:
+
+| Tag | Criteria |
+|-----|----------|
+| `industry-hit` | Rating ≥ 7.5, Popularity ≥ 90 |
+| `blockbuster` | Rating ≥ 7.0, Popularity ≥ 75 |
+| `super-hit` | Rating ≥ 7.0, Popularity ≥ 50 |
+| `hit` | Rating ≥ 6.5, Popularity ≥ 30 |
+| `average` | Rating 5.0-6.5 |
+| `below-average` | Rating < 5.0 |
+
+### Mood Tags
+
+Derived from genre + emotional impact score:
+
+| Tag | Mapped Genres/Conditions |
+|-----|--------------------------|
+| `feel-good` | Comedy, Family + emotional_impact ≥ 7 |
+| `dark-intense` | Thriller, Crime, Horror |
+| `thought-provoking` | Drama + rating ≥ 7.5 |
+| `patriotic` | Keywords: freedom, india, army |
+| `nostalgic` | Release year < 2000 |
+| `inspirational` | Biography, Sports + rating ≥ 7 |
+
+### Content Flags
+
+| Flag | Purpose |
+|------|---------|
+| `pan_india` | Multi-language release |
+| `remake_of` | Links to original movie |
+| `sequel_number` | Franchise position |
+| `biopic` | Biographical film |
+
+### Audience Signals
+
+| Signal | Values |
+|--------|--------|
+| `age_rating` | U, U/A, A, S |
+| `trigger_warnings` | violence, death, trauma, abuse, substance-use |
+| `watch_context` | theater, ott, family, date_movie, group_watch |
+
+---
+
+## 📋 Canonical Lists System
+
+Auto-generated "Best Of" lists with versioning.
+
+### List Types
+
+| Type | Parameter | Example |
+|------|-----------|---------|
+| `best_of_year` | Year | "Best Telugu Movies of 2024" |
+| `top_by_director` | Director name | "SS Rajamouli's Best Films" |
+| `top_by_actor` | Actor name | "NTR's Greatest Performances" |
+| `genre_essentials` | Genre | "Essential Action Telugu Movies" |
+| `decade_classics` | Decade start | "Classic Telugu Movies of the 90s" |
+| `blockbusters` | - | "Telugu Blockbusters of All Time" |
+| `underrated_gems` | - | "Underrated Telugu Gems" |
+| `cult_classics` | - | "Telugu Cult Classics" |
+
+### List Features
+
+- **Versioned**: Each regeneration creates new version
+- **Bilingual**: Telugu + English titles/descriptions
+- **Reasoned**: Each movie includes "why it's here" explanation
+- **Badge-enhanced**: Movies tagged with blockbuster, award-winner, etc.
+
+### CLI Commands
+
+```bash
+pnpm lists:generate:yearly 2000 2024  # Generate best of year lists
+pnpm lists:generate:directors          # Top director filmographies
+pnpm lists:generate:genres             # Genre essential lists
+pnpm lists:generate:featured           # Blockbusters, gems, classics
+```
+
+---
+
+## 🌐 Multi-Language Ingestion
+
+### Telugu (Primary) - Full Index Mode
+
+- **Target**: 99% coverage of all Telugu movies
+- **Mode**: `--mode=full_index`
+- **Accepts**: `metadata_status: 'partial'` for incomplete data
+- **Never rejects**: Telugu movies due to missing data
+
+### Non-Telugu (Curated Mode)
+
+Stricter quality gates for Hindi, Tamil, Malayalam, Kannada, English:
+
+| Rule | Requirement |
+|------|-------------|
+| Min Rating | 6.5+ |
+| Min Votes | 100+ |
+| Blockbuster OR Award | At least one required |
+| Explicit Flop Exclusion | Rating < 5.0 rejected |
+| Convergence Score | Optional AI-driven selection |
+
+### CLI Commands
+
+```bash
+pnpm ingest:tmdb:telugu --mode=full_index     # Full Telugu coverage
+pnpm ingest:multilang --mode=curated          # Quality-gated other languages
+```
+
+---
+
+## 📈 Coverage Intelligence Dashboard
+
+### Coverage Breakdown
+
+| Dimension | Tracked Metrics |
+|-----------|-----------------|
+| By Language | Telugu, Hindi, Tamil, etc. coverage % |
+| By Category | Blockbusters, Classics, Recent coverage |
+| By Tag | Genre distribution, mood coverage |
+| Quality Metrics | Missing metadata, weak reviews, duplicates |
+
+### Coverage Targets
+
+| Language | Target |
+|----------|--------|
+| Telugu | 99% |
+| Non-Telugu | Quality-curated only (no coverage target) |
 
 ---
 

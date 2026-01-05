@@ -8,13 +8,43 @@ This document outlines the steps to generate high-quality editorial reviews for 
 
 ## Prerequisites
 
-1. **API Keys configured** in `.env.local`:
+1. **AI API Keys** in `.env.local`:
    - `GROQ_API_KEY` (primary - 6 keys available)
    - `OPENAI_API_KEY` (fallback - 5 valid keys)
 
-2. **Movies with images**: Only movies with `poster_url` are processed
+2. **Multi-Source API Keys** (optional, reduces AI costs by ~60%):
+   - `OMDB_API_KEY` - Ratings from IMDB, RT, Metacritic
+   - `GOOGLE_KG_API_KEY` - Entity descriptions and context
 
-3. **Movies with ratings**: Only movies with `our_rating` are prioritized
+3. **Movies with images**: Only movies with `poster_url` are processed
+
+4. **Movies with ratings**: Only movies with `our_rating` are prioritized
+
+---
+
+## Multi-Source Data Pipeline (NEW)
+
+Before calling AI, the system fetches factual data from external sources:
+
+```
+Movie → Multi-Source Fetcher → Cache Check → AI (only for missing data)
+              ↓
+         Parallel:
+         ├── Wikipedia (Plot, Reception, Legacy)
+         ├── OMDb (Ratings, Awards text)
+         ├── Wikidata (Structured awards via SPARQL)
+         └── Google KG (Entity descriptions)
+```
+
+### Benefits
+- **60-75% fewer AI calls** when Wikipedia/OMDb have good coverage
+- **Factual accuracy** - awards, ratings come from authoritative sources
+- **30-day cache** - factual data rarely changes
+
+### Test Multi-Source
+```bash
+pnpm tsx scripts/test-multi-source.ts
+```
 
 ---
 

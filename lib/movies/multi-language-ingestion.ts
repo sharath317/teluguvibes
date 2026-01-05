@@ -10,6 +10,12 @@
  *   - OR Hidden Gem (lesser-known but highly rated)
  *   - OR Blockbuster (commercially successful)
  * - NO flop movies (rating < 5.0 or known flops)
+ * 
+ * v2.0 CURATED MODE:
+ * - Even stricter gates for non-Telugu content
+ * - Only Blockbuster OR Award winner OR Cultural impact OR High convergence
+ * - Explicit flop exclusion
+ * - Reduced quotas per language
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -42,6 +48,22 @@ export interface QualityGates {
   min_vote_count: number;
   exclude_genres: string[];
   max_age_years?: number; // For classics, no limit
+}
+
+export type IngestionMode = 'standard' | 'curated';
+
+export interface CuratedModeConfig {
+  // Stricter requirements for curated mode
+  min_rating: number;
+  min_vote_count: number;
+  require_criteria_count: number; // Must meet N of these criteria
+  criteria: {
+    is_blockbuster: boolean;
+    has_awards: boolean;
+    is_pan_india: boolean;
+    high_convergence: boolean; // Both TMDB and IMDb agree on high rating
+    cultural_impact: boolean;
+  };
 }
 
 // ============================================================
@@ -116,12 +138,52 @@ export const LANGUAGE_CONFIGS: LanguageConfig[] = [
   },
 ];
 
-// Quality gates for non-Telugu movies
+// Quality gates for non-Telugu movies (standard mode)
 export const QUALITY_GATES: QualityGates = {
   min_rating: 6.5,
   min_vote_count: 50, // Avoid obscure movies
   exclude_genres: ['Adult', 'Documentary'], // Focus on feature films
 };
+
+// v2.0: Curated mode - much stricter gates
+export const CURATED_MODE_CONFIG: CuratedModeConfig = {
+  min_rating: 7.5,
+  min_vote_count: 200, // More reliable ratings
+  require_criteria_count: 1, // Must meet at least 1 of the criteria below
+  criteria: {
+    is_blockbuster: true,
+    has_awards: true,
+    is_pan_india: true,
+    high_convergence: true,
+    cultural_impact: true,
+  },
+};
+
+// v2.0: Curated mode language quotas (reduced)
+export const CURATED_LANGUAGE_QUOTAS: Record<SupportedLanguage, number> = {
+  Telugu: 2000, // Full Telugu coverage (not curated)
+  Hindi: 100,   // Only 100 best Hindi films
+  Tamil: 75,    // Only 75 best Tamil films
+  Malayalam: 50, // Only 50 best Malayalam films
+  English: 50,  // Only 50 best Hollywood films
+  Kannada: 30,  // Only 30 best Kannada films
+  Dubbed: 20,   // Only 20 dubbed films
+};
+
+// Known award-winning films (National Awards, Filmfare, etc.)
+export const KNOWN_AWARD_WINNERS: string[] = [
+  // Pan-India hits
+  'RRR', 'Baahubali', 'KGF', 'Pushpa', 'Pathaan', '3 Idiots', 'Dangal',
+  // National Award winners
+  'Mahanati', 'Jersey', 'Soorarai Pottru', 'Drishyam', 'Jai Bhim',
+  // Critically acclaimed
+  'Tumbbad', 'Andhadhun', 'Article 15', 'Super Deluxe', 'Vikram Vedha',
+];
+
+// Known flops to explicitly exclude
+export const KNOWN_FLOPS: string[] = [
+  // Add specific titles to exclude
+];
 
 // Known blockbuster directors/actors for each language
 export const BLOCKBUSTER_MARKERS: Record<SupportedLanguage, { directors: string[]; actors: string[] }> = {
@@ -286,6 +348,127 @@ export function checkMovieQuality(
     category: 'rejected',
     reason: 'Did not meet quality thresholds',
     confidence: 0.5,
+  };
+}
+
+/**
+ * v2.0: Curated mode quality check - stricter gates for non-Telugu movies
+ * 
+ * A movie passes curated mode if it meets ALL of:
+ * 1. Min rating (7.5+)
+ * 2. Min vote count (200+)
+ * 3. At least ONE of these criteria:
+ *    - Is a known blockbuster (top director/actor)
+ *    - Has won awards
+ *    - Is a Pan-India release
+ *    - Has high rating convergence (TMDB + IMDb agree)
+ *    - Has cultural impact (widely discussed)
+ */
+export function checkCuratedQuality(
+  movie: MovieCandidate & { 
+    imdb_rating?: number;
+    is_pan_india?: boolean;
+    awards?: string[];
+  },
+  config: LanguageConfig
+): QualityCheckResult {
+  const language = config.language;
+  
+  // Telugu movies bypass curated gates
+  if (language === 'Telugu') {
+    return checkMovieQuality(movie, config);
+  }
+  
+  // Check minimum thresholds
+  if (movie.vote_average < CURATED_MODE_CONFIG.min_rating) {
+    return {
+      passed: false,
+      category: 'rejected',
+      reason: `Curated mode: Rating ${movie.vote_average} below ${CURATED_MODE_CONFIG.min_rating}`,
+      confidence: 1.0,
+    };
+  }
+  
+  if (movie.vote_count < CURATED_MODE_CONFIG.min_vote_count) {
+    return {
+      passed: false,
+      category: 'rejected',
+      reason: `Curated mode: Only ${movie.vote_count} votes (need ${CURATED_MODE_CONFIG.min_vote_count}+)`,
+      confidence: 0.9,
+    };
+  }
+  
+  // Explicit flop exclusion
+  if (KNOWN_FLOPS.some(f => movie.title.toLowerCase().includes(f.toLowerCase()))) {
+    return {
+      passed: false,
+      category: 'rejected',
+      reason: 'Curated mode: Known flop excluded',
+      confidence: 1.0,
+    };
+  }
+  
+  // Count how many criteria are met
+  let criteriaCount = 0;
+  const criteriaReasons: string[] = [];
+  
+  const markers = BLOCKBUSTER_MARKERS[language];
+  
+  // Criterion 1: Blockbuster (top director/actor)
+  const isBlockbusterDirector = markers?.directors.some(d => 
+    movie.director?.toLowerCase().includes(d.toLowerCase())
+  );
+  const hasBlockbusterCast = markers?.actors.some(a => 
+    movie.cast?.some(c => c.toLowerCase().includes(a.toLowerCase()))
+  );
+  if (isBlockbusterDirector || hasBlockbusterCast) {
+    criteriaCount++;
+    criteriaReasons.push('Blockbuster');
+  }
+  
+  // Criterion 2: Has awards
+  const hasAwards = (movie.awards && movie.awards.length > 0) || 
+    KNOWN_AWARD_WINNERS.some(w => movie.title.toLowerCase().includes(w.toLowerCase()));
+  if (hasAwards) {
+    criteriaCount++;
+    criteriaReasons.push('Award winner');
+  }
+  
+  // Criterion 3: Pan-India release
+  if (movie.is_pan_india) {
+    criteriaCount++;
+    criteriaReasons.push('Pan-India');
+  }
+  
+  // Criterion 4: High convergence (both TMDB and IMDb agree on high rating)
+  if (movie.imdb_rating && movie.imdb_rating >= 7.5 && movie.vote_average >= 7.5) {
+    criteriaCount++;
+    criteriaReasons.push('High convergence');
+  }
+  
+  // Criterion 5: Cultural impact (very high votes + rating)
+  if (movie.vote_count >= 1000 && movie.vote_average >= 8.0) {
+    criteriaCount++;
+    criteriaReasons.push('Cultural impact');
+  }
+  
+  // Check if enough criteria are met
+  if (criteriaCount >= CURATED_MODE_CONFIG.require_criteria_count) {
+    const category = hasAwards ? 'blockbuster' : 
+                     criteriaReasons.includes('Cultural impact') ? 'classic' : 'quality';
+    return {
+      passed: true,
+      category,
+      reason: `Curated: ${criteriaReasons.join(', ')}`,
+      confidence: 0.85 + (criteriaCount * 0.03),
+    };
+  }
+  
+  return {
+    passed: false,
+    category: 'rejected',
+    reason: `Curated mode: No qualifying criteria met (checked: blockbuster, awards, pan-india, convergence, impact)`,
+    confidence: 0.8,
   };
 }
 

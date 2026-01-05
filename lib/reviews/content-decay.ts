@@ -272,3 +272,4 @@ export const contentDecay = {
 
 export default contentDecay;
 
+

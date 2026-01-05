@@ -15,6 +15,7 @@ interface RewriteOptions {
   dryRun?: boolean;
   batchSize?: number;
   startFrom?: number;
+  forceUnknown?: boolean; // Force regeneration of reviews with "Unknown" actors
 }
 
 async function fetchTopTeluguMovies(limit: number = 500): Promise<any[]> {
@@ -47,19 +48,45 @@ async function fetchTopTeluguMovies(limit: number = 500): Promise<any[]> {
   return data || [];
 }
 
-async function rewriteReview(movie: any, dryRun: boolean = false): Promise<{ success: boolean; qualityScore: number }> {
+async function rewriteReview(movie: any, dryRun: boolean = false, skipExisting: boolean = true, forceUnknown: boolean = false): Promise<{ success: boolean; qualityScore: number; skipped?: boolean }> {
   try {
     console.log(`\n🎬 Processing: ${movie.title_en} (${movie.release_year})`);
     
-    // Check if review exists
+    // Check if review exists and if it's already V2
     const { data: existingReview } = await supabase
       .from('movie_reviews')
-      .select('id')
+      .select('id, dimensions_json')
       .eq('movie_id', movie.id)
       .single();
 
     const hasExistingReview = !!existingReview;
-    console.log(`   Review status: ${hasExistingReview ? 'EXISTS (updating)' : 'MISSING (creating)'}`);
+    const hasV2Review = existingReview?.dimensions_json?._type === 'editorial_review_v2';
+    
+    // Check if V2 review has all required sections
+    const requiredSections = ['verdict', 'synopsis', 'performances', 'story_screenplay', 'direction_technicals', 'cultural_impact', 'why_watch', 'why_skip', 'perspectives'];
+    const hasAllSections = hasV2Review && requiredSections.every(section => 
+      existingReview?.dimensions_json?.[section] !== undefined
+    );
+    
+    // Check if review has "Unknown" in lead actors
+    const hasUnknownActors = hasV2Review && existingReview?.dimensions_json?.performances?.lead_actors?.some(
+      (actor: any) => actor.name === 'Unknown' || !actor.name
+    );
+    
+    // Force regeneration if --force-unknown flag is set and review has Unknown actors
+    const shouldForceRegen = forceUnknown && hasUnknownActors;
+    
+    // Skip if already has complete V2 review (unless forcing regeneration for Unknown actors)
+    if (skipExisting && hasV2Review && hasAllSections && !shouldForceRegen) {
+      console.log(`   ⏭️  SKIPPED: Already has complete V2 review (${requiredSections.length} sections)`);
+      return { success: true, qualityScore: existingReview?.dimensions_json?._quality_score || 0.85, skipped: true };
+    }
+    
+    if (shouldForceRegen) {
+      console.log(`   🔄 FORCE REGEN: Review has Unknown actors, regenerating...`);
+    }
+    
+    console.log(`   Review status: ${hasExistingReview ? (hasV2Review ? 'V2 EXISTS (incomplete, updating)' : 'OLD FORMAT (upgrading to V2)') : 'MISSING (creating)'}`);
 
     // Generate editorial review with retry for quality
     let editorialReview = await generateEditorialReview(movie.id);
@@ -145,6 +172,7 @@ async function rewriteTopTeluguReviews(options: RewriteOptions = {}) {
     dryRun = false,
     batchSize = 10,
     startFrom = 0,
+    forceUnknown = false,
   } = options;
 
   console.log('\n🚀 Starting Editorial Review Rewriter');
@@ -153,6 +181,9 @@ async function rewriteTopTeluguReviews(options: RewriteOptions = {}) {
   console.log(`Target: ${limit} movies`);
   console.log(`Batch Size: ${batchSize}`);
   console.log(`Start From: ${startFrom}`);
+  if (forceUnknown) {
+    console.log(`Force Unknown: YES (regenerating reviews with Unknown actors)`);
+  }
   console.log('=' .repeat(60) + '\n');
 
   // Fetch movies
@@ -173,17 +204,23 @@ async function rewriteTopTeluguReviews(options: RewriteOptions = {}) {
     console.log('-'.repeat(60));
 
     // Process batch sequentially (to avoid rate limits)
+    let skippedCount = 0;
     for (const movie of batch) {
-      const result = await rewriteReview(movie, dryRun);
-      if (result.success) {
+      const result = await rewriteReview(movie, dryRun, true, forceUnknown);
+      if (result.skipped) {
+        skippedCount++;
+        successCount++; // Count skipped as success for progress
+      } else if (result.success) {
         successCount++;
         totalQualityScore += result.qualityScore;
       } else {
         failureCount++;
       }
 
-      // Small delay to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Small delay to avoid rate limits (skip delay for skipped movies)
+      if (!result.skipped) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
     console.log(`\n   Progress: ${i + batch.length}/${moviesToProcess.length} (${Math.round((i + batch.length) / moviesToProcess.length * 100)}%)`);
@@ -222,6 +259,7 @@ async function main() {
   try {
     const args = process.argv.slice(2);
     const dryRun = args.includes('--dry-run');
+    const forceUnknown = args.includes('--force-unknown');
     const limitArg = args.find(arg => arg.startsWith('--limit='));
     const batchArg = args.find(arg => arg.startsWith('--batch='));
     const startArg = args.find(arg => arg.startsWith('--start='));
@@ -241,6 +279,7 @@ async function main() {
       dryRun,
       batchSize,
       startFrom,
+      forceUnknown,
     });
   } catch (error) {
     console.error('\n❌ Fatal error:', error);

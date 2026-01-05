@@ -182,7 +182,7 @@ export async function gatherMultiSourceData(
   const supabase = getSupabase();
   const { data: movie } = await supabase
     .from('movies')
-    .select('id, title_en, title_te, release_year, imdb_id, wikidata_id, director, hero, heroine, music_director, avg_rating, overview')
+    .select('id, title_en, title_te, release_year, imdb_id, director, hero, heroine, music_director, avg_rating, synopsis')
     .eq('id', movieId)
     .single();
 
@@ -266,11 +266,11 @@ export async function gatherMultiSourceData(
       result.ratings.tmdb = movie.avg_rating;
       result.ratings.sourcesCount++;
     }
-    if (movie.overview && !result.synopsis) {
+    if (movie.synopsis && !result.synopsis) {
       result.synopsis = {
         source: 'tmdb',
-        text: movie.overview,
-        wordCount: movie.overview.split(/\s+/).length,
+        text: movie.synopsis,
+        wordCount: movie.synopsis.split(/\s+/).length,
         confidence: 0.8,
       };
     }

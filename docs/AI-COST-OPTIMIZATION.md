@@ -145,6 +145,110 @@ const [synopsis, culturalImpact] = await Promise.all([
 
 ---
 
+## Multi-Source Data Integration (60%+ Cost Reduction)
+
+### Overview
+
+The biggest cost savings come from **not calling AI at all** for factual content. We fetch data from free/low-cost external sources first, and only use AI for:
+- Synthesis and analysis
+- Translation (Telugu)
+- Content that external sources don't have
+
+### Data Sources
+
+| Source | Cost | Data Provided | Notes |
+|--------|------|---------------|-------|
+| Wikipedia | FREE | Plot, Reception, Legacy, Awards | Excellent for popular movies |
+| Wikidata | FREE | Structured awards (SPARQL) | Telugu film awards included |
+| OMDb | FREE (1k/day) | IMDB/RT/Metacritic ratings | Requires IMDB ID |
+| Google KG | FREE (100k/day) | Entity descriptions | Good for context |
+| TMDB | Already used | Metadata, cast, ratings | Existing pipeline |
+
+### Cost Comparison
+
+**Before Multi-Source Integration:**
+```
+Synopsis:        1 AI call (Premium)    $0.0015
+Cultural Impact: 1 AI call (Premium)    $0.0012
+Awards:          1 AI call (Light)      $0.0003
+Perspectives:    1 AI call (Light)      $0.0005
+─────────────────────────────────────────────────
+Total for 4 sections:                   $0.0035
+```
+
+**After Multi-Source Integration (when data found):**
+```
+Synopsis:        Wikipedia (FREE)       $0.0000
+Cultural Impact: Wikipedia + AI expand  $0.0006
+Awards:          Wikidata (FREE)        $0.0000
+Perspectives:    OMDb + AI synthesis    $0.0003
+─────────────────────────────────────────────────
+Total for 4 sections:                   $0.0009
+Savings:                                ~75%
+```
+
+### Cache Strategy
+
+Factual data from external sources is cached for 30 days:
+
+```typescript
+const FACTUAL_CACHE_TTL = 30 * 24 * 60 * 60; // 30 days
+
+// Cache key: multi_source:{movieId}
+// Stored in Redis (Upstash) or in-memory fallback
+```
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                Editorial Review Generator                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Call MultiSourceDataManager.gatherMultiSourceData(movieId)  │
+│                         ↓                                        │
+│  2. Check what's available:                                      │
+│     - synopsis? → Skip AI synopsis call                          │
+│     - awards? → Skip AI awards call                              │
+│     - reception? → Use in perspectives context                   │
+│     - legacy? → Use in cultural impact context                   │
+│                         ↓                                        │
+│  3. Only call AI for missing/synthesis sections                  │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `lib/reviews/multi-source-data.ts` | Orchestrator + cache |
+| `lib/sources/fetchers/omdb-fetcher.ts` | OMDb integration |
+| `lib/sources/fetchers/google-kg-fetcher.ts` | Google KG integration |
+| `lib/sources/fetchers/wikidata-awards-fetcher.ts` | Wikidata SPARQL |
+| `lib/sources/fetchers/wikipedia-fetcher.ts` | Wikipedia sections |
+
+### Environment Variables
+
+```bash
+# Required for full integration
+OMDB_API_KEY=your_key_here
+GOOGLE_KG_API_KEY=your_key_here
+
+# Optional (for caching)
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+```
+
+### Test Script
+
+```bash
+# Test multi-source data fetching
+pnpm tsx scripts/test-multi-source.ts <movie_id>
+```
+
+---
+
 ## Prompt Optimization
 
 ### Before (Verbose - ~200 tokens)
@@ -290,4 +394,5 @@ For everything else, start with 8B and upgrade only if quality is insufficient.
 - [ ] Add caching to high-frequency endpoints
 - [ ] Enable metrics logging (`AI_METRICS_DEBUG=true`)
 - [ ] Monitor cost dashboard after deployment
+
 
