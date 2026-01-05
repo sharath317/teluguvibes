@@ -1,115 +1,82 @@
-/**
- * RECOMMENDATIONS API
- *
- * Returns personalized recommendations based on browser preferences.
- * No user accounts - preferences sent in request body.
- *
- * WHY SERVER-SIDE:
- * - Browser sends viewing history (from localStorage)
- * - Server matches against available content
- * - No user data stored on server (GDPR safe)
- */
+import { NextResponse } from 'next/server';
+import { getRecommendations, type RecommendMePreferences } from '@/lib/movies/recommend-me';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-interface RecommendationRequest {
-  viewedCelebrities?: string[];
-  viewedCategories?: string[];
-  topCategory?: string;
-  readArticles?: string[];
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body: RecommendationRequest = await request.json();
+    const body = await request.json();
+    
+    // Build preferences from request body
+    const prefs: RecommendMePreferences = {
+      languages: body.languages,
+      genres: body.genres,
+      moods: body.moods,
+      era: body.era,
+      familyFriendly: body.familyFriendly,
+      blockbustersOnly: body.blockbustersOnly,
+      hiddenGems: body.hiddenGems,
+      highlyRatedOnly: body.highlyRatedOnly,
+      criticsChoice: body.criticsChoice,
+      excludeMovieId: body.excludeMovieId,
+    };
 
-    const items: any[] = [];
+    const sections = await getRecommendations(prefs);
 
-    // 1. Recommend based on top category
-    if (body.topCategory) {
-      const { data: categoryPosts } = await supabase
-        .from('posts')
-        .select('id, title, slug, image_url, category')
-        .eq('category', body.topCategory)
-        .eq('status', 'published')
-        .order('published_at', { ascending: false })
-        .limit(3);
-
-      if (categoryPosts) {
-        items.push(...categoryPosts.map(p => ({
-          ...p,
-          reason_te: `${body.topCategory} కేటగిరీలో పాపులర్`,
-        })));
-      }
-    }
-
-    // 2. Recommend based on viewed celebrities
-    if (body.viewedCelebrities && body.viewedCelebrities.length > 0) {
-      // Get posts mentioning similar celebrities
-      const { data: celebPosts } = await supabase
-        .from('posts')
-        .select('id, title, slug, image_url, category')
-        .eq('status', 'published')
-        .order('published_at', { ascending: false })
-        .limit(10);
-
-      // Filter to find posts with related celebrities (simplified)
-      const relatedPosts = (celebPosts || [])
-        .filter(p => !items.some(i => i.id === p.id))
-        .slice(0, 2);
-
-      items.push(...relatedPosts.map(p => ({
-        ...p,
-        reason_te: 'మీరు చూసిన వారికి సంబంధించినది',
-      })));
-    }
-
-    // 3. Recommend trending content as fallback
-    if (items.length < 4) {
-      const { data: trendingPosts } = await supabase
-        .from('posts')
-        .select('id, title, slug, image_url, category')
-        .eq('status', 'published')
-        .order('view_count', { ascending: false })
-        .limit(5);
-
-      const newItems = (trendingPosts || [])
-        .filter(p => !items.some(i => i.id === p.id))
-        .slice(0, 4 - items.length);
-
-      items.push(...newItems.map(p => ({
-        ...p,
-        reason_te: 'ట్రెండింగ్',
-      })));
-    }
-
-    return NextResponse.json(
-      { items: items.slice(0, 5) },
-      {
-        headers: {
-          // Short cache - personalized content
-          'Cache-Control': 'private, max-age=300',
+    return NextResponse.json({
+      success: true,
+      sections,
+      meta: {
+        totalSections: sections.length,
+        totalMovies: sections.reduce((sum, s) => sum + s.movies.length, 0),
+        preferences: {
+          languages: prefs.languages || ['Telugu'],
+          genres: prefs.genres || [],
+          moods: prefs.moods || [],
+          era: prefs.era || [],
         },
-      }
-    );
-  } catch (error) {
-    console.error('Recommendations API error:', error);
+      },
+    });
+  } catch (error: any) {
+    console.error('Recommendation error:', error);
     return NextResponse.json(
-      { error: 'Failed to generate recommendations' },
+      { success: false, error: error.message || 'Failed to generate recommendations' },
       { status: 500 }
     );
   }
 }
 
+// GET endpoint for simple requests with query params
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    
+    const prefs: RecommendMePreferences = {
+      languages: searchParams.get('languages')?.split(',').filter(Boolean),
+      genres: searchParams.get('genres')?.split(',').filter(Boolean),
+      moods: searchParams.get('moods')?.split(',').filter(Boolean) as any,
+      era: searchParams.get('era')?.split(',').filter(Boolean) as any,
+      familyFriendly: searchParams.get('familyFriendly') === 'true',
+      blockbustersOnly: searchParams.get('blockbustersOnly') === 'true',
+      hiddenGems: searchParams.get('hiddenGems') === 'true',
+      highlyRatedOnly: searchParams.get('highlyRatedOnly') === 'true',
+      criticsChoice: searchParams.get('criticsChoice') === 'true',
+      excludeMovieId: searchParams.get('excludeMovieId') || undefined,
+    };
 
+    const sections = await getRecommendations(prefs);
 
-
-
-
-
+    return NextResponse.json({
+      success: true,
+      sections,
+      meta: {
+        totalSections: sections.length,
+        totalMovies: sections.reduce((sum, s) => sum + s.movies.length, 0),
+      },
+    });
+  } catch (error: any) {
+    console.error('Recommendation error:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to generate recommendations' },
+      { status: 500 }
+    );
+  }
+}

@@ -16,11 +16,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   Star, Filter, Search, ChevronDown, ChevronRight, Film, Calendar,
-  ThumbsUp, Award, Gem, Clock, X, TrendingUp, Sparkles, User
+  ThumbsUp, Award, Gem, Clock, X, TrendingUp, Sparkles, User, Wand2
 } from 'lucide-react';
 import type { Movie, Genre, ReviewFilters } from '@/types/reviews';
 import { HorizontalCarousel } from '@/components/ui/HorizontalCarousel';
 import { MoodIndicators } from '@/components/reviews/MoodIndicators';
+import { RecommendMeModal } from '@/components/recommendations/RecommendMeModal';
 
 // ============================================================
 // TYPES
@@ -143,6 +144,7 @@ export default function ReviewsPage() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [viewMode, setViewMode] = useState<"sections" | "grid">("sections");
   const [activeMood, setActiveMood] = useState<string | undefined>();
+  const [showRecommendModal, setShowRecommendModal] = useState(false);
 
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -183,6 +185,14 @@ export default function ReviewsPage() {
         if (newFilters.actor) params.set("actor", newFilters.actor);
         if (newFilters.director) params.set("director", newFilters.director);
         if (newFilters.genre) params.set("genre", newFilters.genre);
+        // Preserve language if not default
+        if (selectedLanguage && selectedLanguage !== "Telugu") {
+          params.set("language", selectedLanguage);
+        }
+        // Preserve mood if active
+        if (activeMood) {
+          params.set("mood", activeMood);
+        }
 
         const url = params.toString()
           ? `/reviews?${params.toString()}`
@@ -190,7 +200,7 @@ export default function ReviewsPage() {
         router.replace(url, { scroll: false });
       }
     },
-    [router]
+    [router, selectedLanguage, activeMood]
   );
 
   // Fetch sections on mount
@@ -469,6 +479,16 @@ export default function ReviewsPage() {
                 </div>
               )}
             </div>
+
+            {/* Recommend Me CTA */}
+            <button
+              onClick={() => setShowRecommendModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/20"
+            >
+              <Wand2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Recommend Me</span>
+              <span className="sm:hidden">✨</span>
+            </button>
 
             {/* Quick Tags */}
             <QuickTag
@@ -838,8 +858,10 @@ export default function ReviewsPage() {
                         key={spotlight.id}
                         spotlight={spotlight}
                         onSelect={(name) => {
-                          setFilters({ ...filters, actor: name });
+                          const updatedFilters = { ...filters, actor: name };
+                          setFilters(updatedFilters);
                           setViewMode("grid");
+                          updateUrl(updatedFilters, "grid");
                         }}
                       />
                     ))}
@@ -940,6 +962,13 @@ export default function ReviewsPage() {
           )}
         </section>
       )}
+
+      {/* Recommend Me Modal */}
+      <RecommendMeModal
+        isOpen={showRecommendModal}
+        onClose={() => setShowRecommendModal(false)}
+        prefillLanguage={selectedLanguage}
+      />
     </main>
   );
 }

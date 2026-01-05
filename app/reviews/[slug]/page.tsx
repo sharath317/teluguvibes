@@ -18,6 +18,7 @@ import { CompactCast } from "@/components/reviews/CompactCast";
 import { ReviewAccordion, PerformanceContent, StoryContent, DirectionContent, CulturalContent } from "@/components/reviews/ReviewAccordion";
 import { SimilarMoviesCarousel } from "@/components/reviews/SimilarMoviesCarousel";
 import { getSimilarMovieSections, type SimilarSection } from "@/lib/movies/similarity-engine";
+import { RecommendMeButton } from "@/components/recommendations/RecommendMeButton";
 import { MovieBadges } from "@/components/reviews/MovieBadges";
 import type { Movie, MovieReview } from '@/types/reviews';
 import type { ReviewInsights } from "@/lib/reviews/review-insights";
@@ -486,6 +487,18 @@ export default async function MovieReviewPage({ params }: PageProps) {
       {/* Similar Movies - Smart Multi-Row Carousel */}
       {similarSections.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 py-8 border-t border-gray-800/50">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white">Discover More</h2>
+            <RecommendMeButton
+              prefillLanguage={movie.language || 'Telugu'}
+              prefillGenres={movie.genres?.slice(0, 2)}
+              prefillEra={movie.release_year && movie.release_year >= 2020 ? 'recent' : 
+                         movie.release_year && movie.release_year >= 2010 ? '2010s' :
+                         movie.release_year && movie.release_year >= 2000 ? '2000s' :
+                         movie.release_year && movie.release_year >= 1990 ? '90s' : 'classics'}
+              variant="secondary"
+            />
+          </div>
           <SimilarMoviesCarousel sections={similarSections} />
         </section>
       )}
