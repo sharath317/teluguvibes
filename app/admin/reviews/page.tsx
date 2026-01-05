@@ -24,6 +24,7 @@ import {
   Users,
   BarChart3,
   ExternalLink,
+  Trash2,
 } from 'lucide-react';
 
 // ============================================================
@@ -116,6 +117,28 @@ export default function ReviewsManagementPage() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
+
+  // Delete review handler
+  async function handleDeleteReview(movieId: string, movieTitle: string) {
+    if (!confirm(`Are you sure you want to delete the review for "${movieTitle}"? This cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/api/admin/reviews/${movieId}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      
+      if (json.success) {
+        fetchData(); // Refresh the list
+      } else {
+        alert('Failed to delete review: ' + (json.error || 'Unknown error'));
+      }
+    } catch {
+      alert('Network error while deleting review');
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -342,6 +365,15 @@ export default function ReviewsManagementPage() {
                           <Edit className="w-3 h-3" />
                           {movie.review ? 'Edit' : 'Create'}
                         </Link>
+                        {movie.review && (
+                          <button
+                            onClick={() => handleDeleteReview(movie.id, movie.title_en)}
+                            className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded"
+                            title="Delete review"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                         <Link
                           href={`/reviews/${movie.slug}`}
                           target="_blank"
