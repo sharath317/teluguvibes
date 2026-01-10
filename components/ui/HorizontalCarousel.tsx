@@ -98,7 +98,6 @@ export function HorizontalCarousel({
             showAllHref ? (
               <Text
                 as="a"
-                // @ts-expect-error - href is valid on anchor element
                 href={showAllHref}
                 variant="caption"
                 color="brand"
@@ -250,5 +249,6 @@ export function CarouselCard({
     </a>
   );
 }
+
 
 

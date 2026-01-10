@@ -263,3 +263,4 @@ The batch publisher enforces these rules:
 3. **Set up cron jobs** - Automate daily content fetching
 4. **Add analytics** - Track sector performance
 
+

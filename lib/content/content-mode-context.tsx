@@ -2,134 +2,109 @@
 
 /**
  * Content Mode Context
- * 
- * Provides global content filtering based on user preference.
- * Default mode is 'family_safe' which hides adult content.
+ * Manages content filtering and age verification for the application
  */
 
-import { 
-  createContext, 
-  useContext, 
-  useState, 
-  useEffect, 
-  useCallback,
-  ReactNode 
-} from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 
 // ============================================================
 // TYPES
 // ============================================================
 
-export type ContentMode = 'family_safe' | 'standard' | 'adult';
+export type ContentMode = 'family' | 'standard' | 'adult';
 
 export interface ContentModeContextValue {
   /** Current content mode */
   mode: ContentMode;
-  /** Set the content mode */
+  /** Set content mode */
   setMode: (mode: ContentMode) => void;
-  /** Check if current mode allows adult content */
-  allowsAdultContent: boolean;
-  /** Check if current mode is family safe */
-  isFamilySafe: boolean;
-  /** Age verification status */
+  /** Whether age has been verified */
   isAgeVerified: boolean;
-  /** Verify age (for adult mode) */
-  verifyAge: (isOver18: boolean) => void;
-  /** Reset to family safe mode */
-  resetToSafe: () => void;
+  /** Trigger age verification */
+  verifyAge: () => Promise<boolean>;
+  /** Reset age verification */
+  resetVerification: () => void;
 }
-
-// ============================================================
-// STORAGE KEY
-// ============================================================
-
-const STORAGE_KEY = 'teluguvibes_content_mode';
-const AGE_VERIFIED_KEY = 'teluguvibes_age_verified';
 
 // ============================================================
 // CONTEXT
 // ============================================================
 
-const ContentModeContext = createContext<ContentModeContextValue | undefined>(undefined);
+const ContentModeContext = createContext<ContentModeContextValue | null>(null);
 
 // ============================================================
 // PROVIDER
 // ============================================================
 
-export interface ContentModeProviderProps {
+interface ContentModeProviderProps {
   children: ReactNode;
-  /** Default mode if not stored */
+  /** Initial mode */
   defaultMode?: ContentMode;
 }
 
-export function ContentModeProvider({ 
-  children, 
-  defaultMode = 'family_safe' 
+const STORAGE_KEY = 'content-mode';
+const AGE_VERIFIED_KEY = 'age-verified';
+
+export function ContentModeProvider({
+  children,
+  defaultMode = 'standard',
 }: ContentModeProviderProps) {
   const [mode, setModeState] = useState<ContentMode>(defaultMode);
   const [isAgeVerified, setIsAgeVerified] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Load from storage on mount
+  // Load saved preferences on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY) as ContentMode | null;
-      const ageVerified = localStorage.getItem(AGE_VERIFIED_KEY) === 'true';
-      
-      if (stored && ['family_safe', 'standard', 'adult'].includes(stored)) {
-        // Only allow adult mode if age was verified
-        if (stored === 'adult' && !ageVerified) {
-          setModeState('standard');
-        } else {
-          setModeState(stored);
-        }
+    try {
+      const savedMode = localStorage.getItem(STORAGE_KEY) as ContentMode | null;
+      if (savedMode && ['family', 'standard', 'adult'].includes(savedMode)) {
+        setModeState(savedMode);
       }
       
-      setIsAgeVerified(ageVerified);
-      setIsHydrated(true);
+      const verified = localStorage.getItem(AGE_VERIFIED_KEY);
+      if (verified === 'true') {
+        setIsAgeVerified(true);
+      }
+    } catch (e) {
+      console.error('Failed to load content mode preferences:', e);
     }
   }, []);
-
-  // Persist to storage
-  useEffect(() => {
-    if (isHydrated && typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, mode);
-    }
-  }, [mode, isHydrated]);
 
   const setMode = useCallback((newMode: ContentMode) => {
-    // Require age verification for adult mode
-    if (newMode === 'adult' && !isAgeVerified) {
-      console.warn('Age verification required for adult mode');
-      return;
-    }
     setModeState(newMode);
-  }, [isAgeVerified]);
-
-  const verifyAge = useCallback((isOver18: boolean) => {
-    setIsAgeVerified(isOver18);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(AGE_VERIFIED_KEY, String(isOver18));
+    try {
+      localStorage.setItem(STORAGE_KEY, newMode);
+    } catch (e) {
+      console.error('Failed to save content mode:', e);
     }
   }, []);
 
-  const resetToSafe = useCallback(() => {
-    setModeState('family_safe');
+  const verifyAge = useCallback(async (): Promise<boolean> => {
+    // In a real implementation, this could show a modal or redirect to verification
+    // For now, we just set verified to true
+    setIsAgeVerified(true);
+    try {
+      localStorage.setItem(AGE_VERIFIED_KEY, 'true');
+    } catch (e) {
+      console.error('Failed to save age verification:', e);
+    }
+    return true;
+  }, []);
+
+  const resetVerification = useCallback(() => {
     setIsAgeVerified(false);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, 'family_safe');
+    try {
       localStorage.removeItem(AGE_VERIFIED_KEY);
+    } catch (e) {
+      console.error('Failed to reset age verification:', e);
     }
   }, []);
 
   const value: ContentModeContextValue = {
     mode,
     setMode,
-    allowsAdultContent: mode === 'adult' && isAgeVerified,
-    isFamilySafe: mode === 'family_safe',
     isAgeVerified,
     verifyAge,
-    resetToSafe,
+    resetVerification,
   };
 
   return (
@@ -146,16 +121,14 @@ export function ContentModeProvider({
 export function useContentMode(): ContentModeContextValue {
   const context = useContext(ContentModeContext);
   
-  if (context === undefined) {
-    // Return safe defaults if provider is missing
+  // Provide default values if used outside provider
+  if (!context) {
     return {
-      mode: 'family_safe',
+      mode: 'standard',
       setMode: () => {},
-      allowsAdultContent: false,
-      isFamilySafe: true,
       isAgeVerified: false,
-      verifyAge: () => {},
-      resetToSafe: () => {},
+      verifyAge: async () => false,
+      resetVerification: () => {},
     };
   }
   
@@ -163,8 +136,32 @@ export function useContentMode(): ContentModeContextValue {
 }
 
 // ============================================================
-// EXPORTS
+// HELPER FUNCTIONS
 // ============================================================
 
-export { ContentModeContext };
-
+/**
+ * Check if content is allowed for the current mode
+ */
+export function isContentAllowed(
+  contentRating: 'U' | 'UA' | 'A',
+  mode: ContentMode,
+  isAgeVerified: boolean
+): boolean {
+  if (mode === 'family') {
+    return contentRating === 'U';
+  }
+  
+  if (mode === 'standard') {
+    return contentRating === 'U' || contentRating === 'UA';
+  }
+  
+  // Adult mode - allow all if age verified
+  if (mode === 'adult') {
+    if (contentRating === 'A') {
+      return isAgeVerified;
+    }
+    return true;
+  }
+  
+  return true;
+}

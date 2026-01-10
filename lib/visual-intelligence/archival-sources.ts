@@ -1,525 +1,369 @@
 /**
- * ARCHIVAL SOURCES LIBRARY
- * 
- * Definitions and helpers for managing archival image sources.
- * Includes known source registry, confidence calculations,
- * and attribution generation.
+ * Archival Sources Module
+ * Utilities for managing archival image sources and outreach
  */
 
 import type {
   ArchivalSourceType,
   LicenseType,
-  ArchivalSource,
   VisualType,
   VisualTier,
+  ArchivalSource,
 } from './types';
 
-import {
-  SOURCE_TYPE_TIERS,
-  SOURCE_DEFAULT_CONFIDENCE,
-  SOURCE_TYPE_LABELS,
-  LICENSE_TYPE_LABELS,
-  VISUAL_TYPE_LABELS,
-} from './types';
-
-// ============================================================
-// KNOWN ARCHIVAL SOURCES REGISTRY
-// ============================================================
-
-export interface KnownArchivalSource {
-  code: string;
-  name: string;
-  type: ArchivalSourceType;
-  tier: VisualTier;
-  website?: string;
-  email?: string;
-  accessType: 'open_access' | 'request_required' | 'membership_required' | 'paid_license' | 'partnership_only';
-  typicalLicense: LicenseType;
-  typicalResponseTime?: string;
-  description: string;
-  coveragePeriod?: string;
-  specialNotes?: string;
+export interface VisualTypeBadgeColors {
+  icon: string;
+  text: string;
+  bg: string;
+  border: string;
+  label: string;
 }
 
 /**
- * Registry of known archival sources for Telugu films
+ * Get badge colors for visual type
  */
-export const KNOWN_SOURCES: KnownArchivalSource[] = [
-  // Tier 1 - Government & Official Archives
-  {
-    code: 'nfai',
-    name: 'National Film Archive of India',
-    type: 'government_archive',
-    tier: 1,
-    website: 'https://nfrp.gov.in/',
-    email: 'nfai-pune@nic.in',
-    accessType: 'request_required',
-    typicalLicense: 'archive_license',
-    typicalResponseTime: '2-4 weeks',
-    description: 'Primary government archive for Indian cinema. Holds film stills, promotional photos, press kits for Telugu classics.',
-    coveragePeriod: '1930s - present',
-    specialNotes: 'Best source for classics. Request low-res previews first, then apply for reproduction rights.',
-  },
-  {
-    code: 'ap_culture',
-    name: 'Andhra Pradesh Culture Department',
-    type: 'state_cultural_dept',
-    tier: 1,
-    accessType: 'request_required',
-    typicalLicense: 'public_domain',
-    description: 'State-funded film materials often under government works. Many Telugu films were state-promoted.',
-    coveragePeriod: '1950s - 2014',
-  },
-  {
-    code: 'ts_culture',
-    name: 'Telangana Culture Department',
-    type: 'state_cultural_dept',
-    tier: 1,
-    accessType: 'request_required',
-    typicalLicense: 'public_domain',
-    description: 'State cultural archives for Telangana region films.',
-    coveragePeriod: '2014 - present',
-  },
-  {
-    code: 'fhf',
-    name: 'Film Heritage Foundation',
-    type: 'museum',
-    tier: 1,
-    website: 'https://filmheritagefoundation.co.in/',
-    accessType: 'partnership_only',
-    typicalLicense: 'archive_license',
-    description: 'Preservation-focused organization with high-quality restorations. Partner for digital preservation grants.',
-    specialNotes: 'Your system is architecturally grant-ready for FHF partnership.',
-  },
+export function getVisualTypeBadgeColor(type: VisualType): VisualTypeBadgeColors {
+  const colorMap: Partial<Record<VisualType, { color: string; label: string }>> = {
+    poster: { color: 'blue', label: 'Poster' },
+    still: { color: 'green', label: 'Still' },
+    'behind-scenes': { color: 'purple', label: 'Behind Scenes' },
+    promotional: { color: 'amber', label: 'Promotional' },
+    premiere: { color: 'red', label: 'Premiere' },
+    candid: { color: 'pink', label: 'Candid' },
+    archival: { color: 'indigo', label: 'Archival' },
+    archival_still: { color: 'green', label: 'Archival Still' },
+    archival_poster: { color: 'indigo', label: 'Archival Poster' },
+    restored: { color: 'teal', label: 'Restored' },
+    magazine: { color: 'orange', label: 'Magazine' },
+    newspaper: { color: 'gray', label: 'Newspaper' },
+    portrait: { color: 'violet', label: 'Portrait' },
+    group: { color: 'cyan', label: 'Group Photo' },
+    award: { color: 'yellow', label: 'Award' },
+    event: { color: 'emerald', label: 'Event' },
+    lobby_card: { color: 'amber', label: 'Lobby Card' },
+    press_photo: { color: 'blue', label: 'Press Photo' },
+    original_poster: { color: 'green', label: 'Verified Original' },
+    studio_photo: { color: 'sky', label: 'Studio Photo' },
+    press_kit_photo: { color: 'blue', label: 'Press Kit' },
+    magazine_ad: { color: 'amber', label: 'Magazine Ad' },
+    newspaper_clipping: { color: 'gray', label: 'Newspaper Clipping' },
+    song_book_cover: { color: 'purple', label: 'Song Book' },
+    cassette_cover: { color: 'rose', label: 'Cassette Cover' },
+    re_release_poster: { color: 'orange', label: 'Re-release Poster' },
+    archive_card: { color: 'indigo', label: 'Archive Card' },
+    placeholder: { color: 'gray', label: 'Placeholder' },
+  };
 
-  // Tier 2 - Print Media & Publications
-  {
-    code: 'andhra_patrika',
-    name: 'Andhra Patrika',
-    type: 'newspaper',
-    tier: 2,
-    accessType: 'request_required',
-    typicalLicense: 'editorial_use',
-    description: 'Historical Telugu newspaper with film advertisements. Pre-1978 ads especially useful.',
-    coveragePeriod: '1930s - 1990s',
-    specialNotes: 'Newspaper ads were commercial announcements - courts treat them as historical records.',
-  },
-  {
-    code: 'sitara',
-    name: 'Sitara Magazine',
-    type: 'magazine',
-    tier: 2,
-    accessType: 'request_required',
-    typicalLicense: 'editorial_use',
-    description: 'Classic Telugu film magazine with stills, ads, and features.',
-    coveragePeriod: '1960s - 1990s',
-  },
-  {
-    code: 'jyothi',
-    name: 'Jyothi Magazine',
-    type: 'magazine',
-    tier: 2,
-    accessType: 'request_required',
-    typicalLicense: 'editorial_use',
-    description: 'Telugu film and entertainment magazine.',
-  },
-  {
-    code: 'bharati',
-    name: 'Bharati Magazine',
-    type: 'magazine',
-    tier: 2,
-    accessType: 'request_required',
-    typicalLicense: 'editorial_use',
-    description: 'Telugu arts and culture magazine with film coverage.',
-  },
-  {
-    code: 'cinema_rangam',
-    name: 'Cinema Rangam',
-    type: 'magazine',
-    tier: 2,
-    accessType: 'request_required',
-    typicalLicense: 'editorial_use',
-    description: 'Older Telugu cinema magazine.',
-  },
+  const config = colorMap[type] || { color: 'gray', label: type.replace(/[_-]/g, ' ') };
+  const { color, label } = config;
 
-  // Tier 2 - Community & Digital Archives
-  {
-    code: 'internet_archive',
-    name: 'Internet Archive',
-    type: 'community',
-    tier: 2,
-    website: 'https://archive.org/',
-    accessType: 'open_access',
-    typicalLicense: 'public_domain',
-    description: 'Community digital archive with some Telugu film materials.',
-    specialNotes: 'Check for scanned magazines and newspapers.',
-  },
-  {
-    code: 'wikimedia',
-    name: 'Wikimedia Commons',
-    type: 'community',
-    tier: 2,
-    website: 'https://commons.wikimedia.org/',
-    accessType: 'open_access',
-    typicalLicense: 'public_domain',
-    description: 'Open source image repository. Some film stills available.',
-    specialNotes: 'Verify license on each image individually.',
-  },
-
-  // Tier 2/3 - Family & Film Society Archives
-  {
-    code: 'family_archive',
-    name: 'Actor/Director Family Estate',
-    type: 'family_archive',
-    tier: 2,
-    accessType: 'request_required',
-    typicalLicense: 'permission_granted',
-    description: 'Families of iconic actors/directors often hold original stills and press photos.',
-    specialNotes: 'Outreach via email/social media. Offer attribution and non-commercial archival preservation.',
-  },
-  {
-    code: 'film_society',
-    name: 'Telugu Film Society / Cine Club',
-    type: 'film_society',
-    tier: 2,
-    accessType: 'request_required',
-    typicalLicense: 'attribution_required',
-    description: 'Old film clubs often digitize stills and programme notes.',
-    specialNotes: 'Usually happy to share with attribution and preservation efforts.',
-  },
-];
-
-// ============================================================
-// HELPER FUNCTIONS
-// ============================================================
-
-/**
- * Get a known source by its code
- */
-export function getKnownSource(code: string): KnownArchivalSource | undefined {
-  return KNOWN_SOURCES.find(s => s.code === code);
+  // Generate Tailwind-compatible class names
+  return {
+    icon: `text-${color}-400`,
+    text: `text-${color}-300`,
+    bg: `bg-${color}-900/80`,
+    border: `border-${color}-700`,
+    label,
+  };
 }
 
 /**
- * Get all sources of a specific type
+ * Check if source requires attribution
  */
-export function getSourcesByType(type: ArchivalSourceType): KnownArchivalSource[] {
-  return KNOWN_SOURCES.filter(s => s.type === type);
+export function requiresAttribution(license: LicenseType): boolean {
+  const noAttributionLicenses: LicenseType[] = ['public-domain'];
+  return !noAttributionLicenses.includes(license);
 }
 
 /**
- * Get all sources of a specific tier
+ * Generate attribution text for an image
+ * Can be called with either an ArchivalSource object or individual parameters
  */
-export function getSourcesByTier(tier: VisualTier): KnownArchivalSource[] {
-  return KNOWN_SOURCES.filter(s => s.tier === tier);
-}
-
-/**
- * Calculate confidence score based on source and visual type
- */
-export function calculateArchivalConfidence(
-  sourceType: ArchivalSourceType,
-  visualType: VisualType,
-  isVerified: boolean = false
-): number {
-  // Base confidence from source type
-  let confidence = SOURCE_DEFAULT_CONFIDENCE[sourceType] || 0.5;
-
-  // Boost for original posters
-  if (visualType === 'original_poster') {
-    confidence = Math.min(1.0, confidence + 0.1);
-  }
-
-  // Slight reduction for some visual types
-  if (['newspaper_clipping', 'cassette_cover'].includes(visualType)) {
-    confidence = Math.max(0.3, confidence - 0.05);
-  }
-
-  // Boost for verified sources
-  if (isVerified) {
-    confidence = Math.min(1.0, confidence + 0.1);
-  }
-
-  return Math.round(confidence * 100) / 100;
-}
-
-/**
- * Get tier from archival source type
- */
-export function getTierFromSourceType(sourceType: ArchivalSourceType): VisualTier {
-  return SOURCE_TYPE_TIERS[sourceType] || 3;
-}
-
-/**
- * Generate attribution text from archival source data
- */
-export function generateAttributionText(source: ArchivalSource): string {
-  if (source.attribution_text) {
-    return source.attribution_text;
-  }
-
-  const parts: string[] = [];
-  
-  parts.push(`Source: ${source.source_name}`);
-  
-  if (source.year_estimated) {
-    parts.push(`(${source.year_estimated})`);
-  }
-
-  return parts.join(' ');
-}
-
-/**
- * Generate display label for visual type with source
- */
-export function getVisualDisplayLabel(
-  visualType: VisualType,
-  sourceType?: ArchivalSourceType
+export function generateAttributionText(
+  sourceOrType: ArchivalSource | ArchivalSourceType,
+  sourceName?: string,
+  license?: LicenseType
 ): string {
-  const typeLabel = VISUAL_TYPE_LABELS[visualType];
-  
-  if (!sourceType) {
-    return typeLabel;
+  let name: string;
+  let licenseType: LicenseType | undefined;
+
+  if (typeof sourceOrType === 'object') {
+    // Called with ArchivalSource object
+    const source = sourceOrType;
+    name = source.source_name || source.name || 'Unknown Source';
+    licenseType = source.license_type || source.default_license;
+  } else {
+    // Called with ArchivalSourceType string
+    name = sourceName || sourceOrType.replace(/-/g, ' ').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    licenseType = license;
   }
 
-  const sourceLabel = SOURCE_TYPE_LABELS[sourceType];
-  return `${typeLabel} (${sourceLabel})`;
+  if (licenseType === 'public-domain' || licenseType === 'public_domain') {
+    return `Image from ${name} (Public Domain)`;
+  }
+
+  if (licenseType === 'cc-by' || licenseType === 'cc-by-sa' || licenseType === 'cc-by-nc') {
+    return `Image © ${name}, used under ${licenseType.toUpperCase()} license`;
+  }
+
+  if (licenseType === 'permission-granted' || licenseType === 'permission_granted') {
+    return `Image courtesy of ${name}, used with permission`;
+  }
+
+  return `Image from ${name}`;
 }
 
 /**
  * Get suggested license for a source type
  */
 export function getSuggestedLicense(sourceType: ArchivalSourceType): LicenseType {
-  const source = KNOWN_SOURCES.find(s => s.type === sourceType);
-  return source?.typicalLicense || 'attribution_required';
+  const suggestions: Partial<Record<ArchivalSourceType, LicenseType>> = {
+    nfai: 'permission-granted',
+    'studio-archive': 'licensed',
+    studio_archive: 'licensed',
+    'family-collection': 'permission-granted',
+    family_collection: 'permission-granted',
+    family_archive: 'permission-granted',
+    'magazine-archive': 'fair-use',
+    magazine: 'fair-use',
+    'newspaper-archive': 'fair-use',
+    newspaper: 'fair-use',
+    book: 'fair-use',
+    'film-society': 'cc-by-nc',
+    film_society: 'cc-by-nc',
+    museum: 'permission-granted',
+    'private-collection': 'permission-granted',
+    private_collection: 'permission-granted',
+    'public-domain': 'public-domain',
+    public_domain: 'public-domain',
+    'fan-contributed': 'cc-by',
+    government_archive: 'permission-granted',
+    state_cultural_dept: 'permission-granted',
+    university: 'fair-use',
+    university_archive: 'fair-use',
+    personal_archive: 'permission-granted',
+    community: 'cc-by',
+  };
+  return suggestions[sourceType] || 'unknown';
 }
 
 /**
- * Check if a source type requires attribution display
+ * Generate NFAI request email template
+ * Accepts either a single movie title or an array of titles
  */
-export function requiresAttribution(licenseType: LicenseType): boolean {
-  return ['attribution_required', 'editorial_use', 'archive_license'].includes(licenseType);
-}
-
-/**
- * Get badge color based on source type
- */
-export function getSourceBadgeColor(sourceType: ArchivalSourceType): {
-  bg: string;
-  text: string;
-  border: string;
-  icon: string;
-} {
-  const tier = SOURCE_TYPE_TIERS[sourceType];
+export function generateNFAIRequestEmail(movieTitleOrTitles: string | string[], movieYear?: number): string {
+  const titles = Array.isArray(movieTitleOrTitles) ? movieTitleOrTitles : [movieTitleOrTitles];
+  const year = movieYear ? ` (${movieYear})` : '';
   
-  switch (tier) {
-    case 1:
-      return {
-        bg: 'bg-green-900/80',
-        text: 'text-green-100',
-        border: 'border-green-700',
-        icon: 'text-green-400',
-      };
-    case 2:
-      return {
-        bg: 'bg-amber-900/80',
-        text: 'text-amber-100',
-        border: 'border-amber-700',
-        icon: 'text-amber-400',
-      };
-    default:
-      return {
-        bg: 'bg-gray-800/80',
-        text: 'text-gray-300',
-        border: 'border-gray-600',
-        icon: 'text-gray-400',
-      };
-  }
-}
-
-/**
- * Get badge color based on visual type
- */
-export function getVisualTypeBadgeColor(visualType: VisualType): {
-  bg: string;
-  text: string;
-  border: string;
-  icon: string;
-  label: string;
-} {
-  switch (visualType) {
-    case 'original_poster':
-      return {
-        bg: 'bg-green-900/80',
-        text: 'text-green-100',
-        border: 'border-green-700',
-        icon: 'text-green-400',
-        label: 'Verified',
-      };
-    case 'archival_still':
-    case 'studio_photo':
-    case 'press_kit_photo':
-      return {
-        bg: 'bg-blue-900/80',
-        text: 'text-blue-100',
-        border: 'border-blue-700',
-        icon: 'text-blue-400',
-        label: 'Studio Photo',
-      };
-    case 'magazine_ad':
-    case 'newspaper_clipping':
-      return {
-        bg: 'bg-amber-900/80',
-        text: 'text-amber-100',
-        border: 'border-amber-700',
-        icon: 'text-amber-400',
-        label: 'Historical Ad',
-      };
-    case 'song_book_cover':
-    case 'lobby_card':
-      return {
-        bg: 'bg-purple-900/80',
-        text: 'text-purple-100',
-        border: 'border-purple-700',
-        icon: 'text-purple-400',
-        label: 'Book/Print',
-      };
-    case 're_release_poster':
-      return {
-        bg: 'bg-cyan-900/80',
-        text: 'text-cyan-100',
-        border: 'border-cyan-700',
-        icon: 'text-cyan-400',
-        label: 'Re-release',
-      };
-    default:
-      return {
-        bg: 'bg-gray-800/80',
-        text: 'text-gray-300',
-        border: 'border-gray-600',
-        icon: 'text-gray-400',
-        label: 'Archive',
-      };
-  }
-}
-
-// ============================================================
-// OUTREACH HELPERS
-// ============================================================
-
-/**
- * Generate email template for NFAI request
- */
-export function generateNFAIRequestEmail(
-  movieTitles: string[],
-  siteDescription: string = 'informational film archive / review portal'
-): string {
-  return `Subject: Request for Digital Reproduction Rights - Telugu Film Stills
+  if (titles.length === 1) {
+    return `
+Subject: Request for Archival Images - ${titles[0]}${year}
 
 Dear Sir/Madam,
 
-I am writing to request access to archival materials for the following Telugu films:
+I am writing to request permission to use archival images of the Telugu film "${titles[0]}"${year} for educational and documentary purposes on our film heritage website.
 
-${movieTitles.map((title, i) => `${i + 1}. ${title}`).join('\n')}
+We are committed to:
+1. Proper attribution to NFAI
+2. Non-commercial use only
+3. Maintaining image integrity
+4. Linking back to NFAI resources
 
-Intended Use: ${siteDescription}
+Please let us know if this would be possible and what the process would be.
 
-We are building a respectful Telugu cinema archive that prioritizes:
-- Accurate historical documentation
-- Proper attribution and provenance
-- Non-commercial, informational use
+Thank you for preserving our cinematic heritage.
 
-We would be grateful if you could:
-1. Provide low-resolution previews of available materials
-2. Advise on the process for obtaining digital reproduction rights
-3. Share any licensing terms or fees applicable
+Best regards,
+Telugu Portal Team
+    `.trim();
+  }
+  
+  const movieList = titles.map((t, i) => `${i + 1}. ${t}`).join('\n');
+  return `
+Subject: Request for Archival Images - ${titles.length} Telugu Films
 
-Thank you for your consideration and for preserving our film heritage.
+Dear Sir/Madam,
 
-Sincerely,
-[Your Name]
-[Organization]
-[Contact Information]`;
+I am writing to request permission to use archival images of the following Telugu films for educational and documentary purposes on our film heritage website:
+
+${movieList}
+
+We are committed to:
+1. Proper attribution to NFAI
+2. Non-commercial use only
+3. Maintaining image integrity
+4. Linking back to NFAI resources
+
+Please let us know if this would be possible and what the process would be.
+
+Thank you for preserving our cinematic heritage.
+
+Best regards,
+Telugu Portal Team
+  `.trim();
 }
 
 /**
  * Generate family outreach template
  */
 export function generateFamilyOutreachTemplate(
-  actorName: string,
-  movieTitle: string
+  celebrityName: string,
+  relationship: string
 ): string {
-  return `Dear ${actorName} Family,
+  return `
+Subject: Request to Share ${celebrityName}'s Legacy
 
-I am reaching out regarding the preservation of Telugu cinema history.
+Dear ${relationship},
 
-We are building an archival resource for classic Telugu films, and would be honored to include authentic materials from "${movieTitle}" in our collection.
+We are building a digital archive celebrating the legacy of ${celebrityName} and Telugu cinema.
 
-What we offer:
-- Full attribution and credit to your family
-- Links to your official work/foundation
-- Non-commercial, archival preservation focus
-- Respectful presentation as historical record
+We would be honored if you could share any photographs, memories, or documents that could help preserve and celebrate this legacy for future generations.
 
-If you have any original stills, press photos, or promotional materials you would be willing to share, we would be deeply grateful.
+All materials would be:
+- Properly credited to your family
+- Used only with your explicit permission
+- Preserved in high quality for historical purposes
 
-This builds long-term partnerships for preserving our film heritage.
+We deeply respect ${celebrityName}'s contribution to Telugu cinema and want to ensure their legacy is properly documented.
+
+Would you be open to a conversation about this?
 
 With respect,
-[Your Name]`;
-}
-
-// ============================================================
-// VALIDATION HELPERS
-// ============================================================
-
-/**
- * Validate archival source data
- */
-export function validateArchivalSource(source: Partial<ArchivalSource>): {
-  isValid: boolean;
-  errors: string[];
-} {
-  const errors: string[] = [];
-
-  if (!source.source_name?.trim()) {
-    errors.push('Source name is required');
-  }
-
-  if (!source.source_type) {
-    errors.push('Source type is required');
-  }
-
-  if (!source.license_type) {
-    errors.push('License type is required');
-  }
-
-  if (source.year_estimated && (source.year_estimated < 1900 || source.year_estimated > new Date().getFullYear())) {
-    errors.push('Year must be between 1900 and current year');
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
+Telugu Portal Team
+  `.trim();
 }
 
 /**
- * Check if URL is from a trusted source
+ * Calculate visual tier based on factors
  */
-export function isTrustedSourceUrl(url: string): boolean {
-  const trustedDomains = [
-    'nfrp.gov.in',
-    'archive.org',
-    'commons.wikimedia.org',
-    'filmheritagefoundation.co.in',
-  ];
+export function calculateVisualTier(factors: {
+  hasVerifiedImages: boolean;
+  hasArchivalSources: boolean;
+  hasFamilyPermission: boolean;
+  imageCount: number;
+  sourceCount: number;
+}): VisualTier {
+  let score = 0;
 
-  try {
-    const urlObj = new URL(url);
-    return trustedDomains.some(domain => urlObj.hostname.includes(domain));
-  } catch {
-    return false;
-  }
+  if (factors.hasVerifiedImages) score += 30;
+  if (factors.hasArchivalSources) score += 25;
+  if (factors.hasFamilyPermission) score += 25;
+  if (factors.imageCount >= 10) score += 10;
+  else if (factors.imageCount >= 5) score += 5;
+  if (factors.sourceCount >= 3) score += 10;
+  else if (factors.sourceCount >= 2) score += 5;
+
+  if (score >= 80) return 'gold';
+  if (score >= 60) return 'silver';
+  if (score >= 40) return 'bronze';
+  return 'unverified';
 }
+
+/**
+ * Calculate archival confidence score
+ * Can be called with object params or individual parameters
+ */
+export function calculateArchivalConfidence(
+  sourceTypeOrParams: ArchivalSourceType | {
+    verifiedCount: number;
+    totalCount: number;
+    sourceCount: number;
+    hasFamilyPermission: boolean;
+    hasNFAI: boolean;
+  },
+  imageType?: VisualType,
+  isVerified?: boolean
+): number {
+  // Handle object-style params
+  if (typeof sourceTypeOrParams === 'object') {
+    const { verifiedCount, totalCount, sourceCount, hasFamilyPermission, hasNFAI } = sourceTypeOrParams;
+    let score = 0;
+
+    // Verification ratio (0-40 points)
+    if (totalCount > 0) {
+      score += (verifiedCount / totalCount) * 40;
+    }
+
+    // Source diversity (0-20 points)
+    score += Math.min(sourceCount * 5, 20);
+
+    // Special permissions (0-40 points)
+    if (hasFamilyPermission) score += 20;
+    if (hasNFAI) score += 20;
+
+    return Math.min(Math.round(score), 100);
+  }
+
+  // Handle individual params (sourceType, imageType, isVerified)
+  const sourceType = sourceTypeOrParams;
+  let score = 50; // Base score
+
+  // Boost for official sources
+  if (sourceType === 'nfai' || sourceType === 'government_archive') {
+    score += 30;
+  } else if (sourceType === 'studio_archive' || sourceType === 'studio-archive') {
+    score += 25;
+  } else if (sourceType === 'family_collection' || sourceType === 'family-collection') {
+    score += 20;
+  } else if (sourceType === 'museum' || sourceType === 'university') {
+    score += 15;
+  }
+
+  // Boost for certain image types
+  if (imageType === 'archival' || imageType === 'archival_still' || imageType === 'archival_poster') {
+    score += 10;
+  }
+
+  // Boost for verified
+  if (isVerified) {
+    score += 10;
+  }
+
+  return Math.min(score, 100);
+}
+
+/**
+ * Known archival sources (alias for DEFAULT_ARCHIVAL_SOURCES)
+ */
+export const KNOWN_SOURCES = [
+  { id: 'nfai', code: 'nfai', name: 'NFAI', description: 'National Film Archive of India - Premier film preservation institution', type: 'nfai' as ArchivalSourceType, typicalLicense: 'permission_granted' as LicenseType, tier: 1, accessType: 'request_required', email: 'director@nfrn.in', website: 'https://nfrn.in' },
+  { id: 'studio', code: 'studio', name: 'Studio Archive', description: 'Official studio archives with production stills and promotional material', type: 'studio_archive' as ArchivalSourceType, typicalLicense: 'licensed' as LicenseType, tier: 1, accessType: 'request_required', email: '', website: '' },
+  { id: 'family', code: 'family', name: 'Family Collection', description: 'Personal collections from celebrity families', type: 'family_collection' as ArchivalSourceType, typicalLicense: 'permission_granted' as LicenseType, tier: 2, accessType: 'request_required', email: '', website: '' },
+  { id: 'public', code: 'public', name: 'Public Domain', description: 'Works in the public domain with no copyright restrictions', type: 'public_domain' as ArchivalSourceType, typicalLicense: 'public_domain' as LicenseType, tier: 1, accessType: 'open_access', email: '', website: '' },
+  { id: 'wikimedia', code: 'wikimedia', name: 'Wikimedia Commons', description: 'Free media repository with Creative Commons licensing', type: 'public_domain' as ArchivalSourceType, typicalLicense: 'cc-by-sa' as LicenseType, tier: 1, accessType: 'open_access', email: '', website: 'https://commons.wikimedia.org' },
+  { id: 'archive-org', code: 'archive-org', name: 'Internet Archive', description: 'Digital library with historical content', type: 'public_domain' as ArchivalSourceType, typicalLicense: 'public_domain' as LicenseType, tier: 1, accessType: 'open_access', email: '', website: 'https://archive.org' },
+  { id: 'government', code: 'government', name: 'Government Archive', description: 'State and central government cultural archives', type: 'government_archive' as ArchivalSourceType, typicalLicense: 'archive_license' as LicenseType, tier: 2, accessType: 'request_required', email: '', website: '' },
+  { id: 'museum', code: 'museum', name: 'Museum', description: 'Film and cultural museum collections', type: 'museum' as ArchivalSourceType, typicalLicense: 'permission_granted' as LicenseType, tier: 2, accessType: 'request_required', email: '', website: '' },
+  { id: 'university', code: 'university', name: 'University Archive', description: 'Academic film studies and media archives', type: 'university' as ArchivalSourceType, typicalLicense: 'archive_license' as LicenseType, tier: 2, accessType: 'request_required', email: '', website: '' },
+];
+
+/**
+ * Default archival sources
+ */
+export const DEFAULT_ARCHIVAL_SOURCES: ArchivalSource[] = [
+  {
+    id: 'nfai',
+    name: 'National Film Archive of India',
+    type: 'nfai',
+    website: 'https://nfrn.in',
+    outreach_status: 'not-contacted',
+    default_license: 'permission-granted',
+  },
+  {
+    id: 'internet-archive',
+    name: 'Internet Archive',
+    type: 'public-domain',
+    website: 'https://archive.org',
+    outreach_status: 'approved',
+    default_license: 'public-domain',
+  },
+  {
+    id: 'wikimedia',
+    name: 'Wikimedia Commons',
+    type: 'public-domain',
+    website: 'https://commons.wikimedia.org',
+    outreach_status: 'approved',
+    default_license: 'cc-by-sa',
+  },
+];
 

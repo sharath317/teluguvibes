@@ -26,6 +26,7 @@ import {
   Verified,
 } from 'lucide-react';
 import type { VisualTier, VisualType } from '@/lib/visual-intelligence/types';
+import { VISUAL_TYPE_LABELS } from '@/lib/visual-intelligence/types';
 
 // Import design system primitives
 import { Text } from '@/components/ui/primitives/Text';
@@ -69,6 +70,7 @@ interface TierConfig {
 }
 
 const tierConfigs: Record<VisualTier, TierConfig> = {
+  // Numeric tiers (legacy)
   1: {
     icon: Verified,
     label: 'Original Poster',
@@ -98,6 +100,47 @@ const tierConfigs: Record<VisualTier, TierConfig> = {
     textColor: 'text-[var(--text-secondary)]',
     borderColor: 'border-[var(--border-primary)]',
     iconColor: 'text-[var(--text-tertiary)]',
+  },
+  // String tiers (new format)
+  gold: {
+    icon: Verified,
+    label: 'Original Poster',
+    shortLabel: 'Verified',
+    description: 'Official movie poster from verified source',
+    bgColor: 'bg-green-900/80',
+    textColor: 'text-green-100',
+    borderColor: 'border-green-700',
+    iconColor: 'text-green-400',
+  },
+  silver: {
+    icon: Film,
+    label: 'Archival Visual',
+    shortLabel: 'Archival',
+    description: 'Historical archival material (film still, magazine ad, etc.)',
+    bgColor: 'bg-amber-900/80',
+    textColor: 'text-amber-100',
+    borderColor: 'border-amber-700',
+    iconColor: 'text-amber-400',
+  },
+  bronze: {
+    icon: Archive,
+    label: 'Archive Card',
+    shortLabel: 'Archive',
+    description: 'Reference card - original poster unavailable',
+    bgColor: 'bg-[var(--bg-tertiary)]',
+    textColor: 'text-[var(--text-secondary)]',
+    borderColor: 'border-[var(--border-primary)]',
+    iconColor: 'text-[var(--text-tertiary)]',
+  },
+  unverified: {
+    icon: Archive,
+    label: 'Unverified',
+    shortLabel: 'Unverified',
+    description: 'Visual source not yet verified',
+    bgColor: 'bg-gray-900/80',
+    textColor: 'text-gray-300',
+    borderColor: 'border-gray-700',
+    iconColor: 'text-gray-400',
   },
 };
 
@@ -130,20 +173,8 @@ const positionClasses = {
   'bottom-right': 'bottom-1 right-1',
 };
 
-// ============================================================
-// VISUAL TYPE LABELS
-// ============================================================
-
-const visualTypeLabels: Record<VisualType, string> = {
-  original_poster: 'Original Poster',
-  archival_still: 'Film Still',
-  magazine_ad: 'Magazine Ad',
-  song_book_cover: 'Song Book Cover',
-  newspaper_clipping: 'Newspaper Clipping',
-  cassette_cover: 'Cassette Cover',
-  archive_card: 'Archive Reference',
-  placeholder: 'Placeholder',
-};
+// Use VISUAL_TYPE_LABELS from types module
+const visualTypeLabels = VISUAL_TYPE_LABELS;
 
 // ============================================================
 // TOOLTIP COMPONENT

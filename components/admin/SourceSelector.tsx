@@ -59,13 +59,13 @@ export function SourceSelector({
       if (filterCategory && config.category !== filterCategory) return;
 
       const sourceInfo = {
-        id: config.id,
+        id: config.id as ComplianceDataSource,
         name: config.name,
-        category: config.category,
-        isOfficial: config.isOfficial,
-        license: config.defaultLicense,
-        isActive: config.isActive,
-        rateLimit: { requestsPerSecond: config.rateLimit.requestsPerSecond },
+        category: config.category ?? 'other',
+        isOfficial: config.isOfficial ?? false,
+        license: (config.defaultLicense ?? config.license ?? 'unknown') as LicenseType,
+        isActive: config.isActive ?? config.enabled ?? false,
+        rateLimit: { requestsPerSecond: config.rateLimit?.requestsPerSecond ?? 0 },
       };
 
       // Categorize

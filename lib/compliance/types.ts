@@ -1,339 +1,240 @@
 /**
- * COMPLIANCE LAYER - Type Definitions
- * 
- * Types for privacy, compliance, licensing, and safe data fetching.
+ * Compliance Types
+ * Type definitions for data compliance, licensing, and attribution
  */
 
-import type { DataSource } from '@/lib/data/conflict-resolution';
+export type ComplianceDataSource =
+  | 'tmdb'
+  | 'imdb'
+  | 'omdb'
+  | 'wikipedia'
+  | 'youtube'
+  | 'instagram'
+  | 'twitter'
+  | 'custom'
+  | 'archive'
+  | 'nfai'
+  | 'family'
+  | 'studio';
 
-// ============================================================
-// DATA SOURCE TYPES
-// ============================================================
-
-export type ComplianceDataSource = 
-  | DataSource 
-  | 'moviebuff' | 'jiosaavn' | 'idlebrain' | 'greatandhra' | '123telugu' | 'filmibeat' 
-  | 'sakshi' | 'eenadu' | 'cinemaazi' | 'archive_org'
-  // New sources for content platform extension
-  | 'news_portals'      // Aggregated news sources
-  | 'public_interviews' // Interview archives
-  | 'reddit_public'     // Reddit public posts
-  | 'court_documents'   // Court/legal documents
-  | 'books_references'  // Book citations
-  | 'archive_articles'  // Historical articles
-  | 'youtube_public'    // YouTube public content
-  | 'press_releases';   // Official press releases
-
-export interface SourceConfig {
-  id: ComplianceDataSource;
-  name: string;
-  website: string;
-  category: 'api' | 'scraper' | 'archive' | 'news' | 'ai' | 'official' | 'social';
-  
-  // Rate limiting
-  rateLimit: {
-    requestsPerSecond: number;
-    burstLimit: number;
-    dailyLimit?: number;
-  };
-  
-  // Compliance
-  robotsTxt?: string;
-  tosUrl?: string;
-  apiTermsUrl?: string;
-  
-  // Access
-  requiresAuth: boolean;
-  authType?: 'api_key' | 'oauth' | 'session' | 'none';
-  
-  // Licensing
-  defaultLicense: LicenseType;
-  attributionRequired: boolean;
-  
-  // Flags
-  isActive: boolean;
-  isOfficial: boolean;  // Official API vs scraping
-}
-
-// ============================================================
-// LICENSING TYPES
-// ============================================================
-
-export type LicenseType = 
-  | 'public_domain'
-  | 'CC0'
-  | 'CC-BY'
-  | 'CC-BY-SA'
-  | 'CC-BY-NC'
-  | 'CC-BY-NC-SA'
-  | 'fair_use'
-  | 'editorial_use'
-  | 'archive_license'
-  | 'permission_granted'
-  | 'api_terms'
+export type LicenseType =
+  | 'public-domain'
+  | 'cc-by'
+  | 'cc-by-sa'
+  | 'cc-by-nc'
+  | 'cc-by-nc-sa'
+  | 'cc-by-nd'
+  | 'cc-by-nc-nd'
+  | 'cc0'
+  | 'fair-use'
+  | 'editorial'
+  | 'licensed'
+  | 'permission-granted'
   | 'unknown';
 
-export interface License {
-  type: LicenseType;
+export type OutreachStatus =
+  | 'not-contacted'
+  | 'contacted'
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'expired';
+
+export interface Attribution {
+  source: ComplianceDataSource;
   name: string;
-  allowCommercial: boolean;
-  allowModification: boolean;
-  requiresAttribution: boolean;
-  shareAlike: boolean;
-  restrictions: string[];
+  sourceName?: string; // Alias for name
+  text?: string;
+  url?: string;
+  sourceUrl?: string; // Alias for url
+  license: LicenseType;
+  requiresLink?: boolean;
+  date?: string;
+  notes?: string;
 }
 
-export const LICENSES: Record<LicenseType, License> = {
-  public_domain: {
-    type: 'public_domain',
+export interface ComplianceCheck {
+  source: ComplianceDataSource;
+  allowed: boolean;
+  reason?: string;
+  rateLimit?: number;
+  dailyLimit?: number;
+}
+
+export interface DataSourceConfig {
+  id: ComplianceDataSource | string;
+  name: string;
+  category?: 'media' | 'text' | 'api' | 'archive' | 'social' | 'other';
+  isOfficial?: boolean;
+  defaultLicense?: LicenseType;
+  isActive?: boolean;
+  rateLimit?: { requestsPerSecond: number };
+  enabled: boolean;
+  license: LicenseType;
+  requiresAttribution: boolean;
+  rateLimitPerMinute?: number;
+  dailyLimit?: number;
+  apiKey?: string;
+  baseUrl?: string;
+}
+
+export const LICENSES: Record<LicenseType, { name: string; url: string; requiresAttribution: boolean; allowCommercial: boolean }> = {
+  'public-domain': {
     name: 'Public Domain',
-    allowCommercial: true,
-    allowModification: true,
+    url: 'https://creativecommons.org/publicdomain/mark/1.0/',
     requiresAttribution: false,
-    shareAlike: false,
-    restrictions: [],
-  },
-  CC0: {
-    type: 'CC0',
-    name: 'Creative Commons Zero',
     allowCommercial: true,
-    allowModification: true,
+  },
+  'cc-by': {
+    name: 'CC BY 4.0',
+    url: 'https://creativecommons.org/licenses/by/4.0/',
+    requiresAttribution: true,
+    allowCommercial: true,
+  },
+  'cc-by-sa': {
+    name: 'CC BY-SA 4.0',
+    url: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    requiresAttribution: true,
+    allowCommercial: true,
+  },
+  'cc-by-nc': {
+    name: 'CC BY-NC 4.0',
+    url: 'https://creativecommons.org/licenses/by-nc/4.0/',
+    requiresAttribution: true,
+    allowCommercial: false,
+  },
+  'cc-by-nc-sa': {
+    name: 'CC BY-NC-SA 4.0',
+    url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
+    requiresAttribution: true,
+    allowCommercial: false,
+  },
+  'cc-by-nd': {
+    name: 'CC BY-ND 4.0',
+    url: 'https://creativecommons.org/licenses/by-nd/4.0/',
+    requiresAttribution: true,
+    allowCommercial: true,
+  },
+  'cc-by-nc-nd': {
+    name: 'CC BY-NC-ND 4.0',
+    url: 'https://creativecommons.org/licenses/by-nc-nd/4.0/',
+    requiresAttribution: true,
+    allowCommercial: false,
+  },
+  cc0: {
+    name: 'CC0 1.0',
+    url: 'https://creativecommons.org/publicdomain/zero/1.0/',
     requiresAttribution: false,
-    shareAlike: false,
-    restrictions: [],
-  },
-  'CC-BY': {
-    type: 'CC-BY',
-    name: 'Creative Commons Attribution',
     allowCommercial: true,
-    allowModification: true,
-    requiresAttribution: true,
-    shareAlike: false,
-    restrictions: ['Must provide attribution'],
   },
-  'CC-BY-SA': {
-    type: 'CC-BY-SA',
-    name: 'Creative Commons Attribution-ShareAlike',
-    allowCommercial: true,
-    allowModification: true,
-    requiresAttribution: true,
-    shareAlike: true,
-    restrictions: ['Must provide attribution', 'Derivatives must use same license'],
-  },
-  'CC-BY-NC': {
-    type: 'CC-BY-NC',
-    name: 'Creative Commons Attribution-NonCommercial',
-    allowCommercial: false,
-    allowModification: true,
-    requiresAttribution: true,
-    shareAlike: false,
-    restrictions: ['Must provide attribution', 'No commercial use'],
-  },
-  'CC-BY-NC-SA': {
-    type: 'CC-BY-NC-SA',
-    name: 'Creative Commons Attribution-NonCommercial-ShareAlike',
-    allowCommercial: false,
-    allowModification: true,
-    requiresAttribution: true,
-    shareAlike: true,
-    restrictions: ['Must provide attribution', 'No commercial use', 'ShareAlike'],
-  },
-  fair_use: {
-    type: 'fair_use',
+  'fair-use': {
     name: 'Fair Use',
+    url: 'https://www.copyright.gov/fair-use/',
+    requiresAttribution: true,
+    allowCommercial: false,
+  },
+  editorial: {
+    name: 'Editorial Use',
+    url: '',
+    requiresAttribution: true,
+    allowCommercial: false,
+  },
+  licensed: {
+    name: 'Licensed',
+    url: '',
+    requiresAttribution: true,
     allowCommercial: true,
-    allowModification: false,
-    requiresAttribution: true,
-    shareAlike: false,
-    restrictions: ['Limited use for commentary/education', 'Attribution recommended'],
   },
-  editorial_use: {
-    type: 'editorial_use',
-    name: 'Editorial Use Only',
-    allowCommercial: false,
-    allowModification: false,
-    requiresAttribution: true,
-    shareAlike: false,
-    restrictions: ['Editorial context only', 'No modification', 'Attribution required'],
-  },
-  archive_license: {
-    type: 'archive_license',
-    name: 'Archive License',
-    allowCommercial: false,
-    allowModification: false,
-    requiresAttribution: true,
-    shareAlike: false,
-    restrictions: ['Must credit archive', 'Follow archive terms', 'May require permission'],
-  },
-  permission_granted: {
-    type: 'permission_granted',
+  'permission-granted': {
     name: 'Permission Granted',
-    allowCommercial: true,
-    allowModification: true,
+    url: '',
     requiresAttribution: true,
-    shareAlike: false,
-    restrictions: ['Follow granted permissions', 'Attribution as specified'],
-  },
-  api_terms: {
-    type: 'api_terms',
-    name: 'API Terms of Service',
     allowCommercial: true,
-    allowModification: true,
-    requiresAttribution: true,
-    shareAlike: false,
-    restrictions: ['Follow API ToS', 'May require attribution'],
   },
   unknown: {
-    type: 'unknown',
-    name: 'Unknown License',
-    allowCommercial: false,
-    allowModification: false,
+    name: 'Unknown',
+    url: '',
     requiresAttribution: true,
-    shareAlike: false,
-    restrictions: ['Treat as restricted until verified'],
+    allowCommercial: false,
   },
 };
 
-// ============================================================
-// COMPLIANCE CHECK TYPES
-// ============================================================
+export const SOURCE_TYPE_LABELS: Record<ComplianceDataSource, string> = {
+  tmdb: 'TMDB',
+  imdb: 'IMDb',
+  omdb: 'OMDb',
+  wikipedia: 'Wikipedia',
+  youtube: 'YouTube',
+  instagram: 'Instagram',
+  twitter: 'Twitter',
+  custom: 'Custom',
+  archive: 'Archive',
+  nfai: 'NFAI',
+  family: 'Family Archive',
+  studio: 'Studio',
+};
 
-export interface ComplianceResult {
-  allowed: boolean;
-  rateLimitOk: boolean;
-  tosCompliant: boolean;
-  robotsTxtAllowed: boolean;
-  requiredDelay: number; // ms to wait before request
-  reason?: string;
-  warnings: string[];
-}
+export const LICENSE_TYPE_LABELS: Record<LicenseType, string> = {
+  'public-domain': 'Public Domain',
+  'cc-by': 'CC BY',
+  'cc-by-sa': 'CC BY-SA',
+  'cc-by-nc': 'CC BY-NC',
+  'cc-by-nc-sa': 'CC BY-NC-SA',
+  'cc-by-nd': 'CC BY-ND',
+  'cc-by-nc-nd': 'CC BY-NC-ND',
+  cc0: 'CC0',
+  'fair-use': 'Fair Use',
+  editorial: 'Editorial',
+  licensed: 'Licensed',
+  'permission-granted': 'Permission',
+  unknown: 'Unknown',
+};
 
-export interface SafeFetchResult<T = unknown> {
-  success: boolean;
-  data: T | null;
-  error?: string;
-  
-  // Compliance metadata
-  source: ComplianceDataSource;
-  fetchedAt: string;
-  responseTime: number;
-  
-  // License info
+// Validation and Safety Types
+
+export interface UsageValidation {
+  isValid: boolean;
+  canUse: boolean;
   license: LicenseType;
-  attribution: Attribution | null;
-  
-  // Audit trail
-  requestId: string;
-  rateLimitRemaining: number;
+  requiresAttribution: boolean;
+  attributionText?: string;
+  restrictions?: string[];
+  warnings?: string[];
+  canCommercialUse?: boolean;
+  canModify?: boolean;
+  expiryDate?: string;
 }
-
-export interface Attribution {
-  text: string;
-  html: string;
-  markdown: string;
-  license: LicenseType;
-  sourceUrl: string;
-  sourceName: string;
-  requiresLink: boolean;
-  fetchedAt: string;
-}
-
-// ============================================================
-// PRIVACY TYPES
-// ============================================================
 
 export interface PrivacyCheck {
   safe: boolean;
-  hasPersonalInfo: boolean;
-  hasSensitiveData: boolean;
-  requiresConsent: boolean;
-  flaggedFields: PrivacyFlag[];
-  recommendations: string[];
+  hasPersonalData: boolean;
+  consentRequired: boolean;
+  consentObtained?: boolean;
+  dataTypes?: string[];
+  flaggedFields: { field: string; severity: 'low' | 'medium' | 'high' | 'critical'; recommendation: string }[];
+  sensitivityLevel: 'low' | 'medium' | 'high';
+  recommendations?: string[];
 }
-
-export interface PrivacyFlag {
-  field: string;
-  type: 'pii' | 'contact' | 'location' | 'financial' | 'health' | 'political' | 'minor';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  value?: string;
-  recommendation: string;
-}
-
-// ============================================================
-// USAGE VALIDATION
-// ============================================================
-
-export interface UsageValidation {
-  canUse: boolean;
-  license: LicenseType;
-  licenseInfo: License;
-  attribution: Attribution | null;
-  restrictions: string[];
-  warnings: string[];
-  expiresAt?: Date;
-}
-
-// ============================================================
-// CONTENT SAFETY (integrates with existing)
-// ============================================================
 
 export interface ContentSafetyResult {
   safe: boolean;
-  status: 'approved' | 'needs_review' | 'flagged' | 'blocked';
-  flags: ContentFlag[];
-  score: number;  // 0-100, higher = safer
-}
-
-export interface ContentFlag {
-  type: 'copyright' | 'adult' | 'violence' | 'political' | 'fake' | 'privacy' | 'tos_violation';
-  severity: 'info' | 'warning' | 'critical';
-  reason: string;
-  autoResolve: boolean;
-  field?: string;
-}
-
-// ============================================================
-// AUDIT TYPES
-// ============================================================
-
-export interface FetchAuditEntry {
-  id: string;
-  source: ComplianceDataSource;
-  url: string;
-  method: 'GET' | 'POST';
-  timestamp: string;
-  responseStatus: number;
-  responseTime: number;
-  rateLimitRemaining: number;
-  userAgent: string;
-  success: boolean;
-  error?: string;
-}
-
-export interface ComplianceReport {
-  generatedAt: string;
-  period: {
-    start: string;
-    end: string;
+  isSafe: boolean;
+  status: 'pass' | 'review_needed' | 'blocked' | 'error';
+  score: number; // 0-100, where 100 is completely safe
+  categories: {
+    adult: number;
+    violence: number;
+    hate: number;
+    harassment: number;
+    selfHarm: number;
+    dangerous: number;
   };
-  summary: {
-    totalRequests: number;
-    successfulRequests: number;
-    failedRequests: number;
-    rateLimitHits: number;
-    complianceViolations: number;
-  };
-  bySource: Record<ComplianceDataSource, {
-    requests: number;
-    failures: number;
-    avgResponseTime: number;
-    rateLimitHits: number;
-  }>;
-  violations: Array<{
-    timestamp: string;
-    source: ComplianceDataSource;
-    type: string;
-    description: string;
-  }>;
+  flags: { 
+    type: string; 
+    severity: 'info' | 'warning' | 'critical'; 
+    reason: string;
+    autoResolve?: boolean;
+  }[];
+  flaggedContent?: string[];
+  recommendations?: string[];
 }
-

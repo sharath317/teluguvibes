@@ -1,234 +1,171 @@
 /**
- * ARCHIVE CARD GENERATOR
- * 
- * Generates archive reference card data for movies without valid posters.
- * Archive cards are Tier 3 visuals that provide transparent information
- * about why a poster is unavailable.
+ * Archive Card Generator
+ * Utilities for generating and displaying archive cards
  */
 
-import type { ArchiveCardData, ArchiveReason } from './types';
-import { determineArchiveReason, needsArchiveCard } from './visual-confidence';
-
-// ============================================================
-// TYPES
-// ============================================================
-
-interface MovieData {
-  id: string;
-  title_en: string;
-  title_te?: string | null;
-  release_year: number | null;
-  hero?: string | null;
-  director?: string | null;
-  poster_url?: string | null;
-  poster_source?: string | null;
-}
-
-interface GenerationResult {
-  movieId: string;
-  archiveCardData: ArchiveCardData | null;
-  needsCard: boolean;
-  reason?: string;
-}
-
-// ============================================================
-// ARCHIVE REASON DESCRIPTIONS
-// ============================================================
-
-const ARCHIVE_REASON_DESCRIPTIONS: Record<ArchiveReason, string> = {
-  pre_poster_era: 'This film predates the era of theatrical poster marketing',
-  lost_media: 'Original promotional materials for this film have been lost to time',
-  no_digital_source: 'Physical posters exist but have not been digitized',
-  regional_release: 'This was a limited regional release without standard marketing materials',
-};
-
-// ============================================================
-// STUDIO DETECTION
-// ============================================================
+import type { ArchiveCardData, VisualTier, ArchivalSourceType } from './types';
+import { SOURCE_TYPE_LABELS, VISUAL_TIER_CONFIG } from './types';
 
 /**
- * Attempt to detect studio from movie data
- * This is a simplified implementation - can be extended with more data sources
+ * Get display text for archive reason
  */
-function detectStudio(movie: MovieData): string | undefined {
-  // This would ideally look up from a database or external source
-  // For now, return undefined to be filled manually
-  return undefined;
+export function getArchiveReasonDisplay(reason: string): string {
+    const reasonMap: Record<string, string> = {
+        'verified-archival': 'Verified archival images available',
+        'family-permission': 'Images shared with family permission',
+        'studio-archive': 'Official studio archive access',
+        'public-domain': 'Public domain images available',
+        'nfai-verified': 'NFAI verified collection',
+        'multiple-sources': 'Multiple verified sources',
+        'high-confidence': 'High confidence visual data',
+        'needs-verification': 'Awaiting verification',
+        'limited-sources': 'Limited source availability',
+    };
+    return reasonMap[reason] || reason;
 }
 
 /**
- * Determine metadata source for archive card
+ * Get archive card subtitle
  */
-function determineMetadataSource(movie: MovieData): string {
-  // Prioritize sources based on available data
-  if (movie.title_te) return 'filmography_record';
-  if (movie.director) return 'filmography_record';
-  if (movie.hero) return 'filmography_record';
-  return 'database_record';
+export function getArchiveCardSubtitle(card: ArchiveCardData): string {
+    if (card.verified_count === 0) {
+        return 'No verified images yet';
+    }
+
+    const sourceText =
+        card.sources.length === 1
+            ? SOURCE_TYPE_LABELS[card.sources[0]]
+            : `${card.sources.length} sources`;
+
+    return `${card.verified_count} verified from ${sourceText}`;
 }
 
-// ============================================================
-// ARCHIVE CARD GENERATION
-// ============================================================
+/**
+ * Get verification status for an archive card
+ */
+export function getVerificationStatus(card: ArchiveCardData): {
+    status: 'verified' | 'partial' | 'unverified';
+    label: string;
+    color: string;
+} {
+    if (card.verified_count === 0) {
+        return { status: 'unverified', label: 'Unverified', color: '#808080' };
+    }
+
+    if (card.verified_count === card.image_count) {
+        return { status: 'verified', label: 'Fully Verified', color: '#22c55e' };
+    }
+
+    return { status: 'partial', label: 'Partially Verified', color: '#f59e0b' };
+}
 
 /**
- * Generate archive card data for a single movie
+ * Get tier badge props
  */
-export function generateArchiveCardData(movie: MovieData): ArchiveCardData | null {
-  // Check if movie needs an archive card
-  if (!needsArchiveCard({
-    posterUrl: movie.poster_url,
-    posterSource: movie.poster_source,
-    releaseYear: movie.release_year,
-  })) {
-    return null;
-  }
-
-  const archiveReason = determineArchiveReason(
-    movie.release_year,
-    !!movie.poster_url && !movie.poster_url.includes('placeholder')
-  );
-
+export function getTierBadgeProps(tier: VisualTier): {
+    label: string;
+    color: string;
+    bgColor: string;
+} {
+    const config = VISUAL_TIER_CONFIG[tier];
   return {
-    title: movie.title_en,
-    year: movie.release_year || 0,
-    lead_actor: movie.hero || undefined,
-    studio: detectStudio(movie),
-    archive_reason: archiveReason,
-    verified_limitation: false, // Requires manual verification
-    metadata_source: determineMetadataSource(movie),
-    notes: ARCHIVE_REASON_DESCRIPTIONS[archiveReason],
+      label: config.label,
+      color: config.color,
+      bgColor: `${config.color}20`,
   };
 }
 
 /**
- * Generate archive card data for multiple movies
+ * Generate archive card data from movie and images
+ * Accepts either the new params format or a movie-like object
  */
-export function batchGenerateArchiveCards(movies: MovieData[]): GenerationResult[] {
-  return movies.map(movie => {
-    const needsCard = needsArchiveCard({
-      posterUrl: movie.poster_url,
-      posterSource: movie.poster_source,
-      releaseYear: movie.release_year,
-    });
+export function generateArchiveCardData(params: {
+    // New format
+    movieId?: string;
+    movieTitle?: string;
+    movieYear?: number;
+    images?: Array<{
+        is_verified: boolean;
+        source_type: ArchivalSourceType;
+        image_url: string;
+    }>;
+    // Movie-like format (for backfill scripts)
+    id?: string;
+    title_en?: string;
+    release_year?: number;
+    hero?: string;
+    director?: string;
+    poster_url?: string | null;
+    poster_source?: string | null;
+}): ArchiveCardData {
+    // Support both naming conventions
+    const movieId = params.movieId ?? params.id ?? '';
+    const movieTitle = params.movieTitle ?? params.title_en ?? 'Unknown Title';
+    const movieYear = params.movieYear ?? params.release_year;
+    const images = params.images ?? [];
+    const hero = params.hero;
 
-    if (!needsCard) {
-      return {
-        movieId: movie.id,
-        archiveCardData: null,
-        needsCard: false,
-        reason: 'Movie has valid poster',
-      };
+    const verifiedCount = images.filter(img => img.is_verified).length;
+    const sources = [...new Set(images.map(img => img.source_type))];
+
+    // Calculate tier
+    let tier: VisualTier = 'unverified';
+    if (verifiedCount >= 10 && sources.length >= 3) {
+        tier = 'gold';
+    } else if (verifiedCount >= 5 && sources.length >= 2) {
+        tier = 'silver';
+    } else if (verifiedCount > 0) {
+        tier = 'bronze';
     }
 
-    const archiveCardData = generateArchiveCardData(movie);
+    // Generate reasons
+    const reasons: string[] = [];
+    if (verifiedCount > 0) reasons.push('verified-archival');
+    if (sources.includes('family-collection')) reasons.push('family-permission');
+    if (sources.includes('nfai')) reasons.push('nfai-verified');
+    if (sources.includes('public-domain')) reasons.push('public-domain');
+    if (sources.length >= 2) reasons.push('multiple-sources');
+    if (verifiedCount === 0) reasons.push('needs-verification');
 
     return {
-      movieId: movie.id,
-      archiveCardData,
-      needsCard: true,
-      reason: archiveCardData?.archive_reason,
+        id: `card-${movieId}`,
+        movie_id: movieId,
+        movie_title: movieTitle,
+        movie_year: movieYear,
+        visual_tier: tier,
+        image_count: images.length,
+        verified_count: verifiedCount,
+        primary_image_url: images[0]?.image_url ?? params.poster_url ?? undefined,
+        sources,
+        archival_reasons: reasons,
+        last_updated: new Date().toISOString(),
+        lead_actor: hero,
     };
-  });
-}
-
-// ============================================================
-// VALIDATION
-// ============================================================
-
-/**
- * Validate archive card data completeness
- */
-export function validateArchiveCardData(data: ArchiveCardData): {
-  isValid: boolean;
-  missingFields: string[];
-  completeness: number;
-} {
-  const requiredFields = ['title', 'year', 'archive_reason'];
-  const optionalFields = ['lead_actor', 'studio', 'metadata_source', 'notes'];
-  
-  const missingRequired = requiredFields.filter(field => {
-    const value = data[field as keyof ArchiveCardData];
-    return value === undefined || value === null || value === '';
-  });
-  
-  const presentOptional = optionalFields.filter(field => {
-    const value = data[field as keyof ArchiveCardData];
-    return value !== undefined && value !== null && value !== '';
-  });
-  
-  const totalFields = requiredFields.length + optionalFields.length;
-  const presentFields = (requiredFields.length - missingRequired.length) + presentOptional.length;
-  const completeness = presentFields / totalFields;
-  
-  return {
-    isValid: missingRequired.length === 0,
-    missingFields: missingRequired,
-    completeness: Math.round(completeness * 100) / 100,
-  };
-}
-
-// ============================================================
-// SERIALIZATION
-// ============================================================
-
-/**
- * Serialize archive card data for database storage
- */
-export function serializeArchiveCardData(data: ArchiveCardData): string {
-  return JSON.stringify(data);
 }
 
 /**
- * Deserialize archive card data from database
+ * Sort archive cards by tier and verification status
  */
-export function deserializeArchiveCardData(json: string | object | null): ArchiveCardData | null {
-  if (!json) return null;
-  
-  try {
-    const data = typeof json === 'string' ? JSON.parse(json) : json;
-    
-    // Validate required fields
-    if (!data.title || !data.archive_reason) {
-      return null;
-    }
-    
-    return data as ArchiveCardData;
-  } catch {
-    return null;
-  }
-}
+export function sortArchiveCards(cards: ArchiveCardData[]): ArchiveCardData[] {
+    const tierOrder: Record<VisualTier, number> = {
+        // String tiers
+        gold: 0,
+        silver: 1,
+        bronze: 2,
+        unverified: 3,
+        // Numeric tiers (map to same order)
+        1: 0,
+        2: 1,
+        3: 2,
+    };
 
-// ============================================================
-// DISPLAY HELPERS
-// ============================================================
+    return [...cards].sort((a, b) => {
+        // First by tier
+        const tierDiff = tierOrder[a.visual_tier] - tierOrder[b.visual_tier];
+        if (tierDiff !== 0) return tierDiff;
 
-/**
- * Get human-readable archive reason
- */
-export function getArchiveReasonDisplay(reason: ArchiveReason): string {
-  return ARCHIVE_REASON_DESCRIPTIONS[reason] || 'Poster unavailable';
-}
-
-/**
- * Get archive card subtitle text
- */
-export function getArchiveCardSubtitle(data: ArchiveCardData): string {
-  const parts: string[] = [];
-  
-  if (data.year) parts.push(String(data.year));
-  if (data.lead_actor) parts.push(data.lead_actor);
-  if (data.studio) parts.push(data.studio);
-  
-  return parts.join(' • ');
-}
-
-/**
- * Get verification status text
- */
-export function getVerificationStatus(data: ArchiveCardData): string {
-  return data.verified_limitation
-    ? 'Verified archival limitation'
-    : 'Unverified archival limitation';
+        // Then by verified count
+        return b.verified_count - a.verified_count;
+    });
 }
 

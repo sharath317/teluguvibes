@@ -51,22 +51,23 @@ export interface ContentFilterResult<T> {
 function isMovieAllowed(movie: Movie, mode: ContentMode): boolean {
   // No profile = assume not family safe, but allow in standard mode
   if (!movie.content_profile) {
-    if (mode === 'family_safe') {
+    if (mode === 'family') {
       // In family safe mode, only allow if explicitly not adult
       return movie.is_adult === false;
     }
-    return mode !== 'family_safe' || movie.is_adult !== true;
+    // For standard and adult modes, allow unless explicitly adult
+    return movie.is_adult !== true;
   }
 
   const profile = movie.content_profile;
 
   switch (mode) {
-    case 'family_safe':
+    case 'family':
       return profile.isFamilySafe && !profile.isAdult;
     
     case 'standard':
       // Allow everything except explicit adult content
-      return !profile.isAdult || profile.audienceRating !== 'S';
+      return !profile.isAdult || profile.audienceRating !== 'A';
     
     case 'adult':
       // Allow everything
@@ -82,7 +83,7 @@ function isMovieAllowed(movie: Movie, mode: ContentMode): boolean {
  */
 function isImageAllowed(image: Image, mode: ContentMode): boolean {
   switch (mode) {
-    case 'family_safe':
+    case 'family':
       return image.isSafe !== false && image.isAdult !== true;
     
     case 'standard':
@@ -100,7 +101,7 @@ function isImageAllowed(image: Image, mode: ContentMode): boolean {
  * Sanitize text for family-safe mode
  */
 function sanitizeText(text: string, mode: ContentMode): string {
-  if (mode !== 'family_safe') return text;
+  if (mode !== 'family') return text;
   
   // List of words to censor in family-safe mode
   const censorWords = [
@@ -124,7 +125,11 @@ function sanitizeText(text: string, mode: ContentMode): string {
 // ============================================================
 
 export function useContentFilter() {
-  const { mode, isFamilySafe, allowsAdultContent } = useContentMode();
+  const { mode, isAgeVerified } = useContentMode();
+  
+  // Derive mode-based flags
+  const isFamilySafe = mode === 'family';
+  const allowsAdultContent = mode === 'adult' && isAgeVerified;
 
   /**
    * Filter an array of movies based on content mode
@@ -251,4 +256,5 @@ export function useFilteredImages<T extends Image>(images: T[]): ContentFilterRe
   
   return useMemo(() => filterImages(images), [filterImages, images]);
 }
+
 

@@ -1,257 +1,226 @@
 /**
- * Celebrity Profile Types
- * Types for celebrity enrichment, awards, milestones, and trivia
+ * Celebrity Types
+ * Type definitions for celebrity-related data
  */
 
-// ============================================================
-// CORE TYPES
-// ============================================================
-
-export interface CelebrityProfile {
+export interface Celebrity {
   id: string;
-  slug: string;
+  name: string;
   name_en: string;
   name_te?: string;
+  slug: string;
+  image_url?: string;
+  profile_image?: string;
+  cover_image_url?: string;
+  profession: CelebrityProfession[];
   gender?: 'male' | 'female' | 'other';
   birth_date?: string;
   death_date?: string;
   birth_place?: string;
-  occupation?: string[];
-  
-  // Bio
-  short_bio?: string;
-  short_bio_te?: string;
-  full_bio?: string;
-  full_bio_te?: string;
-  
-  // Personal
-  education?: string;
-  spouse?: string;
-  children_count?: number;
-  height?: string;
-  nicknames?: string[];
-  family_details?: Record<string, unknown>;
-  
-  // Career
-  debut_year?: number;
-  debut_movie?: string;
-  breakthrough_movie?: string;
-  peak_year?: number;
-  known_for?: string[];
-  signature_style?: string;
-  era?: 'legend' | 'golden' | 'classic' | 'current' | 'emerging';
-  
-  // Stats
-  total_movies?: number;
-  hits_count?: number;
-  flops_count?: number;
-  hit_rate?: number;
-  awards_count?: number;
-  popularity_score?: number;
-  
-  // External IDs
-  tmdb_id?: number;
-  imdb_id?: string;
-  wikidata_id?: string;
-  wikipedia_url?: string;
-  
-  // Media
-  profile_image?: string;
-  profile_image_source?: string;
-  gallery_images?: string[];
-  
-  // Social
-  instagram_handle?: string;
-  twitter_handle?: string;
-  youtube_channel?: string;
-  
-  // Meta
-  enrichment_status?: 'pending' | 'partial' | 'complete';
-  last_enriched_at?: string;
+  nationality?: string;
+  biography?: string;
+  biography_te?: string;
+  is_featured?: boolean;
+  is_verified?: boolean;
+  social_links?: SocialLink[];
   created_at?: string;
   updated_at?: string;
 }
 
+export type CelebrityProfession = 
+  | 'actor'
+  | 'actress'
+  | 'director'
+  | 'producer'
+  | 'music_director'
+  | 'singer'
+  | 'lyricist'
+  | 'cinematographer'
+  | 'editor'
+  | 'writer'
+  | 'choreographer'
+  | 'costume_designer'
+  | 'art_director'
+  | 'stunt_coordinator'
+  | 'playback_singer'
+  | 'dubbing_artist'
+  | 'other';
+
+export interface SocialLink {
+  platform: 'instagram' | 'twitter' | 'facebook' | 'youtube' | 'wikipedia' | 'imdb' | 'other';
+  url: string;
+  handle?: string;
+}
+
 export interface CelebrityAward {
-  id?: string;
-  celebrity_id: string;
-  award_name: string;
-  award_type: 'national' | 'filmfare' | 'nandi' | 'siima' | 'cinemaa' | 'other';
-  category?: string;
-  year?: number;
-  movie_id?: string;
+  id: string;
+  name: string;
+  name_te?: string;
+  category: string;
+  category_te?: string;
+  year: number;
   movie_title?: string;
+  movie_title_te?: string;
   is_won: boolean;
   is_nomination?: boolean;
-  source?: string;
-  source_url?: string;
+  award_type?: 'national' | 'state' | 'filmfare' | 'nandi' | 'zee' | 'cinemaa' | 'siima' | 'other';
+  award_body?: string;
+  award_body_te?: string;
+  image_url?: string;
 }
 
-export interface CelebrityTrivia {
-  id?: string;
-  celebrity_id: string;
-  trivia_text: string;
-  trivia_text_te?: string;
-  category: 'personal' | 'career' | 'fun_fact' | 'controversy' | 'family' | 'education';
-  source_url?: string;
-  is_verified?: boolean;
-  is_published?: boolean;
-  display_order?: number;
-}
-
-export interface CelebrityMilestone {
-  id?: string;
-  celebrity_id: string;
-  milestone_type: 'debut' | 'breakthrough' | 'peak' | 'comeback' | 'downfall' | 'retirement' | 'award' | 'record';
-  year: number;
-  movie_id?: string;
-  movie_title?: string;
-  title: string;
-  title_te?: string;
-  description?: string;
-  description_te?: string;
-  impact_score?: number;
-  is_published?: boolean;
-}
-
-// ============================================================
-// ENRICHMENT TYPES
-// ============================================================
-
-export interface CelebrityEnrichmentData {
-  // Basic Info
-  name_en?: string;
-  name_te?: string;
-  gender?: string;
-  birth_date?: string;
-  death_date?: string;
-  birth_place?: string;
-  
-  // Bio
-  short_bio?: string;
-  full_bio?: string;
-  
-  // Personal
-  education?: string;
-  spouse?: string;
-  children_count?: number;
-  height?: string;
-  nicknames?: string[];
-  
-  // Career
-  occupation?: string[];
-  debut_year?: number;
-  debut_movie?: string;
-  known_for?: string[];
-  
-  // Media
-  profile_image?: string;
-  profile_image_source?: string;
-  
-  // External IDs
-  tmdb_id?: number;
-  imdb_id?: string;
-  wikidata_id?: string;
-  wikipedia_url?: string;
-  
-  // Awards (from enrichment)
-  awards?: CelebrityAward[];
-  
-  // Trivia (from enrichment)
-  trivia?: CelebrityTrivia[];
-}
-
-export interface EnrichmentResult {
-  celebrity_id: string;
-  name: string;
-  source: 'tmdb' | 'wikipedia' | 'wikidata' | 'imdb' | 'ai' | 'none';
-  data: CelebrityEnrichmentData;
-  fields_updated: string[];
-  awards_found: number;
-  trivia_found: number;
-}
-
-// ============================================================
-// API RESPONSE TYPES
-// ============================================================
-
-export interface CelebrityProfileResponse {
-  celebrity: CelebrityProfile;
-  awards: CelebrityAward[];
-  milestones: CelebrityMilestone[];
-  trivia: CelebrityTrivia[];
-  filmography: FilmographyItem[];
-  related_celebrities: RelatedCelebrity[];
-}
-
-export interface FilmographyItem {
+export interface CelebrityFilmography {
+  id: string;
   movie_id: string;
-  title_en: string;
-  title_te?: string;
-  slug: string;
-  release_year: number;
+  movie_title: string;
+  movie_title_te?: string;
+  movie_slug: string;
+  release_year?: number;
+  role: string;
+  role_te?: string;
+  character_name?: string;
+  character_name_te?: string;
   poster_url?: string;
-  role?: string;
-  role_type?: 'lead' | 'supporting' | 'cameo' | 'voice' | 'special_appearance';
-  verdict?: string;
-  verdict_color?: string;
+  is_lead?: boolean;
+  is_cameo?: boolean;
+}
+
+// FilmographyItem is an alias for CelebrityFilmography with additional display fields
+export interface FilmographyItem extends CelebrityFilmography {
+  slug?: string; // Movie slug for URL
+  title_en?: string; // English title (alias for movie_title)
+  title_te?: string; // Telugu title
+  avg_rating?: number;
+  box_office_status?: 'blockbuster' | 'hit' | 'average' | 'flop' | 'unknown';
   our_rating?: number;
-  genres?: string[];
-  director?: string;
-  is_debut?: boolean;
+  verdict?: string; // Verdict text (e.g., "Blockbuster", "Hit", "Flop")
+  verdict_color?: string; // Color for the verdict/status indicator
+  verdict_label?: string;
   is_blockbuster?: boolean;
-  is_iconic?: boolean;
+  is_hit?: boolean;
+  is_flop?: boolean;
+  genres?: string[];
 }
 
 export interface RelatedCelebrity {
   id: string;
-  slug: string;
+  name: string;
   name_en: string;
   name_te?: string;
+  slug: string;
+  image_url?: string;
   profile_image?: string;
-  occupation?: string;
-  collaboration_count: number;
-  relation_type: 'costar' | 'director' | 'producer' | 'music_director';
+  profession?: CelebrityProfession[];
+  relation_type: 'frequent_costar' | 'director' | 'music_director' | 'collaborator' | 'contemporary' | 'similar';
+  relation_label?: string;
+  collaboration_count?: number;
+  latest_movie?: string;
+}
+
+export interface CelebrityGalleryImage {
+  id: string;
+  url: string;
+  thumbnail_url?: string;
+  caption?: string;
+  caption_te?: string;
+  type: 'portrait' | 'event' | 'movie' | 'behind_the_scenes' | 'candid';
+  movie_id?: string;
+  event_name?: string;
+  uploaded_at?: string;
+}
+
+export interface CelebrityStats {
+  total_movies: number;
+  total_awards: number;
+  total_nominations: number;
+  box_office_total?: string;
+  avg_rating?: number;
+  debut_year?: number;
+  latest_movie_year?: number;
+  career_span?: string;
+}
+
+export type MilestoneType = 'debut' | 'blockbuster' | 'award' | 'milestone' | '100_film' | '200_film' | 'collaboration' | 'other';
+
+export interface CelebrityMilestone {
+  id: string;
+  year: number;
+  title: string;
+  title_te?: string;
+  description?: string;
+  description_te?: string;
+  type?: MilestoneType;
+  milestone_type: MilestoneType;
+  movie_id?: string;
+  movie_title?: string;
+  movie_title_te?: string;
+  image_url?: string;
+  importance: 'major' | 'minor' | 'notable';
+  impact_score?: number; // 0-1 score indicating impact/significance
+}
+
+export interface CelebrityProfile extends Celebrity {
+  // Extended profile with computed/additional fields
+  age?: number;
+  zodiac_sign?: string;
+  height?: string;
+  known_for?: string[];
+  nicknames?: string[];
+  filmography_count?: number;
+  awards_count?: number;
+  era?: 'classic' | 'golden' | 'modern' | 'contemporary';
+  occupation?: string[];
+  wikipedia_url?: string;
+  imdb_id?: string;
+  instagram_handle?: string;
+  twitter_handle?: string;
+  youtube_channel?: string;
 }
 
 export interface AwardsSummary {
   total: number;
-  national: number;
-  filmfare: number;
-  nandi: number;
-  siima: number;
-  other: number;
+  wins: number;
+  nominations: number;
+  major_wins?: number;
+  national_awards?: number;
+  filmfare?: number;
+  nandi?: number;
+  siima?: number;
+  other?: number;
 }
 
 export interface CareerStats {
-  total_movies: number;
-  hits: number;
-  average: number;
-  flops: number;
-  hit_rate: number;
-  active_years: string;
-  peak_years: string;
+  total_films: number;
+  total_movies?: number; // Alias for total_films
+  as_lead: number;
+  as_supporting: number;
+  as_cameo?: number;
   debut_year?: number;
-  awards_won: number;
+  latest_release_year?: number;
+  active_years?: number;
+  avg_rating?: number;
+  highest_rated_film?: {
+    title: string;
+    rating: number;
+  };
+  blockbusters?: number;
+  hits?: number;
+  hit_rate?: number; // Percentage of hit movies
+  avg_films_per_year?: number;
 }
 
-// ============================================================
-// FILMOGRAPHY GROUPING
-// ============================================================
+export type TriviaCategory = 'personal' | 'career' | 'education' | 'family' | 'records' | 'fun_fact' | 'controversy' | 'other';
 
-export interface FilmographyByDecade {
-  decade: string; // "2020s", "2010s", etc.
-  movies: FilmographyItem[];
+export interface CelebrityTrivia {
+  id: string;
+  content: string;
+  content_te?: string;
+  trivia_text?: string; // Alias for content
+  trivia_text_te?: string; // Alias for content_te
+  category?: TriviaCategory;
+  is_verified?: boolean;
+  source?: string;
+  source_url?: string;
+  created_at?: string;
 }
-
-export interface FilmographyByGenre {
-  genre: string;
-  movies: FilmographyItem[];
-}
-
-export interface FilmographyByVerdict {
-  verdict: 'blockbuster' | 'hit' | 'average' | 'flop' | 'unknown';
-  movies: FilmographyItem[];
-}
-
 

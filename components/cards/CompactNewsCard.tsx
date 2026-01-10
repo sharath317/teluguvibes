@@ -13,6 +13,59 @@ import { Clock, Eye, TrendingUp } from 'lucide-react';
 import type { Post, Category } from '@/types/database';
 import { CATEGORY_META, getCategoryMeta } from '@/lib/config/navigation';
 
+// Allowed image hosts for next/image
+const ALLOWED_IMAGE_HOSTS = [
+  'picsum.photos',
+  'images.unsplash.com',
+  'upload.wikimedia.org',
+  'commons.wikimedia.org',
+  'image.tmdb.org',
+  'www.themoviedb.org',
+  'm.media-amazon.com',
+  'i.ytimg.com',
+];
+
+// Check if URL is a valid image URL for next/image
+function isValidImageUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  
+  try {
+    const parsed = new URL(url);
+    
+    // Check if host is allowed
+    if (ALLOWED_IMAGE_HOSTS.includes(parsed.hostname)) {
+      return true;
+    }
+    
+    // Check if URL ends with common image extensions
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif'];
+    const pathname = parsed.pathname.toLowerCase();
+    if (imageExtensions.some(ext => pathname.endsWith(ext))) {
+      return true;
+    }
+    
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// Get a safe image URL with fallback
+function getSafeImageUrl(post: Post, size: string = '200/200'): string {
+  const fallback = `https://picsum.photos/seed/${post.id}/${size}`;
+  
+  if (isValidImageUrl(post.image_url)) {
+    return post.image_url!;
+  }
+  
+  const firstImage = post.image_urls?.[0];
+  if (isValidImageUrl(firstImage)) {
+    return firstImage!;
+  }
+  
+  return fallback;
+}
+
 interface CompactNewsCardProps {
   post: Post;
   variant?: 'horizontal' | 'vertical' | 'minimal';
@@ -32,7 +85,7 @@ export function CompactNewsCard({
   imageSize = 'small',
   className = '',
 }: CompactNewsCardProps) {
-  const imageUrl = post.image_url || post.image_urls?.[0] || `https://picsum.photos/seed/${post.id}/200/200`;
+  const imageUrl = getSafeImageUrl(post, '200/200');
   const meta = CATEGORY_META[post.category];
 
   if (variant === 'minimal') {

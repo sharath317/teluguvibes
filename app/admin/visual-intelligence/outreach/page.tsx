@@ -66,7 +66,7 @@ interface OutreachRequest {
 // STATUS CONFIGURATION
 // ============================================================
 
-const statusConfig: Record<OutreachStatus, { label: string; color: string; icon: typeof Clock }> = {
+const statusConfig: Partial<Record<OutreachStatus, { label: string; color: string; icon: typeof Clock }>> = {
   draft: { label: 'Draft', color: 'bg-gray-700 text-gray-300', icon: FileText },
   sent: { label: 'Sent', color: 'bg-blue-900/50 text-blue-300', icon: Send },
   pending_response: { label: 'Awaiting Response', color: 'bg-amber-900/50 text-amber-300', icon: Clock },
@@ -359,7 +359,7 @@ function SourceCard({
   return (
     <div
       onClick={onSelect}
-      className={`p-4 rounded-lg border cursor-pointer transition-all ${tierColors[source.tier]} ${
+      className={`p-4 rounded-lg border cursor-pointer transition-all ${tierColors[source.tier as keyof typeof tierColors] || tierColors[3]} ${
         isSelected ? 'ring-2 ring-orange-500' : 'hover:border-gray-600'
       }`}
     >
@@ -404,7 +404,7 @@ function SourceCard({
 // ============================================================
 
 function RequestCard({ request }: { request: OutreachRequest }) {
-  const status = statusConfig[request.status];
+  const status = statusConfig[request.status] || { label: 'Unknown', color: 'bg-gray-700 text-gray-300', icon: Clock };
   const StatusIcon = status.icon;
 
   return (

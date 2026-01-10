@@ -48,6 +48,7 @@ import {
 import { RecommendMeButton } from "@/components/recommendations/RecommendMeButton";
 import { MovieBadges } from "@/components/reviews/MovieBadges";
 import { MobileSynopsis } from "@/components/reviews/MobileSynopsis";
+import { ContentWarnings } from "@/components/reviews/ContentWarnings";
 import type { Movie, MovieReview } from "@/types/reviews";
 import type { ReviewInsights } from "@/lib/reviews/review-insights";
 import {
@@ -302,13 +303,25 @@ export default async function MovieReviewPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Coming Soon Banner */}
+            {/* Coming Soon Banner - Enhanced for Upcoming Movies */}
             {isUpcoming && (
-              <div className="mt-3 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg p-3">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-orange-400" />
-                  <span className="text-orange-300 font-semibold text-sm">
-                    {upcomingLabel}
+              <div className="mt-3 bg-gradient-to-r from-orange-500/20 via-red-500/20 to-purple-500/20 border border-orange-500/40 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-orange-500/30 flex items-center justify-center">
+                      <Calendar className="w-4 h-4 text-orange-400" />
+                    </div>
+                    <div>
+                      <span className="text-orange-300 font-bold text-sm block">
+                        COMING SOON
+                      </span>
+                      <span className="text-orange-200/80 text-xs">
+                        {upcomingLabel}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="px-2 py-1 bg-orange-500/30 rounded text-[10px] font-bold text-orange-200 uppercase tracking-wider">
+                    Upcoming
                   </span>
                 </div>
               </div>
@@ -649,13 +662,31 @@ export default async function MovieReviewPage({ params }: PageProps) {
                 )}
               </div>
 
+              {/* Coming Soon Banner - Desktop */}
               {isUpcoming && (
-                <div className="mb-4 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg p-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-orange-400" />
-                    <span className="text-orange-300 font-semibold">
-                      {upcomingLabel}
-                    </span>
+                <div className="mb-4 bg-gradient-to-r from-orange-500/20 via-red-500/20 to-purple-500/20 border border-orange-500/40 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500/40 to-red-500/40 flex items-center justify-center">
+                        <Calendar className="w-6 h-6 text-orange-400" />
+                      </div>
+                      <div>
+                        <span className="text-orange-300 font-bold text-lg block">
+                          COMING SOON
+                        </span>
+                        <span className="text-orange-200/80 text-sm">
+                          {upcomingLabel}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="px-3 py-1.5 bg-orange-500/30 rounded-lg text-xs font-bold text-orange-200 uppercase tracking-wider">
+                        Upcoming Release
+                      </span>
+                      <span className="text-[10px] text-[var(--text-tertiary)]">
+                        Ratings will be available after release
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -809,11 +840,29 @@ export default async function MovieReviewPage({ params }: PageProps) {
                               editorialReview.cultural_impact.legacy_status,
                             cult_status:
                               editorialReview.cultural_impact.cult_status,
+                            memorable_elements:
+                              editorialReview.cultural_impact.memorable_elements ||
+                              editorialReview.cultural_impact.iconic_elements,
                           }
                         : undefined
                     }
                     isClassic={movie.is_classic}
+                    // Consolidated metadata inside the card
+                    ageRating={movie.age_rating}
+                    audienceFit={movie.audience_fit}
+                    watchRecommendation={movie.watch_recommendation}
+                    trustScore={movie.data_confidence}
+                    trustBreakdown={movie.confidence_breakdown}
+                    boxOfficeCategory={movie.box_office_category}
                   />
+
+                  {/* Content Warnings - only if present */}
+                  {movie.trigger_warnings && movie.trigger_warnings.length > 0 && (
+                    <ContentWarnings 
+                      warnings={movie.trigger_warnings} 
+                      compact 
+                    />
+                  )}
                 </div>
               </div>
             )}
@@ -1132,11 +1181,11 @@ function DetailedReviewCard({ review }: { review: MovieReview }) {
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center text-black font-bold text-lg">
-            {review.reviewer_name.charAt(0)}
+            {(review.reviewer_name || review.author_name || 'R').charAt(0)}
           </div>
           <div>
             <p className="text-[var(--text-primary)] font-medium">
-              {review.reviewer_name}
+              {review.reviewer_name || review.author_name || 'Reviewer'}
             </p>
             <p className="text-[var(--text-tertiary)] text-sm capitalize">
               {review.reviewer_type} Review
@@ -1146,7 +1195,7 @@ function DetailedReviewCard({ review }: { review: MovieReview }) {
         <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500 rounded-full">
           <Star className="w-4 h-4 text-black fill-black" />
           <span className="text-black font-bold">
-            {review.overall_rating.toFixed(1)}
+            {(review.overall_rating ?? review.rating ?? 0).toFixed(1)}
           </span>
         </div>
       </div>
@@ -1207,11 +1256,11 @@ function DetailedReviewCard({ review }: { review: MovieReview }) {
       <div className="flex items-center gap-6 mt-6 pt-6 border-t border-[var(--border-primary)] text-[var(--text-tertiary)] text-sm">
         <span className="flex items-center gap-1">
           <Eye className="w-4 h-4" />
-          {review.views.toLocaleString()} views
+          {(review.views ?? 0).toLocaleString()} views
         </span>
         <span className="flex items-center gap-1">
           <ThumbsUp className="w-4 h-4" />
-          {review.helpful_votes} found helpful
+          {review.helpful_votes ?? 0} found helpful
         </span>
       </div>
     </div>

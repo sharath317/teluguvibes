@@ -1,528 +1,275 @@
 /**
- * TAG DERIVATION ENGINE
+ * Tag Derivation Module
  * 
- * Automatically derives tags for movies based on:
- * - Rating and popularity metrics
- * - Genre combinations
- * - Content analysis
- * - Box office data
- * - Awards information
- * 
- * Tags are NOT manually curated - all derivation is rule-based.
+ * Automatically derives movie tags based on various signals
  */
-
-import { createClient } from '@supabase/supabase-js';
 
 // ============================================================
 // TYPES
 // ============================================================
 
-export interface Movie {
+export interface DerivedTags {
+    // Box office performance
+    box_office_category?: 'industry-hit' | 'blockbuster' | 'super-hit' | 'hit' | 'average' | 'below-average' | 'disaster';
+
+    // Mood/tone tags
+    mood_tags?: string[];
+
+    // Quality indicators
+    quality_tags?: string[];
+
+    // Audience fit
+    audience_fit?: string[];
+
+    // Watch recommendation
+    watch_recommendation?: 'theater-must' | 'theater-preferred' | 'ott-friendly' | 'any';
+
+    // Legacy boolean flags
+    is_blockbuster?: boolean;
+    is_underrated?: boolean;
+    is_classic?: boolean;
+    is_cult?: boolean;
+
+    // General tags array
+    tags?: string[];
+}
+
+export interface MovieForTagging {
   id: string;
   title_en: string;
   title_te?: string;
   release_year?: number;
-  genres?: string[];
-  avg_rating?: number;
-  total_reviews?: number;
+    our_rating?: number;
+    avg_rating?: number;
   tmdb_rating?: number;
   imdb_rating?: number;
+    genres?: string[];
+    cast?: string[];
+    directors?: string[];
+    runtime?: number;
+    box_office_collection?: number;
+    budget?: number;
+    review_count?: number;
+    views?: number;
   popularity_score?: number;
+    total_reviews?: number;
   is_blockbuster?: boolean;
   is_classic?: boolean;
-  is_underrated?: boolean;
-  box_office_category?: string;
-  awards?: Award[];
-  content_flags?: ContentFlags;
-  mood_tags?: string[];
-  quality_tags?: string[];
+    is_underrated?: boolean;
   overview?: string;
   tagline?: string;
-}
-
-export interface Award {
-  type: 'national' | 'filmfare' | 'state' | 'festival' | 'international';
-  category: string;
-  year: number;
-  recipient?: string;
-}
-
-export interface ContentFlags {
-  pan_india?: boolean;
-  remake_of?: string;
-  original_language?: string;
-  sequel_number?: number;
-  franchise?: string;
-  biopic?: boolean;
-  based_on?: 'true events' | 'book' | 'play' | 'other';
-  debut_director?: boolean;
-  debut_hero?: boolean;
-}
-
-export interface DerivedTags {
-  box_office_category?: string;
-  mood_tags: string[];
-  quality_tags: string[];
-  audience_fit: AudienceFit;
-  age_rating_suggestion?: string;
-  watch_recommendation?: string;
-}
-
-export interface AudienceFit {
-  kids_friendly: boolean;
-  family_watch: boolean;
-  date_movie: boolean;
-  group_watch: boolean;
-  solo_watch: boolean;
+    awards?: unknown[];
+    content_flags?: Record<string, unknown>;
 }
 
 // ============================================================
-// DERIVATION RULES
+// TAG DERIVATION
 // ============================================================
 
 /**
- * Box office category derivation rules
- * Based on rating + popularity score combination
+ * Derive all tags for a movie based on available signals
  */
-const BOX_OFFICE_RULES: Record<string, { minRating?: number; maxRating?: number; minPopularity?: number }> = {
-  'industry-hit': { minRating: 7.5, minPopularity: 90 },
-  'blockbuster': { minRating: 7.0, minPopularity: 75 },
-  'super-hit': { minRating: 7.0, minPopularity: 50 },
-  'hit': { minRating: 6.5, minPopularity: 30 },
-  'average': { minRating: 5.0, maxRating: 6.5 },
-  'below-average': { maxRating: 5.0 },
-};
+export function deriveAllTags(movie: MovieForTagging): DerivedTags {
+    const tags: DerivedTags = {
+        tags: [],
+        mood_tags: [],
+        quality_tags: [],
+        audience_fit: [],
+    };
 
-/**
- * Mood tag derivation rules
- * Based on genre combinations and keywords
- */
-const MOOD_RULES: Record<string, {
-  genres?: string[];
-  excludeGenres?: string[];
-  minRating?: number;
-  maxYear?: number;
-  keywords?: string[];
-}> = {
-  'feel-good': {
-    genres: ['Comedy', 'Family', 'Romance'],
-    excludeGenres: ['Horror', 'Thriller', 'Crime'],
-    minRating: 6.5,
-  },
-  'dark-intense': {
-    genres: ['Thriller', 'Crime', 'Horror', 'Drama'],
-    excludeGenres: ['Comedy', 'Family'],
-  },
-  'thought-provoking': {
-    genres: ['Drama'],
-    excludeGenres: ['Comedy'],
-    minRating: 7.5,
-  },
-  'patriotic': {
-    keywords: ['freedom', 'india', 'independence', 'army', 'soldier', 'nation', 'country', 'war', 'freedom fighter'],
-  },
-  'nostalgic': {
-    maxYear: 2000,
-    minRating: 7.0,
-  },
-  'inspirational': {
-    genres: ['Drama', 'Biography'],
-    keywords: ['dream', 'success', 'overcome', 'journey', 'rise', 'struggle'],
-    minRating: 7.0,
-  },
-  'emotional': {
-    genres: ['Drama', 'Romance', 'Family'],
-    keywords: ['emotion', 'heart', 'tears', 'love', 'family', 'sacrifice'],
-  },
-  'gripping': {
-    genres: ['Thriller', 'Crime', 'Mystery'],
-    minRating: 7.0,
-  },
-  'light-hearted': {
-    genres: ['Comedy', 'Romance'],
-    excludeGenres: ['Drama', 'Thriller', 'Crime', 'Horror'],
-  },
-  'edge-of-seat': {
-    genres: ['Thriller', 'Action', 'Horror'],
-    minRating: 7.0,
-  },
-};
-
-/**
- * Quality tag derivation rules
- */
-const QUALITY_RULES: Record<string, {
-  minRating?: number;
-  minReviews?: number;
-  maxYear?: number;
-  hasAwards?: boolean;
-}> = {
-  'masterpiece': { minRating: 9.0 },
-  'critically-acclaimed': { minRating: 8.0, minReviews: 10 },
-  'cult-classic': { minRating: 7.5, maxYear: 2010 },
-  'hidden-gem': { minRating: 7.5, minReviews: 5 },
-  'fan-favorite': { minRating: 7.0, minReviews: 20 },
-  'crowd-pleaser': { minRating: 7.5, minReviews: 15 },
-  'sleeper-hit': { minRating: 7.0 },
-};
-
-/**
- * Audience fit derivation based on genre and content
- */
-const AUDIENCE_RULES = {
-  kids_friendly: {
-    safeGenres: ['Family', 'Animation', 'Comedy'],
-    unsafeGenres: ['Horror', 'Crime', 'Thriller', 'War'],
-    maxAgeRating: 'U',
-  },
-  family_watch: {
-    preferredGenres: ['Family', 'Drama', 'Comedy', 'Romance'],
-    excludeGenres: ['Horror'],
-  },
-  date_movie: {
-    preferredGenres: ['Romance', 'Comedy', 'Drama'],
-    excludeGenres: ['Horror', 'War', 'Crime'],
-  },
-  group_watch: {
-    preferredGenres: ['Action', 'Comedy', 'Horror', 'Thriller'],
-  },
-};
-
-// ============================================================
-// SUPABASE CLIENT
-// ============================================================
-
-function getSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const rating = movie.our_rating || movie.avg_rating || 0;
+    const year = movie.release_year || new Date().getFullYear();
   
-  if (!url || !key) {
-    throw new Error('Missing Supabase credentials');
+    // Derive quality tags based on rating
+    if (rating >= 4.5) {
+        tags.quality_tags?.push('masterpiece');
+    } else if (rating >= 4.0) {
+        tags.quality_tags?.push('critically-acclaimed');
+    } else if (rating >= 3.5) {
+        tags.quality_tags?.push('good-watch');
+    }
+
+    // Derive classic status
+    if (year < 2005 && rating >= 3.5) {
+        tags.is_classic = true;
+        tags.tags?.push('classic');
   }
   
-  return createClient(url, key);
-}
+    // Derive underrated status (good rating but low views)
+    if (rating >= 3.5 && (movie.views || 0) < 1000 && (movie.review_count || 0) < 10) {
+        tags.is_underrated = true;
+        tags.tags?.push('hidden-gem');
+        tags.quality_tags?.push('hidden-gem');
+    }
 
-// ============================================================
-// DERIVATION FUNCTIONS
-// ============================================================
+    // Derive mood from genres (case-insensitive)
+    const genres = (movie.genres || []).map(g => g.toLowerCase());
 
-/**
- * Derive box office category from rating and popularity
- */
-export function deriveBoxOfficeCategory(movie: Movie): string | undefined {
-  const rating = movie.avg_rating || movie.tmdb_rating || movie.imdb_rating;
-  const popularity = movie.popularity_score || 0;
-  
-  if (!rating) return undefined;
-  
-  for (const [category, rules] of Object.entries(BOX_OFFICE_RULES)) {
-    const meetsMinRating = !rules.minRating || rating >= rules.minRating;
-    const meetsMaxRating = !rules.maxRating || rating < rules.maxRating;
-    const meetsPopularity = !rules.minPopularity || popularity >= rules.minPopularity;
-    
-    if (meetsMinRating && meetsMaxRating && meetsPopularity) {
-      return category;
+    // Feel-good moods
+    if (genres.some(g => ['comedy', 'family', 'animation'].includes(g))) {
+        tags.mood_tags?.push('feel-good');
+    }
+    if (genres.includes('comedy')) {
+        tags.mood_tags?.push('light-hearted');
+    }
+
+    // Intense moods
+    if (genres.some(g => ['thriller', 'crime', 'horror', 'mystery'].includes(g))) {
+        tags.mood_tags?.push('dark-intense');
+    }
+    if (genres.some(g => ['action', 'adventure'].includes(g))) {
+        tags.mood_tags?.push('edge-of-seat');
+    }
+    if (genres.includes('horror')) {
+        tags.mood_tags?.push('gripping');
+    }
+
+    // Emotional/thoughtful moods  
+    if (genres.includes('drama')) {
+        tags.mood_tags?.push('emotional');
+        if (rating >= 3.5) {
+            tags.mood_tags?.push('thought-provoking');
     }
   }
+    if (genres.includes('romance')) {
+        tags.mood_tags?.push('romantic');
+    }
+
+    // Special moods
+    if (genres.some(g => ['war', 'history', 'biography'].includes(g))) {
+        tags.mood_tags?.push('patriotic');
+    }
+    if (year < 2000) {
+        tags.mood_tags?.push('nostalgic');
+  }
+    if (genres.includes('documentary')) {
+        tags.mood_tags?.push('informative');
+    }
+    if (genres.some(g => ['musical', 'music'].includes(g))) {
+        tags.mood_tags?.push('melodious');
+  }
   
-  return undefined;
+    // Ensure at least one mood tag
+    if (tags.mood_tags?.length === 0) {
+        // Default based on rating
+        if (rating >= 3.5) {
+            tags.mood_tags?.push('engaging');
+        } else {
+            tags.mood_tags?.push('casual');
+        }
+    }
+
+    // Deduplicate mood tags
+    tags.mood_tags = [...new Set(tags.mood_tags)];
+  
+    // Derive audience fit
+    if (genres.includes('animation') || genres.includes('family')) {
+        tags.audience_fit?.push('kids_friendly');
+        tags.audience_fit?.push('family_watch');
+  }
+    if (genres.includes('romance')) {
+        tags.audience_fit?.push('date_movie');
+  }
+    if (genres.includes('action') || genres.includes('comedy')) {
+        tags.audience_fit?.push('group_watch');
+  }
+  
+    // Default watch recommendation
+    tags.watch_recommendation = rating >= 4.0 ? 'theater-must' :
+        rating >= 3.5 ? 'theater-preferred' : 'ott-friendly';
+  
+    return tags;
 }
 
 /**
- * Derive mood tags from genre and content
+ * Derive blockbuster status
  */
-export function deriveMoodTags(movie: Movie): string[] {
-  const tags: string[] = [];
-  const genres = movie.genres || [];
-  const rating = movie.avg_rating || movie.tmdb_rating || 0;
-  const year = movie.release_year || new Date().getFullYear();
-  const textContent = `${movie.overview || ''} ${movie.tagline || ''}`.toLowerCase();
+export function deriveBlockbusterStatus(movie: MovieForTagging, topHeroes: string[], topDirectors: string[]): boolean {
+    const rating = movie.our_rating || movie.avg_rating || 0;
+    const cast = movie.cast || [];
+    const directors = movie.directors || [];
   
-  for (const [tag, rules] of Object.entries(MOOD_RULES)) {
-    let matches = true;
-    
-    // Check genre inclusion
-    if (rules.genres) {
-      const hasRequiredGenre = rules.genres.some(g => genres.includes(g));
-      if (!hasRequiredGenre) matches = false;
-    }
-    
-    // Check genre exclusion
-    if (rules.excludeGenres && matches) {
-      const hasExcludedGenre = rules.excludeGenres.some(g => genres.includes(g));
-      if (hasExcludedGenre) matches = false;
-    }
-    
-    // Check minimum rating
-    if (rules.minRating && matches) {
-      if (rating < rules.minRating) matches = false;
-    }
-    
-    // Check max year
-    if (rules.maxYear && matches) {
-      if (year > rules.maxYear) matches = false;
-    }
-    
-    // Check keywords
-    if (rules.keywords && matches) {
-      const hasKeyword = rules.keywords.some(kw => textContent.includes(kw));
-      if (!hasKeyword && !rules.genres) {
-        matches = false;
+    // High rating with top stars or directors
+    if (rating >= 4.0) {
+        const hasTopHero = cast.some(actor => topHeroes.includes(actor));
+        const hasTopDirector = directors.some(dir => topDirectors.includes(dir));
+
+      if (hasTopHero || hasTopDirector) {
+          return true;
       }
+  }
+  
+    // Very high rating is blockbuster regardless
+    if (rating >= 4.5) {
+        return true;
     }
-    
-    if (matches) {
-      tags.push(tag);
-    }
-  }
-  
-  return tags;
+
+    return false;
 }
 
 /**
- * Derive quality tags from rating and reviews
+ * Derive mood tags from movie content (comprehensive, case-insensitive)
  */
-export function deriveQualityTags(movie: Movie): string[] {
-  const tags: string[] = [];
-  const rating = movie.avg_rating || movie.tmdb_rating || 0;
-  const reviews = movie.total_reviews || 0;
-  const year = movie.release_year || new Date().getFullYear();
-  const hasAwards = (movie.awards?.length || 0) > 0;
+export function deriveMoodTags(movie: MovieForTagging): string[] {
+    const moods: string[] = [];
+    const genres = (movie.genres || []).map(g => g.toLowerCase());
+    const rating = movie.our_rating || movie.avg_rating || 0;
   
-  for (const [tag, rules] of Object.entries(QUALITY_RULES)) {
-    let matches = true;
-    
-    if (rules.minRating && rating < rules.minRating) matches = false;
-    if (rules.minReviews && reviews < rules.minReviews) matches = false;
-    if (rules.maxYear && year > rules.maxYear) matches = false;
-    if (rules.hasAwards && !hasAwards) matches = false;
-    
-    if (matches) {
-      tags.push(tag);
-    }
+    // Genre-based mood mapping
+    const GENRE_MOOD_MAP: Record<string, string[]> = {
+        'comedy': ['feel-good', 'light-hearted'],
+        'family': ['feel-good'],
+        'animation': ['feel-good'],
+        'horror': ['dark-intense', 'gripping'],
+        'thriller': ['dark-intense', 'edge-of-seat'],
+        'crime': ['dark-intense', 'gripping'],
+        'mystery': ['gripping'],
+        'action': ['edge-of-seat', 'intense'],
+        'adventure': ['edge-of-seat'],
+        'drama': ['emotional', 'thought-provoking'],
+        'romance': ['romantic', 'emotional'],
+        'war': ['patriotic', 'intense'],
+        'history': ['patriotic'],
+        'biography': ['inspirational'],
+        'documentary': ['informative'],
+        'musical': ['melodious'],
+        'fantasy': ['imaginative'],
+        'sci-fi': ['futuristic'],
+    };
+  
+    for (const genre of genres) {
+        const moodList = GENRE_MOOD_MAP[genre];
+        if (moodList) {
+            moods.push(...moodList);
+        }
   }
   
-  // Special case: hidden-gem is for underrated movies (low popularity but high rating)
-  if (rating >= 7.5 && (movie.popularity_score || 0) < 30 && !movie.is_blockbuster) {
-    if (!tags.includes('hidden-gem')) {
-      tags.push('hidden-gem');
-    }
+    // Ensure at least one mood
+    if (moods.length === 0) {
+        moods.push(rating >= 3.5 ? 'engaging' : 'casual');
   }
   
-  return tags;
+    // Deduplicate
+    return [...new Set(moods)];
 }
 
 /**
- * Derive audience fit from genres and content
+ * Derive box office category
  */
-export function deriveAudienceFit(movie: Movie): AudienceFit {
-  const genres = movie.genres || [];
+export function deriveBoxOfficeCategory(
+    collection: number | undefined,
+    budget: number | undefined
+): DerivedTags['box_office_category'] {
+    if (!collection || !budget) return undefined;
   
-  // Kids friendly
-  const kidsHasSafe = AUDIENCE_RULES.kids_friendly.safeGenres.some(g => genres.includes(g));
-  const kidsHasUnsafe = AUDIENCE_RULES.kids_friendly.unsafeGenres.some(g => genres.includes(g));
-  const kids_friendly = kidsHasSafe && !kidsHasUnsafe;
+    const ratio = collection / budget;
   
-  // Family watch
-  const familyHasPreferred = AUDIENCE_RULES.family_watch.preferredGenres.some(g => genres.includes(g));
-  const familyHasExcluded = AUDIENCE_RULES.family_watch.excludeGenres.some(g => genres.includes(g));
-  const family_watch = familyHasPreferred && !familyHasExcluded;
-  
-  // Date movie
-  const dateHasPreferred = AUDIENCE_RULES.date_movie.preferredGenres.some(g => genres.includes(g));
-  const dateHasExcluded = AUDIENCE_RULES.date_movie.excludeGenres.some(g => genres.includes(g));
-  const date_movie = dateHasPreferred && !dateHasExcluded;
-  
-  // Group watch
-  const group_watch = AUDIENCE_RULES.group_watch.preferredGenres.some(g => genres.includes(g));
-  
-  // Solo watch - dramas and thrillers are good for solo viewing
-  const solo_watch = genres.includes('Drama') || genres.includes('Thriller') || genres.includes('Mystery');
-  
-  return {
-    kids_friendly,
-    family_watch,
-    date_movie,
-    group_watch,
-    solo_watch,
-  };
+    if (ratio >= 5) return 'industry-hit';
+    if (ratio >= 3) return 'blockbuster';
+    if (ratio >= 2) return 'super-hit';
+    if (ratio >= 1.5) return 'hit';
+    if (ratio >= 1) return 'average';
+    if (ratio >= 0.5) return 'below-average';
+    return 'disaster';
 }
-
-/**
- * Derive suggested age rating from genres and content
- */
-export function deriveAgeRatingSuggestion(movie: Movie): string {
-  const genres = movie.genres || [];
-  
-  // A rating for adult content
-  if (genres.includes('Horror') || genres.includes('Crime')) {
-    return 'A';
-  }
-  
-  // U/A for thriller, action with violence
-  if (genres.includes('Thriller') || genres.includes('War')) {
-    return 'U/A';
-  }
-  
-  if (genres.includes('Action')) {
-    return 'U/A';
-  }
-  
-  // U for family-friendly
-  if (genres.includes('Family') || genres.includes('Animation')) {
-    return 'U';
-  }
-  
-  // Default to U/A
-  return 'U/A';
-}
-
-/**
- * Derive watch recommendation (theater vs OTT)
- */
-export function deriveWatchRecommendation(movie: Movie): string {
-  const genres = movie.genres || [];
-  const rating = movie.avg_rating || movie.tmdb_rating || 0;
-  
-  // Big-budget action, fantasy films are theater-must
-  if (genres.includes('Action') || genres.includes('Fantasy')) {
-    if (rating >= 7.5) return 'theater-must';
-    return 'theater-preferred';
-  }
-  
-  // Horror is great in theaters
-  if (genres.includes('Horror')) {
-    return 'theater-preferred';
-  }
-  
-  // Drama and romance are fine on OTT
-  if (genres.includes('Drama') || genres.includes('Romance')) {
-    return 'ott-friendly';
-  }
-  
-  // Comedy works anywhere
-  if (genres.includes('Comedy')) {
-    return 'any';
-  }
-  
-  return 'any';
-}
-
-/**
- * Derive all tags for a movie
- */
-export function deriveAllTags(movie: Movie): DerivedTags {
-  return {
-    box_office_category: deriveBoxOfficeCategory(movie),
-    mood_tags: deriveMoodTags(movie),
-    quality_tags: deriveQualityTags(movie),
-    audience_fit: deriveAudienceFit(movie),
-    age_rating_suggestion: deriveAgeRatingSuggestion(movie),
-    watch_recommendation: deriveWatchRecommendation(movie),
-  };
-}
-
-// ============================================================
-// DATABASE OPERATIONS
-// ============================================================
-
-/**
- * Apply derived tags to a movie in the database
- */
-export async function applyDerivedTags(movieId: string): Promise<DerivedTags | null> {
-  const supabase = getSupabaseClient();
-  
-  // Fetch movie
-  const { data: movie, error } = await supabase
-    .from('movies')
-    .select('*')
-    .eq('id', movieId)
-    .single();
-  
-  if (error || !movie) {
-    console.error(`Failed to fetch movie ${movieId}:`, error);
-    return null;
-  }
-  
-  // Derive tags
-  const derived = deriveAllTags(movie as Movie);
-  
-  // Update movie
-  const { error: updateError } = await supabase
-    .from('movies')
-    .update({
-      box_office_category: derived.box_office_category,
-      mood_tags: derived.mood_tags,
-      quality_tags: derived.quality_tags,
-      audience_fit: derived.audience_fit,
-      watch_recommendation: derived.watch_recommendation,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', movieId);
-  
-  if (updateError) {
-    console.error(`Failed to update movie ${movieId}:`, updateError);
-    return null;
-  }
-  
-  return derived;
-}
-
-/**
- * Batch apply derived tags to all movies
- */
-export async function batchApplyDerivedTags(options: {
-  limit?: number;
-  onlyMissing?: boolean;
-}): Promise<{ processed: number; failed: number }> {
-  const supabase = getSupabaseClient();
-  const limit = options.limit || 100;
-  
-  let query = supabase
-    .from('movies')
-    .select('id, title_en, release_year, genres, avg_rating, total_reviews, tmdb_rating, imdb_rating, popularity_score, is_blockbuster, is_classic, is_underrated, awards, content_flags, overview, tagline')
-    .eq('is_published', true)
-    .order('updated_at', { ascending: true })
-    .limit(limit);
-  
-  // Only movies without mood_tags if onlyMissing
-  if (options.onlyMissing) {
-    query = query.is('mood_tags', null);
-  }
-  
-  const { data: movies, error } = await query;
-  
-  if (error) {
-    console.error('Failed to fetch movies:', error);
-    return { processed: 0, failed: 0 };
-  }
-  
-  let processed = 0;
-  let failed = 0;
-  
-  for (const movie of movies || []) {
-    const result = await applyDerivedTags(movie.id);
-    if (result) {
-      processed++;
-      console.log(`✅ Tagged: ${movie.title_en} - ${result.mood_tags.join(', ')}`);
-    } else {
-      failed++;
-    }
-  }
-  
-  return { processed, failed };
-}
-
-// ============================================================
-// EXPORTS
-// ============================================================
-
-export {
-  BOX_OFFICE_RULES,
-  MOOD_RULES,
-  QUALITY_RULES,
-  AUDIENCE_RULES,
-};
-
 

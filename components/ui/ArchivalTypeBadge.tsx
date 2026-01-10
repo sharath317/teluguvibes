@@ -68,14 +68,32 @@ interface ArchivalTypeBadgeProps {
 // ============================================================
 
 const visualTypeIcons: Record<VisualType, typeof Film> = {
-  original_poster: CheckCircle,
+  // Core types
+  poster: Film,
+  still: Camera,
+  'behind-scenes': Camera,
+  promotional: ImageIcon,
+  premiere: Camera,
+  candid: Camera,
+  archival: Archive,
   archival_still: Camera,
+  archival_poster: Film,
+  restored: CheckCircle,
+  magazine: Newspaper,
+  newspaper: Newspaper,
+  portrait: Camera,
+  group: Users,
+  award: CheckCircle,
+  event: Camera,
+  lobby_card: ImageIcon,
+  press_photo: Camera,
+  // Extended types
+  original_poster: CheckCircle,
   studio_photo: Camera,
   press_kit_photo: Camera,
   magazine_ad: Newspaper,
   newspaper_clipping: Newspaper,
   song_book_cover: BookOpen,
-  lobby_card: ImageIcon,
   cassette_cover: FileText,
   re_release_poster: Film,
   archive_card: Archive,
@@ -83,17 +101,36 @@ const visualTypeIcons: Record<VisualType, typeof Film> = {
 };
 
 const sourceTypeIcons: Record<ArchivalSourceType, typeof Building> = {
+  // Official archives
+  nfai: Building,
+  'studio-archive': Building,
+  studio_archive: Building,
   government_archive: Building,
   state_cultural_dept: Building,
   university: BookOpen,
+  university_archive: BookOpen,
   museum: Building,
+  // Family/Personal
+  'family-collection': Users,
+  family_collection: Users,
+  family_archive: Users,
+  personal_archive: Users,
+  // Publications
+  'magazine-archive': Newspaper,
   magazine: Newspaper,
+  'newspaper-archive': Newspaper,
   newspaper: Newspaper,
   book: BookOpen,
-  family_archive: Users,
+  // Film/Community
+  'film-society': Film,
   film_society: Film,
   community: Users,
+  // Private/Other
+  'private-collection': Users,
   private_collection: Users,
+  'public-domain': CheckCircle,
+  public_domain: CheckCircle,
+  'fan-contributed': Users,
 };
 
 // ============================================================

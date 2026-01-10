@@ -109,7 +109,7 @@ function Lightbox({ image, onClose, onPrev, onNext, hasPrev, hasNext }: Lightbox
       <div className="max-w-4xl max-h-[80vh] mx-auto px-12">
         <img
           src={image.image_url}
-          alt={`${VISUAL_TYPE_LABELS[image.image_type]} - ${image.source_name}`}
+          alt={`${VISUAL_TYPE_LABELS[image.image_type || image.visual_type || 'still']} - ${image.source_name || 'Unknown'}`}
           className="max-w-full max-h-[70vh] object-contain mx-auto"
         />
 
@@ -117,7 +117,7 @@ function Lightbox({ image, onClose, onPrev, onNext, hasPrev, hasNext }: Lightbox
         <div className="mt-4 text-center">
           <div className="flex items-center justify-center gap-3 mb-2">
             <ArchivalTypeBadge
-              visualType={image.image_type}
+              visualType={image.image_type || image.visual_type || 'still'}
               sourceType={image.source_type}
               sourceName={image.source_name}
               licenseType={image.license_type}
@@ -172,7 +172,7 @@ function TimelineItem({ image, isFirst, isLast, onClick }: TimelineItemProps) {
           <div className="w-24 h-36 flex-shrink-0 relative">
             <img
               src={image.image_url}
-              alt={VISUAL_TYPE_LABELS[image.image_type]}
+              alt={VISUAL_TYPE_LABELS[image.image_type || image.visual_type || 'still']}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-transparent to-gray-900/50" />
@@ -182,7 +182,7 @@ function TimelineItem({ image, isFirst, isLast, onClick }: TimelineItemProps) {
           <div className="flex-1 p-3">
             <div className="flex items-center gap-2 mb-1">
               <ArchivalTypeBadge
-                visualType={image.image_type}
+                visualType={image.image_type || image.visual_type || 'still'}
                 size="xs"
                 showTooltip={false}
               />
@@ -190,7 +190,7 @@ function TimelineItem({ image, isFirst, isLast, onClick }: TimelineItemProps) {
                 <span className="text-xs text-gray-500">{image.year_estimated}</span>
               )}
             </div>
-            <p className="text-sm text-gray-300 mb-1">{VISUAL_TYPE_LABELS[image.image_type]}</p>
+            <p className="text-sm text-gray-300 mb-1">{VISUAL_TYPE_LABELS[image.image_type || image.visual_type || 'still']}</p>
             <p className="text-xs text-gray-500">{image.source_name}</p>
             {image.description && (
               <p className="text-xs text-gray-600 mt-1 line-clamp-2">{image.description}</p>
@@ -225,7 +225,7 @@ function GridItem({ image, onClick }: GridItemProps) {
       <div className="aspect-[2/3]">
         <img
           src={image.image_url}
-          alt={VISUAL_TYPE_LABELS[image.image_type]}
+          alt={VISUAL_TYPE_LABELS[image.image_type || image.visual_type || 'still']}
           className="w-full h-full object-cover transition-transform group-hover:scale-105"
         />
       </div>
@@ -234,7 +234,7 @@ function GridItem({ image, onClick }: GridItemProps) {
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
         <div className="absolute bottom-0 left-0 right-0 p-3">
           <ArchivalTypeBadge
-            visualType={image.image_type}
+            visualType={image.image_type || image.visual_type || 'still'}
             size="xs"
             showTooltip={false}
           />

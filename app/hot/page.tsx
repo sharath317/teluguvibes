@@ -565,14 +565,14 @@ export default function HotGalleryPage() {
 
   // Handle post click with tracking
   const handlePostClick = useCallback((post: GlamPost) => {
-    trackClick(post);
+    trackClick(post.id);
     setSelectedPost(post);
   }, [trackClick]);
 
   // Track view when post enters lightbox
   useEffect(() => {
     if (selectedPost) {
-      trackView(selectedPost);
+      trackView(selectedPost.id);
     }
   }, [selectedPost, trackView]);
 

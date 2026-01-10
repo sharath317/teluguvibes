@@ -112,8 +112,8 @@ export function AwardsSection({ awards, className = '' }: AwardsSectionProps) {
 }
 
 function AwardCard({ award }: { award: CelebrityAward }) {
-  const color = getAwardColor(award.award_type);
-  const icon = getAwardIcon(award.award_type);
+  const color = getAwardColor(award.award_type ?? 'other');
+  const icon = getAwardIcon(award.award_type ?? 'other');
 
   return (
     <div className="flex items-start gap-3 p-4 bg-[var(--bg-secondary)]/50 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors">
@@ -132,7 +132,7 @@ function AwardCard({ award }: { award: CelebrityAward }) {
             className="text-xs font-medium px-2 py-0.5 rounded uppercase"
             style={{ backgroundColor: `${color}20`, color }}
           >
-            {formatAwardType(award.award_type)}
+            {formatAwardType(award.award_type ?? 'other')}
           </span>
           {award.is_won && (
             <span className="text-xs text-green-400">Won</span>
@@ -143,7 +143,7 @@ function AwardCard({ award }: { award: CelebrityAward }) {
         </div>
 
         <h4 className="text-[var(--text-primary)] font-medium">
-          {award.category || award.award_name}
+          {award.category || award.name}
         </h4>
 
         {award.movie_title && (

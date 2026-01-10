@@ -23,7 +23,7 @@
  * <Text truncate>Very long text that will be truncated...</Text>
  */
 
-import { forwardRef, ReactNode, ElementType, ComponentPropsWithoutRef } from 'react';
+import React, { ReactNode, ElementType, ComponentPropsWithoutRef } from 'react';
 import { textVariants, TextVariant } from '@/lib/design-system/tokens/typography';
 
 // ============================================================
@@ -93,10 +93,18 @@ const alignStyles: Record<TextAlign, string> = {
 // Convert variant to Tailwind classes
 function getVariantClasses(variant: TextVariant): string {
   const v = textVariants[variant];
+  
+  // Safeguard: if variant not found, return default classes
+  if (!v) {
+    console.warn(`Text variant "${variant}" not found, using default`);
+    return 'text-base font-normal leading-normal';
+  }
+  
   const classes: string[] = [];
   
-  // Font size
+  // Font size - comprehensive mapping including all variant sizes
   const sizeMap: Record<string, string> = {
+    '0.625rem': 'text-[10px]',
     '0.75rem': 'text-xs',
     '0.875rem': 'text-sm',
     '1rem': 'text-base',
@@ -106,27 +114,43 @@ function getVariantClasses(variant: TextVariant): string {
     '1.875rem': 'text-3xl',
     '2.25rem': 'text-4xl',
     '3rem': 'text-5xl',
+    '4rem': 'text-6xl',
+    '5rem': 'text-7xl',
+    '6rem': 'text-8xl',
   };
   classes.push(sizeMap[v.fontSize] || 'text-base');
   
-  // Font weight
+  // Font weight - handle both string and number
   const weightMap: Record<string, string> = {
+    '100': 'font-thin',
+    '200': 'font-extralight',
+    '300': 'font-light',
     '400': 'font-normal',
     '500': 'font-medium',
     '600': 'font-semibold',
     '700': 'font-bold',
     '800': 'font-extrabold',
+    '900': 'font-black',
   };
-  classes.push(weightMap[v.fontWeight] || 'font-normal');
+  const weightKey = String(v.fontWeight);
+  classes.push(weightMap[weightKey] || 'font-normal');
   
-  // Line height
+  // Line height - comprehensive mapping
   const lineHeightMap: Record<string, string> = {
     '1': 'leading-none',
+    '1.1': 'leading-none',
+    '1.15': 'leading-tight',
+    '1.2': 'leading-tight',
     '1.25': 'leading-tight',
+    '1.3': 'leading-snug',
+    '1.35': 'leading-snug',
     '1.375': 'leading-snug',
+    '1.4': 'leading-normal',
     '1.5': 'leading-normal',
+    '1.6': 'leading-relaxed',
     '1.625': 'leading-relaxed',
     '1.75': 'leading-loose',
+    '2': 'leading-loose',
   };
   classes.push(lineHeightMap[v.lineHeight] || 'leading-normal');
   
@@ -156,8 +180,10 @@ function getVariantClasses(variant: TextVariant): string {
 // COMPONENT
 // ============================================================
 
-function TextInner<E extends ElementType = 'p'>(
-  {
+function TextComponent<E extends ElementType = 'p'>(
+  props: TextProps<E> & { ref?: React.Ref<any> }
+): React.ReactElement {
+  const {
     as,
     variant = 'body-md',
     color = 'primary',
@@ -168,10 +194,10 @@ function TextInner<E extends ElementType = 'p'>(
     telugu = false,
     children,
     className = '',
+    ref,
     ...rest
-  }: TextProps<E>,
-  ref: React.Ref<Element>
-) {
+  } = props;
+
   const Component = as || 'p';
   
   const classes = [
@@ -192,9 +218,9 @@ function TextInner<E extends ElementType = 'p'>(
   );
 }
 
-export const Text = forwardRef(TextInner) as <E extends ElementType = 'p'>(
-  props: TextProps<E> & { ref?: React.Ref<Element> }
-) => JSX.Element;
+export const Text = TextComponent as <E extends ElementType = 'p'>(
+  props: TextProps<E> & { ref?: React.Ref<any> }
+) => React.ReactElement;
 
 // ============================================================
 // HEADING CONVENIENCE COMPONENTS

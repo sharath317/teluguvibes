@@ -5,19 +5,51 @@ import Link from 'next/link';
 import { Plus, Edit, Trash2, Eye, RefreshCw } from 'lucide-react';
 import type { Post, Category } from '@/types/database';
 
-const categoryLabels: Record<Category, string> = {
+const categoryLabels: Partial<Record<Category, string>> = {
   gossip: 'గాసిప్',
   sports: 'స్పోర్ట్స్',
   politics: 'రాజకీయాలు',
   entertainment: 'వినోదం',
   trending: 'ట్రెండింగ్',
+  news: 'వార్తలు',
+  movies: 'సినిమాలు',
+  photos: 'ఫోటోలు',
+  videos: 'వీడియోలు',
+  hot: 'హాట్',
+  editorial: 'ఎడిటోరియల్',
+  stories: 'కథలు',
+  quizzes: 'క్విజ్‌లు',
+  memes: 'మీమ్స్',
+  'web-series': 'వెబ్ సిరీస్',
+  jobs: 'ఉద్యోగాలు',
+  astrology: 'జ్యోతిషం',
+  lifestyle: 'జీవనశైలి',
+  reviews: 'రివ్యూలు',
+  interviews: 'ఇంటర్వ్యూలు',
+  features: 'ఫీచర్లు',
 };
 
-const categoryColors: Record<Category, string> = {
+const categoryColors: Partial<Record<Category, string>> = {
   gossip: 'bg-pink-500',
   sports: 'bg-blue-500',
   politics: 'bg-red-500',
   entertainment: 'bg-purple-500',
+  news: 'bg-yellow-500',
+  movies: 'bg-red-600',
+  photos: 'bg-violet-500',
+  videos: 'bg-cyan-500',
+  hot: 'bg-orange-500',
+  editorial: 'bg-green-500',
+  stories: 'bg-blue-600',
+  quizzes: 'bg-purple-600',
+  memes: 'bg-amber-500',
+  'web-series': 'bg-teal-500',
+  jobs: 'bg-slate-500',
+  astrology: 'bg-indigo-500',
+  lifestyle: 'bg-rose-500',
+  reviews: 'bg-emerald-500',
+  interviews: 'bg-sky-500',
+  features: 'bg-fuchsia-500',
   trending: 'bg-[#eab308]',
 };
 

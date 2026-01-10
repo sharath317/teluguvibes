@@ -83,7 +83,7 @@ export function CompliancePanel({
               </span>
               <span>{usage.canUse ? '✓ Allowed' : '✗ Restricted'}</span>
             </div>
-            {usage.restrictions.length > 0 && (
+            {usage.restrictions && usage.restrictions.length > 0 && (
               <ul className="mt-2 text-sm space-y-1">
                 {usage.restrictions.map((r, i) => (
                   <li key={i} className="flex items-start gap-1">
@@ -92,7 +92,7 @@ export function CompliancePanel({
                 ))}
               </ul>
             )}
-            {usage.warnings.length > 0 && (
+            {usage.warnings && usage.warnings.length > 0 && (
               <div className="mt-2 pt-2 border-t border-current/20">
                 {usage.warnings.map((w, i) => (
                   <p key={i} className="text-sm">⚠️ {w}</p>
@@ -140,7 +140,7 @@ export function CompliancePanel({
               </div>
             )}
 
-            {privacy.recommendations.length > 0 && (
+            {privacy.recommendations && privacy.recommendations.length > 0 && (
               <div className="mt-2 pt-2 border-t border-current/20 text-sm">
                 <p className="font-medium">Recommendations:</p>
                 <ul className="mt-1 space-y-1">

@@ -25,6 +25,7 @@ import { DiscoveryPanel } from "@/components/reviews/DiscoveryPanel";
 import { CategoryMoviesModal, CategoryType } from "@/components/reviews/CategoryMoviesModal";
 import { isMovieUpcoming, getUpcomingLabel, shouldHideRating } from "@/lib/utils/movie-status";
 import { getDisplayRating, getRatingCategory, getCategoryLabel } from "@/lib/ratings/editorial-rating";
+import { isValidImageUrl } from "@/lib/utils/safe-image";
 
 // ============================================================
 // TYPES
@@ -174,6 +175,14 @@ const YEAR_RANGES = [
   { label: "90s", from: 1990, to: 1999 },
   { label: "Classics", from: 1950, to: 1989 },
 ];
+
+// Helper to get safe poster URL (validates against allowed hosts)
+function getSafePosterUrl(posterUrl: string | undefined | null, movieId?: string): string | null {
+  if (!posterUrl) return null;
+  if (isValidImageUrl(posterUrl)) return posterUrl;
+  // Return null to show fallback placeholder
+  return null;
+}
 
 const SECTION_ICONS: Record<string, React.ReactNode> = {
   recently_released: <Calendar className="w-5 h-5" />,
@@ -468,7 +477,12 @@ export default function ReviewsPage() {
           setMovies(newMovies);
           setMovieOffset(MOVIES_PER_PAGE);
         } else {
-          setMovies((prev) => [...prev, ...newMovies]);
+          // Deduplicate movies when appending to avoid duplicate key errors
+          setMovies((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const uniqueNewMovies = newMovies.filter((m: Movie) => !existingIds.has(m.id));
+            return [...prev, ...uniqueNewMovies];
+          });
           setMovieOffset(offset + MOVIES_PER_PAGE);
         }
 
@@ -1685,6 +1699,8 @@ function UpcomingMovieCard({
       })
     : movie.release_year?.toString() || "TBA";
 
+  const safePoster = getSafePosterUrl(movie.poster_url, movie.id);
+
   return (
     <Link
       href={`/reviews/${movie.slug}`}
@@ -1692,9 +1708,9 @@ function UpcomingMovieCard({
       style={{ backgroundColor: "var(--bg-secondary)" }}
     >
       <div className="relative aspect-[2/3]">
-        {movie.poster_url ? (
+        {safePoster ? (
           <Image
-            src={movie.poster_url}
+            src={safePoster}
             alt={movie.title_en}
             fill
             className="object-cover"
@@ -1759,6 +1775,7 @@ function SmallMovieCard({ movie }: { movie: MovieCard | Movie }) {
   const isUpcoming = isMovieUpcoming(m);
   const hideRating = shouldHideRating(m); // Hide for upcoming OR no release year
   const upcomingLabel = isUpcoming ? getUpcomingLabel(m) : "";
+  const safePoster = getSafePosterUrl(m.poster_url, m.id);
 
   return (
     <Link
@@ -1767,9 +1784,9 @@ function SmallMovieCard({ movie }: { movie: MovieCard | Movie }) {
       style={{ backgroundColor: "var(--bg-secondary)" }}
     >
       <div className="relative aspect-[2/3]">
-        {m.poster_url ? (
+        {safePoster ? (
           <Image
-            src={m.poster_url}
+            src={safePoster}
             alt={m.title_en}
             fill
             className="object-cover"

@@ -144,9 +144,9 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         // Basic fields
         setTitle(fetchedPost.title);
         setSlug(fetchedPost.slug);
-        setTeluguBody(fetchedPost.telugu_body);
+        setTeluguBody(fetchedPost.telugu_body || '');
         setCategory(fetchedPost.category);
-        setStatus(fetchedPost.status);
+        setStatus(fetchedPost.status === 'published' ? 'published' : 'draft');
         setImageUrls(fetchedPost.image_urls?.join('\n') || '');
         
         // Extended fields
@@ -162,7 +162,10 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         setDisclaimerType(fetchedPost.disclaimer_type || '');
         setHistoricalPeriod(fetchedPost.historical_period || '');
         setGeoContext(fetchedPost.geo_context || '');
-        setSourceRefs(fetchedPost.source_refs || []);
+        setSourceRefs((fetchedPost.source_refs || []).map(ref => ({
+          ...ref,
+          sourceUrl: ref.sourceUrl || ''
+        })));
         
         // Show advanced if any extended fields are set
         if (fetchedPost.content_sector && fetchedPost.content_sector !== 'general') {

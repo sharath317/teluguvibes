@@ -1,394 +1,337 @@
 /**
- * VISUAL CONFIDENCE CALCULATOR
- * 
- * Calculates visual confidence scores and determines archival tiers
- * for movie posters based on source, URL validity, and visual type.
- * 
- * Tier System:
- * - Tier 1 (0.9-1.0): Original posters from TMDB, IMDB, or verified sources
- * - Tier 2 (0.6-0.8): Archival visuals (stills, magazine ads, etc.)
- * - Tier 3 (0.3-0.5): Archive cards or placeholders
+ * Visual Confidence Module
+ * Utilities for calculating visual confidence scores and determining poster quality
  */
 
 import type {
-  VisualType,
   VisualTier,
+  VisualType,
+  ArchivalSourceType,
+  MovieArchivalImage,
   VisualConfidenceResult,
-  ArchiveCardData,
-  ArchiveReason,
 } from './types';
-import {
-  VISUAL_TYPE_TIERS,
-  TIER_CONFIDENCE_RANGES,
-  TIER_1_SOURCES,
-  TIER_2_SOURCES,
-} from './types';
-
-// ============================================================
-// URL VALIDATION
-// ============================================================
 
 /**
- * Check if a URL is a placeholder image
+ * Known placeholder URL patterns that indicate missing/invalid posters
+ */
+const PLACEHOLDER_PATTERNS = [
+  /placeholder/i,
+  /no-image/i,
+  /no_image/i,
+  /missing/i,
+  /default/i,
+  /blank/i,
+  /null/i,
+  /undefined/i,
+  /\.gif$/i, // Often used for 1x1 tracking pixels
+  /via\.placeholder\.com/i,
+  /placehold\.it/i,
+  /placekitten/i,
+  /picsum/i,
+  /dummyimage/i,
+  /fakeimg/i,
+];
+
+/**
+ * TMDb and other API placeholder patterns
+ */
+const API_PLACEHOLDER_PATTERNS = [
+  /w500\/null/i,
+  /original\/null/i,
+  /w342\/null/i,
+  /\/t\/p\/.*\/null/i, // TMDb null poster path
+];
+
+/**
+ * Check if a URL is a placeholder or invalid poster
  */
 export function isPlaceholderUrl(url: string | null | undefined): boolean {
-  if (!url) return true;
-  
-  const placeholderPatterns = [
-    '/images/placeholders/',
-    'placehold.it',
-    'placeholder.com',
-    'via.placeholder.com',
-    'dummyimage.com',
-    'fakeimg.pl',
-  ];
-  
-  return placeholderPatterns.some(pattern => url.toLowerCase().includes(pattern));
-}
-
-/**
- * Check if a URL is from TMDB
- */
-export function isTMDBUrl(url: string | null | undefined): boolean {
-  if (!url) return false;
-  return url.includes('image.tmdb.org') || url.includes('themoviedb.org');
-}
-
-/**
- * Check if a URL is from a verified source
- */
-export function isVerifiedSource(url: string | null | undefined, source?: string | null): boolean {
-  if (!url) return false;
-  
-  // Check explicit source field
-  if (source && TIER_1_SOURCES.includes(source.toLowerCase())) {
+  if (!url || url.trim() === '') {
     return true;
   }
-  
-  // Check URL patterns for verified sources
-  const verifiedPatterns = [
-    'image.tmdb.org',
-    'themoviedb.org',
-    'm.media-amazon.com',
-    'imdb-iu.amazon.com',
-    'upload.wikimedia.org',
-  ];
-  
-  return verifiedPatterns.some(pattern => url.toLowerCase().includes(pattern));
-}
 
-/**
- * Check if a URL is from an archival source
- */
-export function isArchivalSource(url: string | null | undefined, source?: string | null): boolean {
-  if (!url) return false;
-  
-  // Check explicit source field
-  if (source && TIER_2_SOURCES.includes(source.toLowerCase())) {
+  const normalizedUrl = url.toLowerCase().trim();
+
+  // Check for empty or whitespace-only
+  if (normalizedUrl === '' || normalizedUrl === 'null' || normalizedUrl === 'undefined') {
     return true;
   }
-  
-  // Check URL patterns for archival sources
-  const archivalPatterns = [
-    'archive.org',
-    'commons.wikimedia.org',
-    'filmheritagefoundation',
-    'nationalfilmarchive',
-  ];
-  
-  return archivalPatterns.some(pattern => url.toLowerCase().includes(pattern));
-}
 
-// ============================================================
-// VISUAL TYPE DETECTION
-// ============================================================
-
-/**
- * Detect visual type from URL and source information
- */
-export function detectVisualType(
-  posterUrl: string | null | undefined,
-  posterSource?: string | null,
-  releaseYear?: number | null
-): VisualType {
-  // No URL or placeholder
-  if (!posterUrl || isPlaceholderUrl(posterUrl)) {
-    return 'placeholder';
-  }
-  
-  // TMDB or verified source = original poster
-  if (isTMDBUrl(posterUrl) || isVerifiedSource(posterUrl, posterSource)) {
-    return 'original_poster';
-  }
-  
-  // Archival source
-  if (isArchivalSource(posterUrl, posterSource)) {
-    // Could be archival still or other archival type
-    // Default to archival_still, can be refined with more metadata
-    return 'archival_still';
-  }
-  
-  // Very old films without TMDB likely need archive cards
-  if (releaseYear && releaseYear < 1960 && !isTMDBUrl(posterUrl)) {
-    return 'archival_still';
-  }
-  
-  // Default to original poster for other valid URLs
-  return 'original_poster';
-}
-
-// ============================================================
-// CONFIDENCE CALCULATION
-// ============================================================
-
-/**
- * Calculate visual confidence score based on tier and source quality
- * 
- * Source confidence scores (aligned with enrich-waterfall.ts):
- * - tmdb: 0.95
- * - wikimedia: 0.85
- * - internet_archive: 0.75
- * - omdb: 0.80
- * - wikidata: 0.80
- * - google: 0.70
- * - letterboxd: 0.65
- * - cinemaazi: 0.60
- * - ai: 0.50
- */
-export function calculateConfidenceScore(
-  tier: VisualTier,
-  source: string,
-  urlValid: boolean
-): number {
-  const range = TIER_CONFIDENCE_RANGES[tier];
-  
-  if (!urlValid) {
-    // Invalid URL gets minimum of tier 3
-    return TIER_CONFIDENCE_RANGES[3].min;
-  }
-  
-  // Direct source confidence mapping (for enrichment script sources)
-  const SOURCE_CONFIDENCE: Record<string, number> = {
-    tmdb: 0.95,
-    imdb: 0.90,
-    wikimedia: 0.85,
-    wikimedia_commons: 0.85,
-    internet_archive: 0.75,
-    omdb: 0.80,
-    wikidata: 0.80,
-    google: 0.70,
-    letterboxd: 0.65,
-    cinemaazi: 0.60,
-    ai: 0.50,
-    film_heritage_foundation: 0.90,
-    nfai: 0.90,
-    archive_card: 0.40,
-    placeholder: 0.30,
-    other: 0.50,
-    unknown: 0.40,
-  };
-  
-  // If source has a direct confidence mapping, use it
-  if (SOURCE_CONFIDENCE[source] !== undefined) {
-    return SOURCE_CONFIDENCE[source];
-  }
-  
-  // Fallback: Calculate within-tier score based on source quality
-  let tierScore = 0.5; // Default to middle of range
-  
-  if (tier === 1) {
-    // Tier 1 source quality scoring
-    if (TIER_1_SOURCES.includes(source)) tierScore = 0.7;
-    else tierScore = 0.5;
-  } else if (tier === 2) {
-    // Tier 2 source quality scoring
-    if (TIER_2_SOURCES.includes(source)) tierScore = 0.7;
-    else tierScore = 0.5;
-  } else {
-    // Tier 3 - archive cards and placeholders
-    tierScore = 0.3;
-  }
-  
-  // Map tier score to confidence range
-  const confidence = range.min + (range.max - range.min) * tierScore;
-  
-  // Round to 2 decimal places
-  return Math.round(confidence * 100) / 100;
-}
-
-/**
- * Get visual tier from visual type
- */
-export function getTierFromVisualType(visualType: VisualType): VisualTier {
-  return VISUAL_TYPE_TIERS[visualType];
-}
-
-/**
- * Determine source identifier from URL
- */
-export function getSourceFromUrl(url: string | null | undefined): string {
-  if (!url) return 'unknown';
-  
-  // Tier 1 sources (highest confidence)
-  if (url.includes('tmdb.org') || url.includes('themoviedb.org')) return 'tmdb';
-  if (url.includes('amazon.com') || url.includes('imdb')) return 'imdb';
-  
-  // Tier 2 archival sources
-  if (url.includes('wikimedia.org') || url.includes('commons.wikimedia')) return 'wikimedia';
-  if (url.includes('wikipedia.org')) return 'wikipedia';
-  if (url.includes('archive.org')) return 'internet_archive';
-  
-  // Community and scraper sources
-  if (url.includes('letterboxd.com')) return 'letterboxd';
-  if (url.includes('cinemaazi.com')) return 'cinemaazi';
-  
-  // Other databases
-  if (url.includes('omdbapi.com')) return 'omdb';
-  
-  // Placeholders
-  if (url.includes('placeholder') || url.includes('placehold')) return 'placeholder';
-  
-  return 'other';
-}
-
-// ============================================================
-// MAIN CONFIDENCE CALCULATOR
-// ============================================================
-
-/**
- * Calculate full visual confidence result for a movie
- */
-export async function calculateVisualConfidence(params: {
-  posterUrl: string | null | undefined;
-  posterSource?: string | null;
-  releaseYear?: number | null;
-  validateUrl?: boolean;
-}): Promise<VisualConfidenceResult> {
-  const { posterUrl, posterSource, releaseYear, validateUrl = false } = params;
-  
-  // Detect visual type
-  const visualType = detectVisualType(posterUrl, posterSource, releaseYear);
-  
-  // Get tier from visual type
-  const tier = getTierFromVisualType(visualType);
-  
-  // Determine source
-  const source = posterSource || getSourceFromUrl(posterUrl);
-  
-  // URL validation (optional, for server-side use)
-  let urlValidated = true;
-  if (validateUrl && posterUrl && !isPlaceholderUrl(posterUrl)) {
-    try {
-      const response = await fetch(posterUrl, { method: 'HEAD' });
-      urlValidated = response.ok;
-    } catch {
-      urlValidated = false;
+  // Check against placeholder patterns
+  for (const pattern of PLACEHOLDER_PATTERNS) {
+    if (pattern.test(normalizedUrl)) {
+      return true;
     }
   }
-  
-  // Calculate confidence score
-  const confidence = calculateConfidenceScore(tier, source, urlValidated);
-  
+
+  // Check against API placeholder patterns
+  for (const pattern of API_PLACEHOLDER_PATTERNS) {
+    if (pattern.test(normalizedUrl)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Check if a movie needs an archive card instead of a poster
+ * Movies need archive cards when:
+ * 1. No poster URL available
+ * 2. Poster URL is a placeholder
+ * 3. Movie is from pre-digital era (before 1990) with low confidence
+ * 4. Visual confidence is below threshold
+ */
+export function needsArchiveCard(movie: {
+  poster_url?: string | null;
+  posterUrl?: string | null; // Alias for poster_url
+  posterSource?: string | null; // Source of the poster (for future use)
+  release_year?: number;
+  releaseYear?: number; // Alias for release_year
+  visual_confidence?: number;
+  visual_tier?: VisualTier;
+  has_verified_poster?: boolean;
+}): boolean {
+  // Support both naming conventions
+  const posterUrl = movie.poster_url ?? movie.posterUrl;
+  const releaseYear = movie.release_year ?? movie.releaseYear;
+
+  // No poster URL
+  if (!posterUrl) {
+    return true;
+  }
+
+  // Placeholder URL
+  if (isPlaceholderUrl(posterUrl)) {
+    return true;
+  }
+
+  // Pre-digital era without verified poster
+  if (releaseYear && releaseYear < 1990 && !movie.has_verified_poster) {
+    // Only require archive card if visual confidence is low
+    if (movie.visual_confidence !== undefined && movie.visual_confidence < 40) {
+      return true;
+    }
+    if (movie.visual_tier === 'unverified' || movie.visual_tier === 3) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Calculate visual confidence score for a movie based on available imagery
+ */
+export function calculateVisualConfidence(params: {
+  posterUrl?: string | null;
+  posterSource?: string | null;
+  images?: MovieArchivalImage[];
+  releaseYear?: number;
+  hasVerifiedPoster?: boolean;
+  sourceTypes?: ArchivalSourceType[];
+  hasFamilyPermission?: boolean;
+  hasNFAI?: boolean;
+  validateUrl?: boolean;
+}): VisualConfidenceResult {
+  const {
+    posterUrl,
+    posterSource,
+    images = [],
+    releaseYear,
+    hasVerifiedPoster = false,
+    sourceTypes = [],
+    hasFamilyPermission = false,
+    hasNFAI = false,
+    validateUrl = false,
+  } = params;
+
+  let score = 0;
+  const factors = {
+    hasVerifiedImages: false,
+    hasArchivalSources: false,
+    hasFamilyPermission,
+    imageCount: images.length,
+    sourceCount: new Set(sourceTypes).size,
+  };
+
+  // Base score for having a poster
+  if (posterUrl && !isPlaceholderUrl(posterUrl)) {
+    score += 20;
+  }
+
+  // Verified poster bonus
+  if (hasVerifiedPoster) {
+    score += 30;
+    factors.hasVerifiedImages = true;
+  }
+
+  // Check images for verification and archival sources
+  const verifiedImages = images.filter(img => img.is_verified);
+  if (verifiedImages.length > 0) {
+    factors.hasVerifiedImages = true;
+    score += Math.min(verifiedImages.length * 5, 20); // Up to 20 points for verified images
+  }
+
+  // Archival source bonus
+  const archivalTypes: ArchivalSourceType[] = [
+    'nfai', 'studio-archive', 'studio_archive', 'family-collection', 
+    'family_collection', 'museum', 'government_archive'
+  ];
+  const hasArchivalSource = sourceTypes.some(type => archivalTypes.includes(type));
+  if (hasArchivalSource) {
+    factors.hasArchivalSources = true;
+    score += 15;
+  }
+
+  // NFAI bonus
+  if (hasNFAI) {
+    score += 10;
+    factors.hasArchivalSources = true;
+  }
+
+  // Family permission bonus
+  if (hasFamilyPermission) {
+    score += 10;
+  }
+
+  // Image count bonus
+  if (images.length >= 10) {
+    score += 10;
+  } else if (images.length >= 5) {
+    score += 5;
+  }
+
+  // Source diversity bonus
+  if (factors.sourceCount >= 3) {
+    score += 5;
+  }
+
+  // Era adjustment - older movies get slightly higher base for any verification
+  if (releaseYear && releaseYear < 1970 && factors.hasVerifiedImages) {
+    score += 10; // Bonus for verified imagery from golden era
+  }
+
+  // Cap at 100
+  score = Math.min(score, 100);
+
+  // Determine tier
+  let tier: VisualTier;
+  if (score >= 80) {
+    tier = 'gold';
+  } else if (score >= 60) {
+    tier = 'silver';
+  } else if (score >= 40) {
+    tier = 'bronze';
+  } else {
+    tier = 'unverified';
+  }
+
+  // Infer visual type based on poster source
+  let visualType: VisualType | null = null;
+  if (posterUrl && !isPlaceholderUrl(posterUrl)) {
+    visualType = inferVisualType(posterUrl);
+  }
+
   return {
-    confidence,
+    movieId: '', // Will be set by caller
     tier,
+    score,
+    confidence: score, // Alias for score
     visualType,
-    source,
-    urlValidated,
-    validatedAt: new Date(),
+    factors,
   };
 }
 
-// ============================================================
-// BATCH PROCESSING
-// ============================================================
-
 /**
- * Calculate visual confidence for multiple movies
+ * Get confidence level label
  */
-export async function batchCalculateVisualConfidence(
-  movies: Array<{
-    id: string;
-    poster_url: string | null;
-    poster_source?: string | null;
-    release_year?: number | null;
-  }>,
-  options?: {
-    validateUrls?: boolean;
-    concurrency?: number;
-  }
-): Promise<Map<string, VisualConfidenceResult>> {
-  const results = new Map<string, VisualConfidenceResult>();
-  const { validateUrls = false, concurrency = 10 } = options || {};
-  
-  // Process in batches for concurrency control
-  for (let i = 0; i < movies.length; i += concurrency) {
-    const batch = movies.slice(i, i + concurrency);
-    
-    const batchResults = await Promise.all(
-      batch.map(async (movie) => {
-        const result = await calculateVisualConfidence({
-          posterUrl: movie.poster_url,
-          posterSource: movie.poster_source,
-          releaseYear: movie.release_year,
-          validateUrl: validateUrls,
-        });
-        return { id: movie.id, result };
-      })
-    );
-    
-    batchResults.forEach(({ id, result }) => {
-      results.set(id, result);
-    });
-  }
-  
-  return results;
-}
-
-// ============================================================
-// ARCHIVE CARD ELIGIBILITY
-// ============================================================
-
-/**
- * Determine archive reason for a movie without a valid poster
- */
-export function determineArchiveReason(
-  releaseYear: number | null | undefined,
-  hasAnyPoster: boolean
-): ArchiveReason {
-  if (!releaseYear) return 'no_digital_source';
-  
-  // Pre-1950 films rarely had theatrical poster culture
-  if (releaseYear < 1950) return 'pre_poster_era';
-  
-  // 1950-1970 films often have lost media
-  if (releaseYear < 1970) return hasAnyPoster ? 'no_digital_source' : 'lost_media';
-  
-  // Regional releases or low-budget films
-  return 'regional_release';
+export function getConfidenceLabel(score: number): string {
+  if (score >= 80) return 'High Confidence';
+  if (score >= 60) return 'Good Confidence';
+  if (score >= 40) return 'Moderate Confidence';
+  if (score >= 20) return 'Low Confidence';
+  return 'Unverified';
 }
 
 /**
- * Check if a movie needs an archive card
+ * Get confidence color class
  */
-export function needsArchiveCard(params: {
-  posterUrl: string | null | undefined;
-  posterSource?: string | null;
-  releaseYear?: number | null;
-}): boolean {
-  const { posterUrl, posterSource, releaseYear } = params;
-  
-  // No poster URL
-  if (!posterUrl) return true;
-  
-  // Placeholder URL
-  if (isPlaceholderUrl(posterUrl)) return true;
-  
-  // Old films without TMDB might benefit from archive cards
-  if (releaseYear && releaseYear < 1970 && !isTMDBUrl(posterUrl)) {
+export function getConfidenceColor(score: number): string {
+  if (score >= 80) return 'text-green-400';
+  if (score >= 60) return 'text-blue-400';
+  if (score >= 40) return 'text-yellow-400';
+  if (score >= 20) return 'text-orange-400';
+  return 'text-gray-400';
+}
+
+/**
+ * Check if poster URL is likely valid (accessible)
+ * This is a simple heuristic check, not an actual HTTP request
+ */
+export function isLikelyValidPosterUrl(url: string | null | undefined): boolean {
+  if (!url || isPlaceholderUrl(url)) {
+    return false;
+  }
+
+  // Check for valid URL structure
+  try {
+    const parsed = new URL(url);
+    // Must be HTTP or HTTPS
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return false;
+    }
+    // Must have a path beyond just /
+    if (parsed.pathname === '/' || parsed.pathname === '') {
+      return false;
+    }
     return true;
+  } catch {
+    return false;
   }
-  
-  return false;
+}
+
+/**
+ * Determine the visual type of an image based on filename/URL patterns
+ */
+export function inferVisualType(url: string): VisualType {
+  const lowerUrl = url.toLowerCase();
+
+  if (lowerUrl.includes('poster') || lowerUrl.includes('cover')) {
+    return 'poster';
+  }
+  if (lowerUrl.includes('still') || lowerUrl.includes('scene')) {
+    return 'still';
+  }
+  if (lowerUrl.includes('behind') || lowerUrl.includes('bts') || lowerUrl.includes('making')) {
+    return 'behind-scenes';
+  }
+  if (lowerUrl.includes('promo') || lowerUrl.includes('promotional')) {
+    return 'promotional';
+  }
+  if (lowerUrl.includes('premiere') || lowerUrl.includes('launch')) {
+    return 'premiere';
+  }
+  if (lowerUrl.includes('candid') || lowerUrl.includes('casual')) {
+    return 'candid';
+  }
+  if (lowerUrl.includes('archival') || lowerUrl.includes('archive')) {
+    return 'archival';
+  }
+  if (lowerUrl.includes('magazine')) {
+    return 'magazine';
+  }
+  if (lowerUrl.includes('newspaper')) {
+    return 'newspaper';
+  }
+  if (lowerUrl.includes('lobby')) {
+    return 'lobby_card';
+  }
+  if (lowerUrl.includes('press')) {
+    return 'press_photo';
+  }
+
+  // Default to poster for most cases
+  return 'poster';
 }
 

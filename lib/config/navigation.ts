@@ -1,641 +1,332 @@
 /**
- * Navigation Configuration - Single Source of Truth
- * 
- * CATCHY NAMING CONVENTION:
- * - "Glam Zone" replaces "Hot"
- * - Creative Telugu names for sections
- * - All names are engaging and memorable
+ * Navigation Configuration
+ * Defines site navigation structure, categories, and menu sections
  */
 
 export interface NavItem {
   id: string;
-  label: string;
-  labelEn: string;
-  emoji?: string;
   href: string;
-  gradient?: string;
-  textColor?: string;
-  isNew?: boolean;
-  isGlam?: boolean;  // Replaces isHot
-  isHot?: boolean;
-  children?: NavItem[];
-}
-
-export interface NavGroup {
-  id: string;
   label: string;
-  labelEn: string;
-  items: NavItem[];
+  labelTe?: string;
+  emoji?: string;
+  icon?: string;
+  description?: string;
+  descriptionTe?: string;
+  isHot?: boolean;
+  isNew?: boolean;
 }
 
-// ============================================================
-// CATCHY NAMES MAPPING
-// ============================================================
-
-export const CATCHY_NAMES = {
-  // Main Sections
-  glam: { te: '✨ గ్లామ్ జోన్', en: '✨ Glam Zone' },
-  glamWorld: { te: '🌟 అందాల లోకం', en: '🌟 Glam World' },
-  starGlow: { te: '⭐ స్టార్ గ్లో', en: '⭐ Star Glow' },
-  
-  // Entertainment
-  filmBeat: { te: '🎥 సినీ బీట్', en: '🎥 Film Beat' },
-  starPulse: { te: '💫 స్టార్ పల్స్', en: '💫 Star Pulse' },
-  tollywoodTalk: { te: '🎭 టాలీవుడ్ టాక్', en: '🎭 Tollywood Talk' },
-  
-  // Sports
-  sportsMasala: { te: '🏆 స్పోర్ట్స్ మసాలా', en: '🏆 Sports Masala' },
-  cricketAdda: { te: '🏏 క్రికెట్ అడ్డా', en: '🏏 Cricket Adda' },
-  
-  // Politics
-  politicalPulse: { te: '🗳️ పొలిటికల్ పల్స్', en: '🗳️ Political Pulse' },
-  
-  // Trending
-  viralWave: { te: '🌊 వైరల్ వేవ్', en: '🌊 Viral Wave' },
-  buzzFeed: { te: '🔥 బజ్ ఫీడ్', en: '🔥 Buzz Feed' },
-  
-  // Gossip
-  masalaBytes: { te: '🌶️ మసాలా బైట్స్', en: '🌶️ Masala Bytes' },
-  whispers: { te: '🤫 విస్పర్స్', en: '🤫 Whispers' },
-  
-  // Crime
-  crimeFile: { te: '🔍 క్రైమ్ ఫైల్', en: '🔍 Crime File' },
-  
-  // Lifestyle
-  lifeVibes: { te: '💖 లైఫ్ వైబ్స్', en: '💖 Life Vibes' },
-  healthHub: { te: '🏥 హెల్త్ హబ్', en: '🏥 Health Hub' },
-  foodFiesta: { te: '🍕 ఫుడ్ ఫీస్టా', en: '🍕 Food Fiesta' },
-  
-  // Astrology
-  starSigns: { te: '🔮 రాశి రహస్యం', en: '🔮 Star Signs' },
-  
-  // Photos & Videos
-  photoFlash: { te: '📸 ఫోటో ఫ్లాష్', en: '📸 Photo Flash' },
-  videoWave: { te: '🎬 వీడియో వేవ్', en: '🎬 Video Wave' },
-  
-  // Fun
-  funCorner: { te: '🎮 ఫన్ కార్నర్', en: '🎮 Fun Corner' },
-  memeMasala: { te: '😂 మీమ్ మసాలా', en: '😂 Meme Masala' },
-  quizTime: { te: '🧠 క్విజ్ టైమ్', en: '🧠 Quiz Time' },
-  
-  // Reviews
-  movieMeter: { te: '🎬 మూవీ మీటర్', en: '🎬 Movie Meter' },
-  
-  // News
-  newsWorld: { te: '🌍 వార్తల లోకం', en: '🌍 News World' },
-  globalBeat: { te: '🌍 గ్లోబల్ బీట్', en: '🌍 Global Beat' },
-  
-  // Tech
-  techTalk: { te: '💻 టెక్ టాక్', en: '💻 Tech Talk' },
-  
-  // Business
-  bizBuzz: { te: '💼 బిజ్ బజ్', en: '💼 Biz Buzz' },
-  
-  // Jobs
-  jobJunction: { te: '💼 జాబ్ జంక్షన్', en: '💼 Job Junction' },
-};
-
-// ============================================================
-// MAIN NAVIGATION (Header - Consolidated)
-// ============================================================
-
-// Entertainment Hub - Merged section with dropdown
-export const ENTERTAINMENT_HUB: NavItem = {
-  id: 'entertainment-hub',
-  label: '🎬 వినోదం',
-  labelEn: 'Entertainment',
-  href: '/category/entertainment',
-  children: [
-    { id: 'glam', label: '✨ గ్లామ్ జోన్', labelEn: 'Glam Zone', href: '/hot', isGlam: true },
-    { id: 'gossip', label: '🌶️ మసాలా బైట్స్', labelEn: 'Masala Bytes', href: '/category/gossip' },
-    { id: 'entertainment', label: '🎥 సినీ బీట్', labelEn: 'Film Beat', href: '/category/entertainment' },
-    { id: 'trending', label: '🌊 వైరల్ వేవ్', labelEn: 'Viral Wave', href: '/category/trending' },
-    { id: 'reviews', label: '🎬 మూవీ మీటర్', labelEn: 'Movie Meter', href: '/reviews' },
-  ],
-};
-
-// Primary Navigation Items (Top Bar)
-export const PRIMARY_NAV: NavItem[] = [
-  { id: 'home', label: '🏠 మన ఇల్లు', labelEn: 'Home', href: '/' },
-  ENTERTAINMENT_HUB,
-  { id: 'sports', label: '🏆 స్పోర్ట్స్ మసాలా', labelEn: 'Sports Masala', href: '/category/sports' },
-  { id: 'politics', label: '🗳️ పొలిటికల్ పల్స్', labelEn: 'Political Pulse', href: '/category/politics' },
-];
-
-// Featured Pills (Gradient buttons in header) - GLAM instead of HOT
-export const FEATURED_PILLS: NavItem[] = [
-  { 
-    id: 'glam', 
-    label: '✨ గ్లామ్', 
-    labelEn: 'Glam', 
-    href: '/hot', 
-    gradient: 'from-purple-500 to-pink-500',
-    textColor: 'text-white',
-    isGlam: true,
-  },
-  { 
-    id: 'reviews', 
-    label: '🎬 రివ్యూలు', 
-    labelEn: 'Reviews', 
-    href: '/reviews', 
-    gradient: 'from-yellow-500 to-amber-500',
-    textColor: 'text-black',
-  },
-];
-
-// More Menu - Organized into 4 clear sections with card styling
 export interface MenuSection {
   id: string;
   title: string;
-  titleEn: string;
-  emoji: string;
-  gradient: string;
+  titleTe?: string;
+  emoji?: string;
   items: NavItem[];
 }
 
-export const MORE_MENU_SECTIONS: MenuSection[] = [
-  {
-    id: 'glam-entertainment',
-    title: '✨ గ్లామ్ & వినోదం',
-    titleEn: '✨ Glam & Entertainment',
-    emoji: '✨',
-    gradient: 'from-purple-500 to-pink-500',
-    items: [
-      { id: 'glam', label: 'గ్లామ్ జోన్', labelEn: 'Glam Zone', emoji: '✨', href: '/hot', isGlam: true },
-      { id: 'viral', label: 'వైరల్ వేవ్', labelEn: 'Viral Wave', emoji: '🌊', href: '/category/viral', isHot: true },
-      { id: 'celebrities', label: 'స్టార్ ఫైల్', labelEn: 'Star File', emoji: '🌟', href: '/celebrities' },
-      { id: 'movies', label: 'సినీ తాజా', labelEn: 'Cine Fresh', emoji: '🎥', href: '/movies' },
-      { id: 'reviews', label: 'మూవీ మీటర్', labelEn: 'Movie Meter', emoji: '🎬', href: '/reviews' },
-      { id: 'photos', label: 'ఫోటో ఫ్లాష్', labelEn: 'Photo Flash', emoji: '📸', href: '/photos', isNew: true },
-    ],
-  },
-  {
-    id: 'news-world',
-    title: '🌍 వార్తల లోకం',
-    titleEn: '🌍 News World',
-    emoji: '🌍',
-    gradient: 'from-blue-500 to-indigo-600',
-    items: [
-      { id: 'crime', label: 'క్రైమ్ ఫైల్', labelEn: 'Crime File', emoji: '🔍', href: '/category/crime', isNew: true },
-      { id: 'world', label: 'గ్లోబల్ బీట్', labelEn: 'Global Beat', emoji: '🌍', href: '/category/world' },
-      { id: 'business', label: 'బిజ్ బజ్', labelEn: 'Biz Buzz', emoji: '💼', href: '/category/business' },
-      { id: 'tech', label: 'టెక్ టాక్', labelEn: 'Tech Talk', emoji: '💻', href: '/category/tech', isNew: true },
-      { id: 'editorial', label: 'సంపాదకీయం', labelEn: 'Editorial', emoji: '📝', href: '/editorial' },
-    ],
-  },
-  {
-    id: 'life-vibes',
-    title: '💖 లైఫ్ వైబ్స్',
-    titleEn: '💖 Life Vibes',
-    emoji: '💖',
-    gradient: 'from-pink-500 to-rose-500',
-    items: [
-      { id: 'health', label: 'హెల్త్ హబ్', labelEn: 'Health Hub', emoji: '🏥', href: '/category/health', isNew: true },
-      { id: 'lifestyle', label: 'లైఫ్ స్టైల్', labelEn: 'Lifestyle', emoji: '✨', href: '/category/lifestyle', isNew: true },
-      { id: 'astrology', label: 'రాశి రహస్యం', labelEn: 'Star Signs', emoji: '🔮', href: '/astrology', isNew: true },
-      { id: 'food', label: 'ఫుడ్ ఫీస్టా', labelEn: 'Food Fiesta', emoji: '🍕', href: '/category/food', isNew: true },
-      { id: 'videos', label: 'వీడియో వేవ్', labelEn: 'Video Wave', emoji: '🎬', href: '/videos', isNew: true },
-    ],
-  },
-  {
-    id: 'fun-corner',
-    title: '🎮 ఫన్ కార్నర్',
-    titleEn: '🎮 Fun Corner',
-    emoji: '🎮',
-    gradient: 'from-emerald-500 to-teal-500',
-    items: [
-      { id: 'games', label: 'గేమ్ జోన్', labelEn: 'Game Zone', emoji: '🎮', href: '/games' },
-      { id: 'memes', label: 'మీమ్ మసాలా', labelEn: 'Meme Masala', emoji: '😂', href: '/memes', isNew: true },
-      { id: 'quizzes', label: 'క్విజ్ టైమ్', labelEn: 'Quiz Time', emoji: '🧠', href: '/quizzes', isNew: true },
-      { id: 'stories', label: 'కథల కొలువు', labelEn: 'Story Corner', emoji: '📖', href: '/stories' },
-      { id: 'webSeries', label: 'వెబ్ వరల్డ్', labelEn: 'Web World', emoji: '📺', href: '/web-series' },
-      { id: 'jobs', label: 'జాబ్ జంక్షన్', labelEn: 'Job Junction', emoji: '💼', href: '/jobs', isNew: true },
-    ],
-  },
-];
-
-// ============================================================
-// CATEGORY BAR (Secondary Nav - Below Header)
-// ============================================================
-
-export const CATEGORY_BAR: NavItem[] = [
-  { id: 'home', label: '🏠 హోమ్', labelEn: 'Home', href: '/' },
-  { id: 'glam', label: '✨ గ్లామ్', labelEn: 'Glam', href: '/hot', isGlam: true },
-  { id: 'gossip', label: '🌶️ గాసిప్', labelEn: 'Gossip', href: '/category/gossip' },
-  { id: 'sports', label: '🏏 స్పోర్ట్స్', labelEn: 'Sports', href: '/category/sports' },
-  { id: 'politics', label: '🏛️ పాలిటిక్స్', labelEn: 'Politics', href: '/category/politics' },
-  { id: 'entertainment', label: '🎬 వినోదం', labelEn: 'Entertainment', href: '/category/entertainment' },
-  { id: 'trending', label: '📈 ట్రెండింగ్', labelEn: 'Trending', href: '/category/trending' },
-];
-
-// ============================================================
-// QUICK LINKS (Sidebar & Mobile Bottom Nav)
-// ============================================================
-
-export const QUICK_LINKS: NavItem[] = [
-  { id: 'home', label: 'హోమ్', labelEn: 'Home', emoji: '🏠', href: '/' },
-  { id: 'glam', label: 'గ్లామ్ జోన్', labelEn: 'Glam Zone', emoji: '✨', href: '/hot' },
-  { id: 'trending', label: 'ట్రెండింగ్', labelEn: 'Trending', emoji: '📈', href: '/category/trending' },
-  { id: 'entertainment', label: 'వినోదం', labelEn: 'Entertainment', emoji: '🎬', href: '/category/entertainment' },
-  { id: 'games', label: 'గేమ్ జోన్', labelEn: 'Game Zone', emoji: '🎮', href: '/games' },
-];
-
-// ============================================================
-// CATEGORY METADATA (Colors & Styles)
-// ============================================================
-
-export const CATEGORY_META: Record<string, {
+export interface CategoryMeta {
+  id: string;
+  href: string;
+  label: string;
+  labelTe: string;
+  description: string;
+  descriptionTe: string;
   color: string;
-  gradient: string;
-  bgColor: string;
-  glowColor: string;
-  icon: string;
-  name: { te: string; en: string };
-  description: { te: string; en: string };
-}> = {
-  // Glam (formerly Hot)
-  glam: {
-    color: '#9b5de5',
-    gradient: 'from-purple-500 to-pink-500',
-    bgColor: 'rgba(155, 93, 229, 0.12)',
-    glowColor: 'rgba(155, 93, 229, 0.4)',
-    icon: '✨',
-    name: { te: 'గ్లామ్ జోన్', en: 'Glam Zone' },
-    description: { te: 'సెలబ్రిటీల అందాల ఫోటోలు, ఫ్యాషన్', en: 'Celebrity glamour photos, fashion' },
-  },
-  hot: {
-    color: '#9b5de5',
-    gradient: 'from-purple-500 to-pink-500',
-    bgColor: 'rgba(155, 93, 229, 0.12)',
-    glowColor: 'rgba(155, 93, 229, 0.4)',
-    icon: '✨',
-    name: { te: 'గ్లామ్ జోన్', en: 'Glam Zone' },
-    description: { te: 'సెలబ్రిటీల అందాల ఫోటోలు, ఫ్యాషన్', en: 'Celebrity glamour photos, fashion' },
-  },
-  gossip: {
-    color: '#f72585',
-    gradient: 'from-pink-500 to-fuchsia-600',
-    bgColor: 'rgba(247, 37, 133, 0.12)',
-    glowColor: 'rgba(247, 37, 133, 0.4)',
-    icon: '🌶️',
-    name: { te: 'మసాలా బైట్స్', en: 'Masala Bytes' },
-    description: { te: 'సెలబ్రిటీల గాసిప్ వార్తలు', en: 'Celebrity gossip news' },
-  },
-  entertainment: {
-    color: '#7209b7',
-    gradient: 'from-purple-600 to-indigo-600',
-    bgColor: 'rgba(114, 9, 183, 0.12)',
-    glowColor: 'rgba(114, 9, 183, 0.4)',
-    icon: '🎥',
-    name: { te: 'సినీ బీట్', en: 'Film Beat' },
-    description: { te: 'సినిమా, టీవీ వినోద వార్తలు', en: 'Cinema, TV entertainment news' },
-  },
-  reviews: {
-    color: '#ffd60a',
-    gradient: 'from-yellow-400 to-amber-500',
-    bgColor: 'rgba(255, 214, 10, 0.12)',
-    glowColor: 'rgba(255, 214, 10, 0.4)',
-    icon: '🎬',
-    name: { te: 'మూవీ మీటర్', en: 'Movie Meter' },
-    description: { te: 'సినిమా రివ్యూలు, రేటింగ్స్', en: 'Movie reviews, ratings' },
-  },
-  trending: {
-    color: '#ff006e',
-    gradient: 'from-pink-600 to-rose-600',
-    bgColor: 'rgba(255, 0, 110, 0.12)',
-    glowColor: 'rgba(255, 0, 110, 0.4)',
-    icon: '🌊',
-    name: { te: 'వైరల్ వేవ్', en: 'Viral Wave' },
-    description: { te: 'ట్రెండింగ్ టాపిక్స్', en: 'Trending topics' },
-  },
-  sports: {
-    color: '#06d6a0',
-    gradient: 'from-emerald-500 to-teal-500',
-    bgColor: 'rgba(6, 214, 160, 0.12)',
-    glowColor: 'rgba(6, 214, 160, 0.4)',
-    icon: '🏆',
-    name: { te: 'స్పోర్ట్స్ మసాలా', en: 'Sports Masala' },
-    description: { te: 'క్రికెట్, ఫుట్‌బాల్ వార్తలు', en: 'Cricket, Football news' },
-  },
-  politics: {
-    color: '#4361ee',
-    gradient: 'from-blue-500 to-indigo-600',
-    bgColor: 'rgba(67, 97, 238, 0.12)',
-    glowColor: 'rgba(67, 97, 238, 0.4)',
-    icon: '🗳️',
-    name: { te: 'పొలిటికల్ పల్స్', en: 'Political Pulse' },
-    description: { te: 'రాజకీయ వార్తలు', en: 'Political news' },
-  },
-  crime: {
-    color: '#d00000',
-    gradient: 'from-red-600 to-rose-700',
-    bgColor: 'rgba(208, 0, 0, 0.12)',
-    glowColor: 'rgba(208, 0, 0, 0.4)',
-    icon: '🔍',
-    name: { te: 'క్రైమ్ ఫైల్', en: 'Crime File' },
-    description: { te: 'నేర వార్తలు', en: 'Crime news' },
-  },
-  viral: {
-    color: '#ff006e',
-    gradient: 'from-pink-600 to-purple-600',
-    bgColor: 'rgba(255, 0, 110, 0.12)',
-    glowColor: 'rgba(255, 0, 110, 0.4)',
-    icon: '🌊',
-    name: { te: 'వైరల్ వేవ్', en: 'Viral Wave' },
-    description: { te: 'వైరల్ వీడియోలు', en: 'Viral videos' },
-  },
-  health: {
-    color: '#38b000',
-    gradient: 'from-green-500 to-lime-500',
-    bgColor: 'rgba(56, 176, 0, 0.12)',
-    glowColor: 'rgba(56, 176, 0, 0.4)',
-    icon: '🏥',
-    name: { te: 'హెల్త్ హబ్', en: 'Health Hub' },
-    description: { te: 'ఆరోగ్యం, ఫిట్‌నెస్', en: 'Health, Fitness' },
-  },
-  lifestyle: {
-    color: '#fb5607',
-    gradient: 'from-orange-500 to-pink-500',
-    bgColor: 'rgba(251, 86, 7, 0.12)',
-    glowColor: 'rgba(251, 86, 7, 0.4)',
-    icon: '✨',
-    name: { te: 'లైఫ్ వైబ్స్', en: 'Life Vibes' },
-    description: { te: 'లైఫ్‌స్టైల్, ఫ్యాషన్', en: 'Lifestyle, Fashion' },
-  },
-  astrology: {
-    color: '#9d4edd',
-    gradient: 'from-purple-500 to-violet-600',
-    bgColor: 'rgba(157, 78, 221, 0.12)',
-    glowColor: 'rgba(157, 78, 221, 0.4)',
-    icon: '🔮',
-    name: { te: 'రాశి రహస్యం', en: 'Star Signs' },
-    description: { te: 'రాశిఫలాలు', en: 'Horoscope' },
-  },
-  food: {
-    color: '#FFC107',
-    gradient: 'from-amber-400 to-orange-500',
-    bgColor: 'rgba(255, 193, 7, 0.12)',
-    glowColor: 'rgba(255, 193, 7, 0.4)',
-    icon: '🍕',
-    name: { te: 'ఫుడ్ ఫీస్టా', en: 'Food Fiesta' },
-    description: { te: 'వంటకాలు, రెసిపీలు', en: 'Recipes, Food' },
-  },
-  tech: {
-    color: '#00b4d8',
-    gradient: 'from-cyan-500 to-blue-600',
-    bgColor: 'rgba(0, 180, 216, 0.12)',
-    glowColor: 'rgba(0, 180, 216, 0.4)',
-    icon: '💻',
-    name: { te: 'టెక్ టాక్', en: 'Tech Talk' },
-    description: { te: 'టెక్నాలజీ వార్తలు', en: 'Technology news' },
-  },
-  world: {
-    color: '#8338ec',
-    gradient: 'from-violet-600 to-purple-700',
-    bgColor: 'rgba(131, 56, 236, 0.12)',
-    glowColor: 'rgba(131, 56, 236, 0.4)',
-    icon: '🌍',
-    name: { te: 'గ్లోబల్ బీట్', en: 'Global Beat' },
-    description: { te: 'అంతర్జాతీయ వార్తలు', en: 'International news' },
-  },
-  business: {
-    color: '#ffd60a',
-    gradient: 'from-yellow-400 to-amber-500',
-    bgColor: 'rgba(255, 214, 10, 0.12)',
-    glowColor: 'rgba(255, 214, 10, 0.4)',
-    icon: '💼',
-    name: { te: 'బిజ్ బజ్', en: 'Biz Buzz' },
-    description: { te: 'వ్యాపార వార్తలు', en: 'Business news' },
-  },
-  games: {
-    color: '#1E88E5',
-    gradient: 'from-blue-500 to-cyan-500',
-    bgColor: 'rgba(30, 136, 229, 0.12)',
-    glowColor: 'rgba(30, 136, 229, 0.4)',
-    icon: '🎮',
-    name: { te: 'గేమ్ జోన్', en: 'Game Zone' },
-    description: { te: 'గేమ్స్, టిప్స్', en: 'Games, Tips' },
-  },
-  memes: {
-    color: '#ff006e',
-    gradient: 'from-pink-500 to-orange-500',
-    bgColor: 'rgba(255, 0, 110, 0.12)',
-    glowColor: 'rgba(255, 0, 110, 0.4)',
-    icon: '😂',
-    name: { te: 'మీమ్ మసాలా', en: 'Meme Masala' },
-    description: { te: 'ఫన్నీ మీమ్స్', en: 'Funny memes' },
-  },
-  quizzes: {
-    color: '#8E24AA',
-    gradient: 'from-purple-600 to-pink-600',
-    bgColor: 'rgba(142, 36, 170, 0.12)',
-    glowColor: 'rgba(142, 36, 170, 0.4)',
-    icon: '🧠',
-    name: { te: 'క్విజ్ టైమ్', en: 'Quiz Time' },
-    description: { te: 'క్విజ్‌లు', en: 'Quizzes' },
-  },
-  editorial: {
-    color: '#607D8B',
-    gradient: 'from-gray-500 to-gray-600',
-    bgColor: 'rgba(96, 125, 139, 0.12)',
-    glowColor: 'rgba(96, 125, 139, 0.4)',
-    icon: '📝',
-    name: { te: 'సంపాదకీయం', en: 'Editorial' },
-    description: { te: 'అభిప్రాయాలు', en: 'Opinions' },
-  },
-  jobs: {
-    color: '#00BCD4',
-    gradient: 'from-cyan-400 to-teal-500',
-    bgColor: 'rgba(0, 188, 212, 0.12)',
-    glowColor: 'rgba(0, 188, 212, 0.4)',
-    icon: '💼',
-    name: { te: 'జాబ్ జంక్షన్', en: 'Job Junction' },
-    description: { te: 'ఉద్యోగ వార్తలు', en: 'Job news' },
-  },
-  stories: {
-    color: '#4CAF50',
-    gradient: 'from-green-500 to-emerald-600',
-    bgColor: 'rgba(76, 175, 80, 0.12)',
-    glowColor: 'rgba(76, 175, 80, 0.4)',
-    icon: '📖',
-    name: { te: 'కథల కొలువు', en: 'Story Corner' },
-    description: { te: 'తెలుగు జీవిత కథలు', en: 'Telugu life stories' },
-  },
-  webSeries: {
-    color: '#e63946',
-    gradient: 'from-red-500 to-rose-600',
-    bgColor: 'rgba(230, 57, 70, 0.12)',
-    glowColor: 'rgba(230, 57, 70, 0.4)',
-    icon: '📺',
-    name: { te: 'వెబ్ వరల్డ్', en: 'Web World' },
-    description: { te: 'వెబ్ సిరీస్ రివ్యూలు', en: 'Web series reviews' },
-  },
-  photos: {
-    color: '#9c27b0',
-    gradient: 'from-purple-500 to-pink-500',
-    bgColor: 'rgba(156, 39, 176, 0.12)',
-    glowColor: 'rgba(156, 39, 176, 0.4)',
-    icon: '📸',
-    name: { te: 'ఫోటో ఫ్లాష్', en: 'Photo Flash' },
-    description: { te: 'ఫోటో గ్యాలరీలు', en: 'Photo galleries' },
-  },
-  videos: {
-    color: '#f44336',
-    gradient: 'from-orange-500 to-red-500',
-    bgColor: 'rgba(244, 67, 54, 0.12)',
-    glowColor: 'rgba(244, 67, 54, 0.4)',
-    icon: '🎬',
-    name: { te: 'వీడియో వేవ్', en: 'Video Wave' },
-    description: { te: 'వీడియో న్యూస్, క్లిప్స్', en: 'Video news, clips' },
-  },
-  celebrities: {
-    color: '#ffb703',
-    gradient: 'from-yellow-400 to-orange-500',
-    bgColor: 'rgba(255, 183, 3, 0.12)',
-    glowColor: 'rgba(255, 183, 3, 0.4)',
-    icon: '🌟',
-    name: { te: 'స్టార్ ఫైల్', en: 'Star File' },
-    description: { te: 'సెలబ్రిటీ ప్రొఫైల్స్', en: 'Celebrity profiles' },
+  bgColor?: string;
+  icon?: string;
+  gradient?: string;
+  glowColor?: string;
+  // Alternative structure used by some code
+  name?: {
+    en: string;
+    te: string;
+  };
+}
+
+// Category metadata for main sections
+export const CATEGORY_META: Record<string, CategoryMeta> = {
+  news: {
+    id: 'news',
+    href: '/category/news',
+    label: 'News',
+    labelTe: 'వార్తలు',
+    description: 'Latest Telugu cinema news',
+    descriptionTe: 'తాజా తెలుగు సినిమా వార్తలు',
+    color: '#eab308',
   },
   movies: {
+    id: 'movies',
+    href: '/reviews',
+    label: 'Movies',
+    labelTe: 'సినిమాలు',
+    description: 'Movie reviews and ratings',
+    descriptionTe: 'సినిమా సమీక్షలు మరియు రేటింగ్‌లు',
+    color: '#ef4444',
+  },
+  gossip: {
+    id: 'gossip',
+    href: '/category/gossip',
+    label: 'Gossip',
+    labelTe: 'గాసిప్',
+    description: 'Celebrity gossip and rumors',
+    descriptionTe: 'సెలబ్రిటీ గాసిప్ మరియు వదంతులు',
+    color: '#ec4899',
+  },
+  photos: {
+    id: 'photos',
+    href: '/photos',
+    label: 'Photos',
+    labelTe: 'ఫోటోలు',
+    description: 'Photo galleries',
+    descriptionTe: 'ఫోటో గ్యాలరీలు',
     color: '#8b5cf6',
-    gradient: 'from-violet-500 to-purple-600',
-    bgColor: 'rgba(139, 92, 246, 0.12)',
-    glowColor: 'rgba(139, 92, 246, 0.4)',
-    icon: '🎥',
-    name: { te: 'సినీ తాజా', en: 'Cine Fresh' },
-    description: { te: 'మూవీ న్యూస్', en: 'Movie news' },
+  },
+  videos: {
+    id: 'videos',
+    href: '/videos',
+    label: 'Videos',
+    labelTe: 'వీడియోలు',
+    description: 'Video content',
+    descriptionTe: 'వీడియో కంటెంట్',
+    color: '#06b6d4',
+  },
+  hot: {
+    id: 'hot',
+    href: '/hot',
+    label: 'Hot',
+    labelTe: 'హాట్',
+    description: 'Trending hot content',
+    descriptionTe: 'ట్రెండింగ్ హాట్ కంటెంట్',
+    color: '#f97316',
+  },
+  editorial: {
+    id: 'editorial',
+    href: '/editorial',
+    label: 'Editorial',
+    labelTe: 'ఎడిటోరియల్',
+    description: 'In-depth articles and analysis',
+    descriptionTe: 'లోతైన వ్యాసాలు మరియు విశ్లేషణ',
+    color: '#22c55e',
+  },
+  stories: {
+    id: 'stories',
+    href: '/category/stories',
+    label: 'Stories',
+    labelTe: 'కథలు',
+    description: 'Feature stories',
+    descriptionTe: 'ఫీచర్ కథలు',
+    color: '#3b82f6',
+  },
+  quizzes: {
+    id: 'quizzes',
+    href: '/quizzes',
+    label: 'Quizzes',
+    labelTe: 'క్విజ్‌లు',
+    description: 'Fun movie quizzes',
+    descriptionTe: 'సరదా సినిమా క్విజ్‌లు',
+    color: '#a855f7',
+  },
+  memes: {
+    id: 'memes',
+    href: '/memes',
+    label: 'Memes',
+    labelTe: 'మీమ్స్',
+    description: 'Telugu movie memes',
+    descriptionTe: 'తెలుగు సినిమా మీమ్స్',
+    color: '#f59e0b',
+  },
+  'web-series': {
+    id: 'web-series',
+    href: '/web-series',
+    label: 'Web Series',
+    labelTe: 'వెబ్ సిరీస్',
+    description: 'OTT web series',
+    descriptionTe: 'OTT వెబ్ సిరీస్',
+    color: '#14b8a6',
+  },
+  jobs: {
+    id: 'jobs',
+    href: '/jobs',
+    label: 'Jobs',
+    labelTe: 'ఉద్యోగాలు',
+    description: 'Industry job listings',
+    descriptionTe: 'పరిశ్రమ ఉద్యోగ జాబితాలు',
+    color: '#64748b',
+  },
+  astrology: {
+    id: 'astrology',
+    href: '/astrology',
+    label: 'Astrology',
+    labelTe: 'జ్యోతిషం',
+    description: 'Daily horoscopes',
+    descriptionTe: 'రోజువారీ జాతకాలు',
+    color: '#6366f1',
   },
 };
 
-// ============================================================
-// FOOTER NAVIGATION
-// ============================================================
+// More menu sections (collapsible groups)
+export const MORE_MENU_SECTIONS: MenuSection[] = [
+  {
+    id: 'entertainment',
+    title: 'Entertainment',
+    titleTe: 'వినోదం',
+    emoji: '🎬',
+    items: [
+      { id: 'stories', href: '/category/stories', label: 'Stories', labelTe: 'కథలు' },
+      { id: 'quizzes', href: '/quizzes', label: 'Quizzes', labelTe: 'క్విజ్‌లు' },
+      { id: 'memes', href: '/memes', label: 'Memes', labelTe: 'మీమ్స్' },
+      { id: 'web-series', href: '/web-series', label: 'Web Series', labelTe: 'వెబ్ సిరీస్' },
+      { id: 'trailers', href: '/trailers', label: 'Trailers', labelTe: 'ట్రైలర్లు' },
+      { id: 'audio-songs', href: '/audio', label: 'Audio Songs', labelTe: 'ఆడియో పాటలు' },
+    ],
+  },
+  {
+    id: 'lifestyle',
+    title: 'Lifestyle',
+    titleTe: 'జీవనశైలి',
+    emoji: '✨',
+    items: [
+      { id: 'astrology', href: '/astrology', label: 'Astrology', labelTe: 'జ్యోతిషం' },
+      { id: 'horoscope', href: '/horoscope', label: 'Daily Horoscope', labelTe: 'రోజువారీ రాశిఫలాలు' },
+      { id: 'health', href: '/health', label: 'Health Tips', labelTe: 'ఆరోగ్య చిట్కాలు' },
+      { id: 'recipes', href: '/recipes', label: 'Recipes', labelTe: 'వంటకాలు' },
+    ],
+  },
+  {
+    id: 'news',
+    title: 'News & Updates',
+    titleTe: 'వార్తలు',
+    emoji: '📰',
+    items: [
+      { id: 'breaking', href: '/breaking', label: 'Breaking News', labelTe: 'బ్రేకింగ్ న్యూస్' },
+      { id: 'crime', href: '/category/crime', label: 'Crime', labelTe: 'క్రైమ్' },
+      { id: 'viral', href: '/viral', label: 'Viral News', labelTe: 'వైరల్' },
+      { id: 'tech', href: '/tech', label: 'Technology', labelTe: 'టెక్నాలజీ' },
+    ],
+  },
+  {
+    id: 'services',
+    title: 'Services',
+    titleTe: 'సేవలు',
+    emoji: '💼',
+    items: [
+      { id: 'jobs', href: '/jobs', label: 'Jobs', labelTe: 'ఉద్యోగాలు' },
+      { id: 'education', href: '/education', label: 'Education', labelTe: 'విద్య' },
+      { id: 'govt-schemes', href: '/govt-schemes', label: 'Govt Schemes', labelTe: 'ప్రభుత్వ పథకాలు' },
+    ],
+  },
+];
 
-export const FOOTER_LINKS = {
-  about: [
-    { href: '/about', label: { te: '🏢 మా గురించి', en: '🏢 About Us' } },
-    { href: '/contact', label: { te: '📞 సంప్రదించండి', en: '📞 Contact' } },
-    { href: '/advertise', label: { te: '📣 ప్రకటనలు', en: '📣 Advertise' } },
-  ],
-  legal: [
-    { href: '/privacy', label: { te: '🔒 గోప్యతా విధానం', en: '🔒 Privacy Policy' } },
-    { href: '/terms', label: { te: '📜 నిబంధనలు', en: '📜 Terms of Use' } },
-    { href: '/disclaimer', label: { te: '⚠️ నిరాకరణ', en: '⚠️ Disclaimer' } },
-  ],
-  social: [
-    { href: 'https://twitter.com/teluguvibes', label: 'Twitter', icon: 'twitter' },
-    { href: 'https://instagram.com/teluguvibes', label: 'Instagram', icon: 'instagram' },
-    { href: 'https://youtube.com/@teluguvibes', label: 'YouTube', icon: 'youtube' },
-    { href: 'https://facebook.com/teluguvibes', label: 'Facebook', icon: 'facebook' },
-  ],
+// Category bar items for horizontal navigation
+export const CATEGORY_BAR: NavItem[] = [
+  { id: 'movies', href: '/reviews', label: 'Movies', labelTe: 'సినిమాలు', emoji: '🎬' },
+  { id: 'gossip', href: '/category/gossip', label: 'Gossip', labelTe: 'గాసిప్', emoji: '🌶️' },
+  { id: 'entertainment', href: '/category/entertainment', label: 'Entertainment', labelTe: 'వినోదం', emoji: '🎭' },
+  { id: 'sports', href: '/category/sports', label: 'Sports', labelTe: 'స్పోర్ట్స్', emoji: '🏆' },
+  { id: 'politics', href: '/category/politics', label: 'Politics', labelTe: 'రాజకీయాలు', emoji: '🗳️' },
+  { id: 'hot', href: '/hot', label: 'Hot', labelTe: 'హాట్', emoji: '🔥' },
+  { id: 'videos', href: '/videos', label: 'Videos', labelTe: 'వీడియోలు', emoji: '📹' },
+  { id: 'photos', href: '/photos', label: 'Photos', labelTe: 'ఫోటోలు', emoji: '📸' },
+];
+
+// More menu items (flat list for dropdown)
+export const MORE_MENU: NavItem[] = [
+  { id: 'astrology', href: '/astrology', label: 'Astrology', labelTe: 'జ్యోతిషం', emoji: '🔮' },
+  { id: 'stories', href: '/category/stories', label: 'Stories', labelTe: 'కథలు', emoji: '📖' },
+  { id: 'quizzes', href: '/quizzes', label: 'Quizzes', labelTe: 'క్విజ్‌లు', emoji: '❓' },
+  { id: 'memes', href: '/memes', label: 'Memes', labelTe: 'మీమ్స్', emoji: '😂' },
+  { id: 'web-series', href: '/web-series', label: 'Web Series', labelTe: 'వెబ్ సిరీస్', emoji: '📺' },
+  { id: 'jobs', href: '/jobs', label: 'Jobs', labelTe: 'ఉద్యోగాలు', emoji: '💼' },
+];
+
+// Extended category colors for categories not explicitly defined
+const EXTENDED_CATEGORY_COLORS: Record<string, { color: string; glowColor: string }> = {
+  entertainment: { color: '#a855f7', glowColor: 'rgba(168, 85, 247, 0.3)' },
+  sports: { color: '#22c55e', glowColor: 'rgba(34, 197, 94, 0.3)' },
+  politics: { color: '#3b82f6', glowColor: 'rgba(59, 130, 246, 0.3)' },
+  trending: { color: '#f97316', glowColor: 'rgba(249, 115, 22, 0.3)' },
+  crime: { color: '#ef4444', glowColor: 'rgba(239, 68, 68, 0.3)' },
+  viral: { color: '#f59e0b', glowColor: 'rgba(245, 158, 11, 0.3)' },
+  breaking: { color: '#dc2626', glowColor: 'rgba(220, 38, 38, 0.3)' },
 };
 
-// ============================================================
-// HELPER FUNCTIONS
-// ============================================================
+// Default category metadata
+const DEFAULT_CATEGORY_META: CategoryMeta = {
+  id: 'default',
+  href: '/',
+  label: 'General',
+  labelTe: 'జనరల్',
+  description: 'General content',
+  descriptionTe: 'సాధారణ కంటెంట్',
+  color: '#6366f1',
+  glowColor: 'rgba(99, 102, 241, 0.3)',
+};
 
 /**
- * Get category metadata by ID
+ * Get category metadata by ID (always returns valid metadata)
  */
-export function getCategoryMeta(id: string) {
-  return CATEGORY_META[id] || {
-    color: 'var(--brand-primary)',
-    gradient: 'from-gray-500 to-gray-600',
-    bgColor: 'var(--bg-hover)',
-    glowColor: 'rgba(255, 107, 0, 0.3)',
-    icon: '📰',
-    name: { te: id, en: id },
-    description: { te: '', en: '' },
-  };
-}
-
-/**
- * Get all navigation items for mobile menu
- */
-export function getAllNavItems(): NavGroup[] {
-  return [
-    { 
-      id: 'main', 
-      label: 'ప్రధాన', 
-      labelEn: 'Main', 
-      items: [
-        { id: 'home', label: '🏠 హోమ్', labelEn: 'Home', href: '/' },
-        { id: 'glam', label: '✨ గ్లామ్', labelEn: 'Glam', href: '/hot', isGlam: true },
-        { id: 'reviews', label: '🎬 రివ్యూలు', labelEn: 'Reviews', href: '/reviews' },
-      ]
-    },
-    { 
-      id: 'entertainment', 
-      label: 'వినోదం', 
-      labelEn: 'Entertainment', 
-      items: ENTERTAINMENT_HUB.children || []
-    },
-    { 
-      id: 'news', 
-      label: 'వార్తలు', 
-      labelEn: 'News', 
-      items: [
-        { id: 'sports', label: '🏏 స్పోర్ట్స్', labelEn: 'Sports', href: '/category/sports' },
-        { id: 'politics', label: '🏛️ రాజకీయాలు', labelEn: 'Politics', href: '/category/politics' },
-      ]
-    },
-  ];
-}
-
-/**
- * Get category bar items
- */
-export function getCategoryBarItems() {
+export function getCategoryMeta(categoryId: string): CategoryMeta {
+  const baseMeta = CATEGORY_META[categoryId];
+  
+  if (baseMeta) {
+    // Add glowColor and bgColor if not present
+    const extendedColors = EXTENDED_CATEGORY_COLORS[categoryId];
+    return {
+      ...baseMeta,
+      glowColor: extendedColors?.glowColor || `${baseMeta.color}4D`, // 30% opacity
+      bgColor: baseMeta.bgColor || `${baseMeta.color}1A`, // 10% opacity for background
+    };
+  }
+  
+  // Check extended colors for categories not in CATEGORY_META
+  const extendedColors = EXTENDED_CATEGORY_COLORS[categoryId];
+  if (extendedColors) {
+    return {
+      ...DEFAULT_CATEGORY_META,
+      id: categoryId,
+      href: `/category/${categoryId}`,
+      label: categoryId.charAt(0).toUpperCase() + categoryId.slice(1),
+      labelTe: categoryId,
+      color: extendedColors.color,
+      glowColor: extendedColors.glowColor,
+      bgColor: `${extendedColors.color}1A`, // 10% opacity for background
+    };
+  }
+  
+  // Final fallback
   return {
-    primary: CATEGORY_BAR.slice(0, 5),
-    more: CATEGORY_BAR.slice(5),
+    ...DEFAULT_CATEGORY_META,
+    id: categoryId || 'default',
+    href: categoryId ? `/category/${categoryId}` : '/',
+    bgColor: `${DEFAULT_CATEGORY_META.color}1A`, // 10% opacity for background
   };
-}
-
-/**
- * Get entertainment hub items (for mega menu)
- */
-export function getEntertainmentItems() {
-  return ENTERTAINMENT_HUB.children || [];
 }
 
 /**
  * Get localized label for a nav item
  */
-export function getLocalizedLabel(item: NavItem, lang: 'te' | 'en'): string {
-  return lang === 'en' ? item.labelEn : item.label;
+export function getLocalizedLabel(item: NavItem, lang: 'en' | 'te' = 'en'): string {
+  return lang === 'te' && item.labelTe ? item.labelTe : item.label;
 }
 
 /**
  * Get localized section title
  */
-export function getLocalizedSectionTitle(section: MenuSection, lang: 'te' | 'en'): string {
-  return lang === 'en' ? section.titleEn : section.title;
+export function getLocalizedSectionTitle(section: MenuSection, lang: 'en' | 'te' = 'en'): string {
+  return lang === 'te' && section.titleTe ? section.titleTe : section.title;
 }
 
 /**
- * Get localized category name
+ * Get all main navigation items
  */
-export function getLocalizedCategoryName(categoryId: string, lang: 'te' | 'en'): string {
-  const meta = CATEGORY_META[categoryId];
-  if (!meta) return categoryId;
-  return meta.name[lang];
+export function getMainNavItems(): NavItem[] {
+  return [
+    { id: 'news', href: '/category/news', label: 'News', labelTe: 'వార్తలు' },
+    { id: 'movies', href: '/reviews', label: 'Movies', labelTe: 'సినిమాలు' },
+    { id: 'gossip', href: '/category/gossip', label: 'Gossip', labelTe: 'గాసిప్' },
+    { id: 'photos', href: '/photos', label: 'Photos', labelTe: 'ఫోటోలు' },
+    { id: 'videos', href: '/videos', label: 'Videos', labelTe: 'వీడియోలు' },
+    { id: 'hot', href: '/hot', label: 'Hot', labelTe: 'హాట్' },
+  ];
 }
 
-/**
- * Get localized category description
- */
-export function getLocalizedCategoryDescription(categoryId: string, lang: 'te' | 'en'): string {
-  const meta = CATEGORY_META[categoryId];
-  if (!meta) return '';
-  return meta.description[lang];
-}
-
-/**
- * Get localized footer link label
- */
-export function getLocalizedFooterLabel(item: { label: { te: string; en: string } } | { label: string }, lang: 'te' | 'en'): string {
-  if (typeof item.label === 'string') return item.label;
-  return item.label[lang];
-}

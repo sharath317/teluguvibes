@@ -56,7 +56,7 @@ export function ContentWarning({
 
   const handleProceed = () => {
     if (profile.isAdult) {
-      verifyAge(true);
+      verifyAge();
     }
     setDismissed(true);
     onProceed?.();
@@ -250,4 +250,5 @@ export function ContentRatingBadge({
 }
 
 export default ContentWarning;
+
 

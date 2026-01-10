@@ -18,8 +18,9 @@
  *   npx tsx scripts/enrich-waterfall.ts --execute
  *   npx tsx scripts/enrich-waterfall.ts --execute --propagate
  *   npx tsx scripts/enrich-waterfall.ts --execute --propagate --audit
+ *   npx tsx scripts/enrich-waterfall.ts --actor=Krishna --execute  # Actor filmography
  * 
- * New Options:
+ * Advanced Options:
  *   npx tsx scripts/enrich-waterfall.ts --placeholders-only --execute
  *   npx tsx scripts/enrich-waterfall.ts --sources=wikimedia,internet_archive --limit=100
  *   npx tsx scripts/enrich-waterfall.ts --batch --limit=100 --auto-approve-above=0.8 --execute
@@ -948,13 +949,16 @@ async function main() {
   // Existing args
   const limitArg = args.find(a => a.startsWith('--limit='));
   const idsArg = args.find(a => a.startsWith('--ids='));
+  const actorArg = args.find(a => a.startsWith('--actor='));
   const limit = limitArg ? parseInt(limitArg.split('=')[1]) : 20;
+  const actor = actorArg ? actorArg.split('=')[1] : '';
 
   if (!batchMode) {
     console.log(`\n${'═'.repeat(70)}`);
     console.log(`MULTI-SOURCE ENRICHMENT WATERFALL ${dryRun ? '(DRY RUN)' : '(LIVE)'}`);
     console.log(`${'═'.repeat(70)}`);
     console.log(`Sources: TMDB → Wikimedia → IA → OMDB → Wikidata → Letterboxd → Cinemaazi → Google → AI`);
+    if (actor) console.log(`Actor filter: ${actor} (processing filmography only)`);
     if (placeholdersOnly) console.log(`Mode: PLACEHOLDERS ONLY (focusing on missing images)`);
     if (enabledSources) console.log(`Enabled Sources: ${enabledSources.join(', ')}`);
     console.log(`Auto-approve above: ${autoApproveThreshold}, Queue below: ${queueThreshold}`);
@@ -968,10 +972,28 @@ async function main() {
   if (idsArg) {
     // Specific movie IDs
     const ids = idsArg.split('=')[1].split(',');
-    const { data } = await supabase
+    let query = supabase
       .from('movies')
       .select('*')
       .in('id', ids);
+    if (actor) query = query.eq('hero', actor);
+    const { data } = await query;
+    movies = data || [];
+  } else if (actor) {
+    // Actor-specific filmography enrichment
+    let query = supabase
+      .from('movies')
+      .select('*')
+      .eq('language', 'Telugu')
+      .eq('hero', actor);
+    
+    if (placeholdersOnly) {
+      query = query.or('poster_url.is.null,poster_url.ilike.%placeholder%');
+    } else {
+      query = query.or('hero.is.null,heroine.is.null,director.is.null,poster_url.is.null');
+    }
+    
+    const { data } = await query.limit(limit);
     movies = data || [];
   } else if (placeholdersOnly) {
     // NEW: Get only movies with placeholder images
@@ -1100,9 +1122,10 @@ async function main() {
     console.log(`  --execute              Apply changes (default: dry run)`);
     console.log(`  --limit=N              Process N movies (default: 20)`);
     console.log(`  --ids=id1,id2,...      Process specific movie IDs`);
+    console.log(`  --actor=NAME           Filter by actor's filmography (e.g., --actor=Krishna)`);
     console.log(`  --propagate            Also update reviews with cast changes`);
     console.log(`  --audit                Log changes for rollback`);
-    console.log(`\nNEW OPTIONS:`);
+    console.log(`\nADVANCED OPTIONS:`);
     console.log(`  --placeholders-only    Focus on movies with placeholder images`);
     console.log(`  --batch                Quiet mode for cron jobs`);
     console.log(`  --sources=s1,s2,...    Only try specific sources`);
@@ -1110,6 +1133,7 @@ async function main() {
     console.log(`  --auto-approve-above=N Auto-save images above confidence N (default: 0.7)`);
     console.log(`  --queue-below=N        Flag for review below confidence N (default: 0.5)`);
     console.log(`\nEXAMPLES:`);
+    console.log(`  npx tsx scripts/enrich-waterfall.ts --actor=Krishna --execute`);
     console.log(`  npx tsx scripts/enrich-waterfall.ts --placeholders-only --execute`);
     console.log(`  npx tsx scripts/enrich-waterfall.ts --sources=wikimedia,internet_archive --limit=100`);
     console.log(`  npx tsx scripts/enrich-waterfall.ts --batch --limit=100 --auto-approve-above=0.8 --execute`);

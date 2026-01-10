@@ -139,10 +139,9 @@ async function backfillSmartReviews(): Promise<BackfillResult> {
   
   // Apply limit if specified
   const reviews = limit ? allReviews.slice(0, limit) : allReviews;
-  const fetchError = null;
 
-  if (fetchError || !reviews) {
-    console.error('❌ Failed to fetch reviews:', fetchError?.message);
+  if (!reviews || reviews.length === 0) {
+    console.error('❌ No reviews found to process');
     return result;
   }
 
@@ -211,7 +210,7 @@ async function backfillSmartReviews(): Promise<BackfillResult> {
         const fieldsNeedingReview = getFieldsNeedingReview(smartReview);
 
         // Track statistics
-        totalConfidence += smartReview.derivation_confidence;
+        totalConfidence += smartReview.confidence.overall;
         if (fieldsNeedingReview.length > 0) {
           result.needsHumanReview++;
         }
@@ -221,7 +220,7 @@ async function backfillSmartReviews(): Promise<BackfillResult> {
         }
 
         // Log progress
-        const confLabel = `${Math.round(smartReview.derivation_confidence * 100)}%`;
+        const confLabel = `${Math.round((smartReview.derivation_confidence || 0) * 100)}%`;
         const legacyLabel = smartReview.legacy_status || '-';
         const needsReviewLabel = fieldsNeedingReview.length > 0 ? '⚠️' : '✓';
         

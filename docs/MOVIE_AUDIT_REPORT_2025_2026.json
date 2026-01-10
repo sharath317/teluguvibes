@@ -1,0 +1,258 @@
+{
+  "generated_at": "2026-01-09T11:20:45.984Z",
+  "summary": {
+    "total_2025_movies": 217,
+    "total_2026_movies": 33,
+    "movies_2026_with_date": 21,
+    "movies_2026_tba": 12,
+    "movies_2025_completeness": "100.0%",
+    "critical_issues": [
+      "3 movies without synopsis"
+    ]
+  },
+  "anomalies": {
+    "missing_data": {
+      "movies_2026": {
+        "no_director": [],
+        "no_hero": [],
+        "no_synopsis": [
+          "Psych Siddhartha",
+          "Madham",
+          "Vanaveera"
+        ],
+        "no_poster": [
+          "Psych Siddhartha",
+          "Madham",
+          "Vanaveera",
+          "Parasakthi",
+          "Sahakutumbaanaam",
+          "Toxic: A Fairy Tale for Grown-Ups",
+          "Dacoit",
+          "Peddi",
+          "Fauji",
+          "Dragon",
+          "Man Of The Match"
+        ]
+      }
+    },
+    "inconsistencies": [],
+    "coverage_gaps": {}
+  },
+  "movies_2026": {
+    "total": 33,
+    "with_release_date": 21,
+    "without_release_date": 12,
+    "tba_movies": [
+      {
+        "title": "Dark Chocolate",
+        "hero": "Vishwadev Rachakonda",
+        "director": "Shashank Srivatsavaya"
+      },
+      {
+        "title": "The Paradise",
+        "hero": "Nani",
+        "director": "Srikanth Odela"
+      },
+      {
+        "title": "Seetha Payanam",
+        "hero": "Niranjan Sudhindra",
+        "director": "Arjun Sarja"
+      },
+      {
+        "title": "Nilakanta",
+        "hero": "Mahendran",
+        "director": "Rakesh Madhavan"
+      },
+      {
+        "title": "Rowdy Janardhana",
+        "hero": "Vijay Deverakonda",
+        "director": "Ravikiran Kola"
+      },
+      {
+        "title": "Rao Bahadur",
+        "hero": "Satyadev Kancharana",
+        "director": "Venkatesh Maha"
+      },
+      {
+        "title": "Itllu Arjuna",
+        "hero": "Aniesh",
+        "director": "Mahesh Uppala"
+      },
+      {
+        "title": "Swayambhu",
+        "hero": "Nikhil Siddhartha",
+        "director": "Bharath Krishnamachari"
+      },
+      {
+        "title": "Alcohol",
+        "hero": "Allari Naresh",
+        "director": "Meher Tej"
+      },
+      {
+        "title": "Honey",
+        "hero": "Naveen Chandra",
+        "director": "Karuna Kumar"
+      },
+      {
+        "title": "Funky",
+        "hero": "Vishwak Sen",
+        "director": "Anudeep"
+      },
+      {
+        "title": "Man Of The Match",
+        "hero": "Sagar",
+        "director": "P. A. Arun Prasad"
+      }
+    ],
+    "released": [
+      {
+        "title": "Psych Siddhartha",
+        "date": "2026-01-01",
+        "hero": "Nandu"
+      },
+      {
+        "title": "Madham",
+        "date": "2026-01-01",
+        "hero": "Harsha Gangavarapu"
+      },
+      {
+        "title": "Vanaveera",
+        "date": "2026-01-01",
+        "hero": "Avinash Thiruveedhula"
+      },
+      {
+        "title": "The Raja Saab",
+        "date": "2026-01-09",
+        "hero": "Prabhas"
+      }
+    ],
+    "upcoming_with_date": 17,
+    "schedule_by_month": {
+      "2026-01": [
+        {
+          "title": "Psych Siddhartha",
+          "date": "2026-01-01",
+          "hero": "Nandu"
+        },
+        {
+          "title": "Madham",
+          "date": "2026-01-01",
+          "hero": "Harsha Gangavarapu"
+        },
+        {
+          "title": "Vanaveera",
+          "date": "2026-01-01",
+          "hero": "Avinash Thiruveedhula"
+        },
+        {
+          "title": "The Raja Saab",
+          "date": "2026-01-09",
+          "hero": "Prabhas"
+        },
+        {
+          "title": "Parasakthi",
+          "date": "2026-01-10",
+          "hero": "Sivakarthikeyan"
+        },
+        {
+          "title": "Mana Shankara Vara Prasad Garu",
+          "date": "2026-01-12",
+          "hero": "Chiranjeevi"
+        },
+        {
+          "title": "Bhartha Mahasayulaku Wignyapthi",
+          "date": "2026-01-13",
+          "hero": "Ravi Teja"
+        },
+        {
+          "title": "Nari Nari Naduma Murari",
+          "date": "2026-01-14",
+          "hero": "Sharwanand"
+        },
+        {
+          "title": "Anaganaga Oka Raju",
+          "date": "2026-01-14",
+          "hero": "Naveen Polishetty"
+        },
+        {
+          "title": "Om Shanti Shanti Shantihi",
+          "date": "2026-01-23",
+          "hero": "Tharun Bhascker"
+        }
+      ],
+      "2026-03": [
+        {
+          "title": "Sahakutumbaanaam",
+          "date": "2026-03-01",
+          "hero": "Raam Kiran"
+        },
+        {
+          "title": "Toxic: A Fairy Tale for Grown-Ups",
+          "date": "2026-03-19",
+          "hero": "Yash"
+        },
+        {
+          "title": "Dacoit",
+          "date": "2026-03-19",
+          "hero": "Adivi Sesh"
+        },
+        {
+          "title": "Aakasam Lo Oka Tara",
+          "date": "2026-03-26",
+          "hero": "Dulquer Salmaan"
+        },
+        {
+          "title": "Peddi",
+          "date": "2026-03-27",
+          "hero": "Ram Charan"
+        }
+      ],
+      "2026-04": [
+        {
+          "title": "Fauji",
+          "date": "2026-04-10",
+          "hero": "Prabhas"
+        },
+        {
+          "title": "Ustaad Bhagat Singh",
+          "date": "2026-04-17",
+          "hero": "Pawan Kalyan"
+        }
+      ],
+      "2026-05": [
+        {
+          "title": "Goodachari 2",
+          "date": "2026-05-01",
+          "hero": "Adivi Sesh"
+        }
+      ],
+      "2026-06": [
+        {
+          "title": "Dragon",
+          "date": "2026-06-25",
+          "hero": "Jr. NTR"
+        }
+      ],
+      "2026-11": [
+        {
+          "title": "Salaar: Part 2 - Shouryaanga Parvam",
+          "date": "2026-11-14",
+          "hero": "Prabhas"
+        }
+      ],
+      "2026-12": [
+        {
+          "title": "Spirit",
+          "date": "2026-12-01",
+          "hero": "Prabhas"
+        }
+      ]
+    }
+  },
+  "movies_2025": {
+    "total": 217,
+    "complete": 217,
+    "without_release_date": 82,
+    "completeness_percentage": "100.0%"
+  }
+}

@@ -1,18 +1,10 @@
 /**
- * Validation Module - Main Exports
+ * Validation Module
  * 
- * Content validation utilities for Telugu entertainment content.
+ * Provides multi-source validation, rule-based validation,
+ * and consensus building for movie data.
  */
 
-// Telugu Emotion Validation
-export * from './telugu-emotion';
-
-// Re-export from pipeline for convenience
-export { validateTeluguContent } from '../pipeline/unified-content-pipeline';
-
-
-
-
-
-
+export * from './multi-source-validator';
+export { default as MultiSourceValidator } from './multi-source-validator';
 

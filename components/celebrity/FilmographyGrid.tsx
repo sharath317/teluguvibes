@@ -153,7 +153,7 @@ function MovieCard({ movie }: { movie: FilmographyItem }) {
         {movie.poster_url && !imageError ? (
           <Image
             src={movie.poster_url}
-            alt={movie.title_en}
+            alt={movie.title_en || movie.movie_title || 'Movie'}
             fill
             className="object-cover"
             sizes="(max-width: 640px) 33vw, (max-width: 1024px) 20vw, 16vw"

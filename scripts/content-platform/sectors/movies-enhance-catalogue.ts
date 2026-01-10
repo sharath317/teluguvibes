@@ -38,7 +38,7 @@ async function generateReviewDrafts(limit: number) {
     .select(`
       id, title_en, title_te, synopsis, synopsis_te,
       director, hero, heroine, music_director,
-      release_year, genres, poster_url
+      release_year, genres, poster_url, overview_te
     `)
     .not('synopsis', 'is', null)
     .gte('release_year', 2000)

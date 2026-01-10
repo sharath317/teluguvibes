@@ -1,17 +1,10 @@
+'use client';
+
 /**
  * Browser-Only Personalization
  * 
- * Implements user preference tracking and adaptive content
- * WITHOUT cookies or backend user profiles.
- * 
- * Uses localStorage for persistent preferences.
- * 
- * Features:
- * - Interest clusters (actors, genres, eras, languages)
- * - View history tracking
- * - Adaptive home section re-ranking
- * - Favorite boosting
- * - Irrelevant block hiding
+ * Local storage-based personalization without cookies or backend profiles.
+ * Respects user privacy while providing useful personalization.
  */
 
 // ============================================================
@@ -19,109 +12,59 @@
 // ============================================================
 
 export interface UserInterest {
-  id: string;
-  type: 'actor' | 'genre' | 'era' | 'language' | 'director';
+    type: 'actor' | 'genre' | 'director' | 'year';
+    id: string;
   name: string;
-  score: number;  // 0-100, decays over time
-  lastSeen: number; // timestamp
+    score: number;
+    lastUpdated: string;
 }
 
 export interface ViewedItem {
-  id: string;
-  type: 'movie' | 'review' | 'story' | 'celebrity';
+    type: 'movie' | 'review' | 'article';
+    id: string;
   slug: string;
-  timestamp: number;
-  duration?: number; // seconds spent
-}
-
-export interface BrowserPreferences {
-  version: number;
-  interests: UserInterest[];
-  viewHistory: ViewedItem[];
-  hiddenSections: string[];
-  favoriteGenres: string[];
-  preferredLanguage: 'te' | 'en';
-  lastUpdated: number;
+    viewedAt: string;
 }
 
 export interface SectionRanking {
   sectionId: string;
   score: number;
-  reason?: string;
+    hidden: boolean;
 }
 
 // ============================================================
-// CONSTANTS
+// STORAGE KEYS
 // ============================================================
 
-const STORAGE_KEY = 'tv_user_preferences';
-const CURRENT_VERSION = 1;
-const MAX_HISTORY = 100;
-const MAX_INTERESTS = 50;
-const SCORE_DECAY_DAYS = 30;
-const MIN_SCORE = 5;
-
-// Default preferences
-const DEFAULT_PREFERENCES: BrowserPreferences = {
-  version: CURRENT_VERSION,
-  interests: [],
-  viewHistory: [],
-  hiddenSections: [],
-  favoriteGenres: [],
-  preferredLanguage: 'te',
-  lastUpdated: Date.now(),
-};
+const STORAGE_KEYS = {
+    interests: 'tv-interests',
+    views: 'tv-views',
+    sections: 'tv-sections',
+    favorites: 'tv-favorites',
+    language: 'tv-language',
+} as const;
 
 // ============================================================
-// STORAGE UTILITIES
+// STORAGE HELPERS
 // ============================================================
 
-function isClient(): boolean {
-  return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
-}
-
-function loadPreferences(): BrowserPreferences {
-  if (!isClient()) {
-    return { ...DEFAULT_PREFERENCES };
-  }
-
+function getFromStorage<T>(key: string, defaultValue: T): T {
+    if (typeof window === 'undefined') return defaultValue;
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      return { ...DEFAULT_PREFERENCES };
-    }
-
-    const parsed = JSON.parse(stored) as BrowserPreferences;
-    
-    // Handle version migrations
-    if (!parsed.version || parsed.version < CURRENT_VERSION) {
-      return migratePreferences(parsed);
-    }
-
-    return parsed;
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : defaultValue;
   } catch {
-    return { ...DEFAULT_PREFERENCES };
+      return defaultValue;
   }
 }
 
-function savePreferences(prefs: BrowserPreferences): void {
-  if (!isClient()) return;
-
+function saveToStorage<T>(key: string, value: T): void {
+    if (typeof window === 'undefined') return;
   try {
-    prefs.lastUpdated = Date.now();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-  } catch {
-    // Storage might be full or disabled
-    console.warn('Failed to save preferences to localStorage');
+      localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+      console.error('Failed to save to localStorage:', e);
   }
-}
-
-function migratePreferences(old: Partial<BrowserPreferences>): BrowserPreferences {
-  return {
-    ...DEFAULT_PREFERENCES,
-    ...old,
-    version: CURRENT_VERSION,
-  };
 }
 
 // ============================================================
@@ -129,215 +72,139 @@ function migratePreferences(old: Partial<BrowserPreferences>): BrowserPreference
 // ============================================================
 
 /**
- * Calculate decayed score based on time since last seen
- */
-function decayScore(score: number, lastSeen: number): number {
-  const daysSinceLastSeen = (Date.now() - lastSeen) / (1000 * 60 * 60 * 24);
-  const decayFactor = Math.exp(-daysSinceLastSeen / SCORE_DECAY_DAYS);
-  return Math.max(MIN_SCORE, Math.round(score * decayFactor));
-}
-
-/**
- * Record user interest in an entity
+ * Record a user interest (actor, genre, director, etc.)
  */
 export function recordInterest(
   type: UserInterest['type'],
   id: string,
   name: string,
-  weight: number = 10
+    weight: number = 1
 ): void {
-  const prefs = loadPreferences();
+    const interests = getFromStorage<UserInterest[]>(STORAGE_KEYS.interests, []);
   
-  // Find existing interest
-  const existingIndex = prefs.interests.findIndex(
-    i => i.type === type && i.id === id
-  );
+    const existingIndex = interests.findIndex(i => i.type === type && i.id === id);
 
   if (existingIndex >= 0) {
-    // Boost existing interest
-    const existing = prefs.interests[existingIndex];
-    existing.score = Math.min(100, decayScore(existing.score, existing.lastSeen) + weight);
-    existing.lastSeen = Date.now();
+      interests[existingIndex].score += weight;
+      interests[existingIndex].lastUpdated = new Date().toISOString();
   } else {
-    // Add new interest
-    prefs.interests.push({
-      id,
+      interests.push({
       type,
+        id,
       name,
-      score: Math.min(100, weight),
-      lastSeen: Date.now(),
+        score: weight,
+        lastUpdated: new Date().toISOString(),
     });
   }
 
-  // Trim to max interests, keeping highest scores
-  prefs.interests.sort((a, b) => b.score - a.score);
-  prefs.interests = prefs.interests.slice(0, MAX_INTERESTS);
-
-  savePreferences(prefs);
+    // Keep only top 50 interests
+    interests.sort((a, b) => b.score - a.score);
+    saveToStorage(STORAGE_KEYS.interests, interests.slice(0, 50));
 }
 
 /**
- * Get user's top interests by type
+ * Get top interests sorted by score
  */
-export function getTopInterests(type?: UserInterest['type'], limit: number = 10): UserInterest[] {
-  const prefs = loadPreferences();
-  
-  let interests = prefs.interests.map(i => ({
-    ...i,
-    score: decayScore(i.score, i.lastSeen),
-  }));
-
-  if (type) {
-    interests = interests.filter(i => i.type === type);
-  }
-
-  return interests
-    .filter(i => i.score >= MIN_SCORE)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
+export function getTopInterests(limit: number = 10): UserInterest[] {
+    const interests = getFromStorage<UserInterest[]>(STORAGE_KEYS.interests, []);
+    return interests.slice(0, limit);
 }
 
 // ============================================================
-// VIEW HISTORY
+// VIEW TRACKING
 // ============================================================
 
 /**
- * Record a viewed item
+ * Record a content view
  */
 export function recordView(
   type: ViewedItem['type'],
   id: string,
-  slug: string,
-  duration?: number
+    slug: string
 ): void {
-  const prefs = loadPreferences();
+    const views = getFromStorage<ViewedItem[]>(STORAGE_KEYS.views, []);
 
-  // Remove existing entry if present
-  prefs.viewHistory = prefs.viewHistory.filter(
-    v => !(v.type === type && v.id === id)
-  );
+    // Remove existing entry for same item
+    const filtered = views.filter(v => !(v.type === type && v.id === id));
 
-  // Add new entry at start
-  prefs.viewHistory.unshift({
-    id,
+    // Add new entry at beginning
+    filtered.unshift({
     type,
+      id,
     slug,
-    timestamp: Date.now(),
-    duration,
+      viewedAt: new Date().toISOString(),
   });
 
-  // Trim to max history
-  prefs.viewHistory = prefs.viewHistory.slice(0, MAX_HISTORY);
-
-  savePreferences(prefs);
+    // Keep only last 100 views
+    saveToStorage(STORAGE_KEYS.views, filtered.slice(0, 100));
 }
 
 /**
  * Get recent views
  */
-export function getRecentViews(type?: ViewedItem['type'], limit: number = 20): ViewedItem[] {
-  const prefs = loadPreferences();
-  
-  let history = prefs.viewHistory;
-  
-  if (type) {
-    history = history.filter(v => v.type === type);
-  }
-
-  return history.slice(0, limit);
-}
-
-/**
- * Check if item was recently viewed
- */
-export function wasRecentlyViewed(type: ViewedItem['type'], id: string): boolean {
-  const prefs = loadPreferences();
-  return prefs.viewHistory.some(v => v.type === type && v.id === id);
+export function getRecentViews(limit: number = 20): ViewedItem[] {
+    const views = getFromStorage<ViewedItem[]>(STORAGE_KEYS.views, []);
+    return views.slice(0, limit);
 }
 
 // ============================================================
-// SECTION PERSONALIZATION
+// SECTION RANKINGS
 // ============================================================
 
 /**
- * Get personalized section rankings based on user interests
+ * Get personalized section rankings
  */
-export function getPersonalizedSectionRankings(
-  availableSections: string[]
-): SectionRanking[] {
-  const prefs = loadPreferences();
-  const topInterests = getTopInterests();
-
-  // Map sections to scores
-  const rankings: SectionRanking[] = availableSections.map(sectionId => {
-    let score = 50; // Base score
-    let reason: string | undefined;
-
-    // Boost based on interests
-    const genreInterests = topInterests.filter(i => i.type === 'genre');
-    const actorInterests = topInterests.filter(i => i.type === 'actor');
-
-    // Section-specific boosts
-    if (sectionId === 'trending' || sectionId === 'hot') {
-      score += 20; // Always show trending high
-      reason = 'Trending content';
-    } else if (sectionId === 'hidden-gems' && genreInterests.length > 0) {
-      score += 15;
-      reason = 'Based on your genre interests';
-    } else if (sectionId === 'star-spotlight' && actorInterests.length > 0) {
-      score += 10;
-      reason = 'Based on your favorite actors';
-    }
-
-    // Penalize hidden sections
-    if (prefs.hiddenSections.includes(sectionId)) {
-      score = 0;
-    }
-
-    return { sectionId, score, reason };
-  });
-
-  return rankings.sort((a, b) => b.score - a.score);
+export function getPersonalizedSectionRankings(): SectionRanking[] {
+    return getFromStorage<SectionRanking[]>(STORAGE_KEYS.sections, []);
 }
 
 /**
- * Hide a section from the user's view
+ * Hide a section
  */
 export function hideSection(sectionId: string): void {
-  const prefs = loadPreferences();
-  if (!prefs.hiddenSections.includes(sectionId)) {
-    prefs.hiddenSections.push(sectionId);
-    savePreferences(prefs);
+    const sections = getFromStorage<SectionRanking[]>(STORAGE_KEYS.sections, []);
+    const existingIndex = sections.findIndex(s => s.sectionId === sectionId);
+
+    if (existingIndex >= 0) {
+        sections[existingIndex].hidden = true;
+    } else {
+        sections.push({ sectionId, score: 0, hidden: true });
   }
+
+    saveToStorage(STORAGE_KEYS.sections, sections);
 }
 
 /**
  * Show a previously hidden section
  */
 export function showSection(sectionId: string): void {
-  const prefs = loadPreferences();
-  prefs.hiddenSections = prefs.hiddenSections.filter(s => s !== sectionId);
-  savePreferences(prefs);
+    const sections = getFromStorage<SectionRanking[]>(STORAGE_KEYS.sections, []);
+    const existingIndex = sections.findIndex(s => s.sectionId === sectionId);
+
+    if (existingIndex >= 0) {
+        sections[existingIndex].hidden = false;
+        saveToStorage(STORAGE_KEYS.sections, sections);
+    }
 }
 
 // ============================================================
-// FAVORITE GENRES
+// FAVORITES
 // ============================================================
 
 /**
  * Toggle a genre as favorite
  */
 export function toggleFavoriteGenre(genre: string): boolean {
-  const prefs = loadPreferences();
-  const index = prefs.favoriteGenres.indexOf(genre);
+    const favorites = getFromStorage<string[]>(STORAGE_KEYS.favorites, []);
+    const index = favorites.indexOf(genre);
   
   if (index >= 0) {
-    prefs.favoriteGenres.splice(index, 1);
-    savePreferences(prefs);
+      favorites.splice(index, 1);
+      saveToStorage(STORAGE_KEYS.favorites, favorites);
     return false;
   } else {
-    prefs.favoriteGenres.push(genre);
-    savePreferences(prefs);
+      favorites.push(genre);
+      saveToStorage(STORAGE_KEYS.favorites, favorites);
     return true;
   }
 }
@@ -346,8 +213,7 @@ export function toggleFavoriteGenre(genre: string): boolean {
  * Get favorite genres
  */
 export function getFavoriteGenres(): string[] {
-  const prefs = loadPreferences();
-  return prefs.favoriteGenres;
+    return getFromStorage<string[]>(STORAGE_KEYS.favorites, []);
 }
 
 // ============================================================
@@ -355,81 +221,60 @@ export function getFavoriteGenres(): string[] {
 // ============================================================
 
 /**
- * Set preferred language
- */
-export function setPreferredLanguage(lang: 'te' | 'en'): void {
-  const prefs = loadPreferences();
-  prefs.preferredLanguage = lang;
-  savePreferences(prefs);
-}
-
-/**
  * Get preferred language
  */
 export function getPreferredLanguage(): 'te' | 'en' {
-  const prefs = loadPreferences();
-  return prefs.preferredLanguage;
+    return getFromStorage<'te' | 'en'>(STORAGE_KEYS.language, 'te');
+}
+
+/**
+ * Set preferred language
+ */
+export function setPreferredLanguage(lang: 'te' | 'en'): void {
+    saveToStorage(STORAGE_KEYS.language, lang);
 }
 
 // ============================================================
-// CLEAR DATA
+// RECOMMENDATION FILTERS
+// ============================================================
+
+export interface RecommendedFilters {
+  genres: string[];
+  actors: string[];
+  directors: string[];
+    years: number[];
+}
+
+/**
+ * Get recommended filters based on user interests
+ */
+export function getRecommendedFilters(): RecommendedFilters {
+    const interests = getTopInterests(20);
+  
+  return {
+    genres: interests.filter(i => i.type === 'genre').map(i => i.name),
+    actors: interests.filter(i => i.type === 'actor').map(i => i.name),
+    directors: interests.filter(i => i.type === 'director').map(i => i.name),
+      years: interests.filter(i => i.type === 'year').map(i => parseInt(i.id)).filter(Boolean),
+  };
+}
+
+// ============================================================
+// DATA MANAGEMENT
 // ============================================================
 
 /**
  * Clear all personalization data
  */
 export function clearAllData(): void {
-  if (!isClient()) return;
-  localStorage.removeItem(STORAGE_KEY);
+    if (typeof window === 'undefined') return;
+
+    Object.values(STORAGE_KEYS).forEach(key => {
+        try {
+            localStorage.removeItem(key);
+        } catch (e) {
+            console.error('Failed to clear storage:', e);
+        }
+    });
 }
-
-/**
- * Clear view history only
- */
-export function clearViewHistory(): void {
-  const prefs = loadPreferences();
-  prefs.viewHistory = [];
-  savePreferences(prefs);
-}
-
-// ============================================================
-// MOVIE RECOMMENDATIONS
-// ============================================================
-
-/**
- * Get movie IDs that should be boosted based on user interests
- */
-export function getRecommendedFilters(): {
-  genres: string[];
-  actors: string[];
-  directors: string[];
-  languages: string[];
-} {
-  const interests = getTopInterests();
-  
-  return {
-    genres: interests.filter(i => i.type === 'genre').map(i => i.name),
-    actors: interests.filter(i => i.type === 'actor').map(i => i.name),
-    directors: interests.filter(i => i.type === 'director').map(i => i.name),
-    languages: interests.filter(i => i.type === 'language').map(i => i.name),
-  };
-}
-
-export default {
-  recordInterest,
-  recordView,
-  getTopInterests,
-  getRecentViews,
-  wasRecentlyViewed,
-  getPersonalizedSectionRankings,
-  hideSection,
-  showSection,
-  toggleFavoriteGenre,
-  getFavoriteGenres,
-  setPreferredLanguage,
-  getPreferredLanguage,
-  clearAllData,
-  clearViewHistory,
-  getRecommendedFilters,
-};
 

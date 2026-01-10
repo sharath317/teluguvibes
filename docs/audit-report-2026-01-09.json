@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2026-01-09T15:53:31.413Z",
+  "stats": {
+    "totalMovies": 1000,
+    "totalIssues": 2,
+    "bySeverity": {
+      "HIGH": 2
+    },
+    "byType": {
+      "ACTOR_TOO_YOUNG": 2
+    },
+    "byDecade": {
+      "1970": 2
+    },
+    "actorsWithIssues": [
+      "Rajinikanth",
+      "Jaya Prada",
+      "Chandramohan"
+    ]
+  },
+  "issues": [
+    {
+      "movieId": "7d2a8e96-36ec-406e-8e66-b0aac90755d0",
+      "slug": "anthuleni-katha-1976",
+      "title": "Anthuleni Katha",
+      "dbYear": 1976,
+      "hero": "Rajinikanth",
+      "heroine": "Jaya Prada",
+      "director": "K. Balachander",
+      "issueType": "ACTOR_TOO_YOUNG",
+      "details": "Jaya Prada was only 14 years old in 1976 (born 1962) - verify if this is a child role",
+      "severity": "HIGH",
+      "suggestedFix": "If not a child role, verify correct year or cast",
+      "autoFixable": false
+    },
+    {
+      "movieId": "cb90a2e2-0802-474f-a494-bfa9de1b2854",
+      "slug": "siri-siri-muvva-1976",
+      "title": "Siri Siri Muvva",
+      "dbYear": 1976,
+      "hero": "Chandramohan",
+      "heroine": "Jaya Prada",
+      "director": "K. Viswanath",
+      "issueType": "ACTOR_TOO_YOUNG",
+      "details": "Jaya Prada was only 14 years old in 1976 (born 1962) - verify if this is a child role",
+      "severity": "HIGH",
+      "suggestedFix": "If not a child role, verify correct year or cast",
+      "autoFixable": false
+    }
+  ]
+}

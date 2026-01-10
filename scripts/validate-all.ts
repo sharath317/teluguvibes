@@ -11,6 +11,7 @@
  *   npx tsx scripts/validate-all.ts --limit=500 --auto-fix
  *   npx tsx scripts/validate-all.ts --auto-fix --report=./reports/validation.md
  *   npx tsx scripts/validate-all.ts --field=director --auto-fix
+ *   npx tsx scripts/validate-all.ts --actor=Krishna --auto-fix   # Validate actor's filmography
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -46,6 +47,7 @@ const REPORT_PATH = getArg('report', '');
 const FIELD = getArg('field', ''); // hero, heroine, director, music_director, producer
 const DECADE = getArg('decade', '');
 const HAS_TMDB = hasFlag('has-tmdb');
+const ACTOR = getArg('actor', ''); // Filter by actor (hero) filmography
 
 async function main(): Promise<void> {
     console.log(chalk.cyan.bold(`
@@ -57,6 +59,7 @@ async function main(): Promise<void> {
 
     console.log(`  Mode: ${AUTO_FIX ? chalk.green('AUTO-FIX ENABLED') : chalk.yellow('REPORT ONLY')}`);
     console.log(`  Limit: ${LIMIT} movies`);
+    if (ACTOR) console.log(`  Actor filter: ${chalk.cyan(ACTOR)}`);
     if (FIELD) console.log(`  Field filter: ${FIELD}`);
     if (DECADE) console.log(`  Decade: ${DECADE}`);
     if (REPORT_PATH) console.log(`  Report: ${REPORT_PATH}`);
@@ -68,6 +71,11 @@ async function main(): Promise<void> {
         .eq('language', 'Telugu');
 
     // Apply filters
+    if (ACTOR) {
+        // Filter by actor's filmography (movies where they are the hero)
+        query = query.eq('hero', ACTOR);
+    }
+
     if (HAS_TMDB) {
         query = query.not('tmdb_id', 'is', null);
     }

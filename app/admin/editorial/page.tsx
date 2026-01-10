@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Brain, MessageSquareQuote, Search, TrendingUp, AlertTriangle,
   CheckCircle, XCircle, Lightbulb, Users, BarChart3, Target,
-  RefreshCw, Eye, FileText, Sparkles, Quote, ExternalLink
+  RefreshCw, Eye, FileText, Sparkles, Quote, ExternalLink, Star
 } from 'lucide-react';
 
 interface POVMetrics {

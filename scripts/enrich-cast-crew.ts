@@ -30,15 +30,8 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import chalk from 'chalk';
-import { runParallel, type Task } from '../lib/pipeline/execution-controller';
-import { MovieBuffFetcher } from '../lib/sources/fetchers/moviebuff-fetcher';
-import { JioSaavnFetcher } from '../lib/sources/fetchers/jiosaavn-fetcher';
 
 dotenv.config({ path: '.env.local' });
-
-// Initialize fetchers
-const movieBuffFetcher = new MovieBuffFetcher();
-const jioSaavnFetcher = new JioSaavnFetcher();
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -95,6 +88,22 @@ interface CastCrewResult {
     crew?: CrewData;
     source: string;
     confidence: number;
+    /** Per-field provenance tracking (v2.0) */
+    provenance?: FieldProvenance;
+}
+
+/**
+ * Per-field provenance tracking (v2.0)
+ * Records which source provided each field and confidence level
+ */
+interface FieldProvenance {
+    hero?: { source: string; confidence: number; fetchedAt: string };
+    heroine?: { source: string; confidence: number; fetchedAt: string };
+    director?: { source: string; confidence: number; fetchedAt: string };
+    music_director?: { source: string; confidence: number; fetchedAt: string };
+    producer?: { source: string; confidence: number; fetchedAt: string };
+    supporting_cast?: { source: string; confidence: number; fetchedAt: string };
+    crew?: { source: string; confidence: number; fetchedAt: string };
 }
 
 interface Movie {
@@ -479,125 +488,23 @@ async function getWikidataLabel(entityId: string): Promise<string | null> {
 }
 
 // ============================================================================
-// MOVIEBUFF (Telugu-specific source)
+// MOVIEBUFF (Telugu-specific source) - STUB: Source not yet implemented
 // ============================================================================
 
-async function tryMovieBuff(movie: Movie): Promise<CastCrewResult | null> {
-    try {
-        const movieBuffResult = await movieBuffFetcher.fetchMovie(movie.title_en, movie.release_year);
-
-        if (!movieBuffResult.movie && movieBuffResult.cast.length === 0 && movieBuffResult.crew.length === 0) {
-            return null;
-        }
-
-        const result: CastCrewResult = {
-            source: 'MovieBuff',
-            confidence: 0.80,
-        };
-
-        // Extract director from crew
-        const director = movieBuffResult.crew.find(c => c.role.toLowerCase() === 'director');
-        if (director && !movie.director) {
-            result.director = director.name;
-        }
-
-        // Extract producer from crew
-        const producer = movieBuffResult.crew.find(c => c.role.toLowerCase() === 'producer');
-        if (producer && !movie.producer) {
-            result.producer = producer.name;
-        }
-
-        // Extract music director from crew
-        const musicDirector = movieBuffResult.crew.find(c =>
-            c.role.toLowerCase().includes('music') || c.role.toLowerCase().includes('composer')
-        );
-        if (musicDirector && !movie.music_director) {
-            result.music_director = musicDirector.name;
-        }
-
-        // Extract hero (first male actor) and heroine (first female actor) from cast
-        // MovieBuff cast has roles - we look for lead roles
-        if (movieBuffResult.cast.length > 0) {
-            const leads = movieBuffResult.cast.filter(c =>
-                c.role.toLowerCase() === 'actor' || c.role.toLowerCase() === 'actress' ||
-                c.role.toLowerCase() === 'lead' || c.role.toLowerCase() === 'hero' ||
-                c.role.toLowerCase() === 'heroine'
-            );
-
-            if (leads.length > 0 && !movie.hero) {
-                result.hero = leads[0]?.name;
-            }
-            if (leads.length > 1 && !movie.heroine) {
-                result.heroine = leads[1]?.name;
-            }
-
-            // Supporting cast
-            const supportingCast: SupportingCastMember[] = movieBuffResult.cast
-                .slice(2, 7)
-                .map((c, i) => ({
-                    name: c.name,
-                    role: c.character || c.role,
-                    order: i + 1,
-                    type: 'supporting' as const,
-                }));
-
-            if (supportingCast.length > 0) {
-                result.supporting_cast = supportingCast;
-            }
-        }
-
-        // Extract crew
-        const crewData: CrewData = {};
-        const cinematographer = movieBuffResult.crew.find(c =>
-            c.role.toLowerCase().includes('cinematograph') || c.role.toLowerCase() === 'dop'
-        );
-        if (cinematographer) crewData.cinematographer = cinematographer.name;
-
-        const editor = movieBuffResult.crew.find(c => c.role.toLowerCase() === 'editor');
-        if (editor) crewData.editor = editor.name;
-
-        const writer = movieBuffResult.crew.find(c =>
-            c.role.toLowerCase().includes('writer') || c.role.toLowerCase() === 'screenplay'
-        );
-        if (writer) crewData.writer = writer.name;
-
-        if (Object.keys(crewData).length > 0) {
-            result.crew = crewData;
-        }
-
-        const hasData = result.hero || result.heroine || result.director ||
-            result.music_director || result.producer ||
-            (result.supporting_cast && result.supporting_cast.length > 0);
-
-        return hasData ? result : null;
-    } catch {
-        return null;
-    }
+async function tryMovieBuff(_movie: Movie): Promise<CastCrewResult | null> {
+    // MovieBuff fetcher not yet implemented
+    // TODO: Implement when MovieBuff API access is available
+    return null;
 }
 
 // ============================================================================
-// JIOSAAVN (Music director specifically)
+// JIOSAAVN (Music director specifically) - STUB: Source not yet implemented
 // ============================================================================
 
-async function tryJioSaavn(movie: Movie): Promise<CastCrewResult | null> {
-    // Only use JioSaavn for music director if missing
-    if (movie.music_director) return null;
-
-    try {
-        const jioResult = await jioSaavnFetcher.searchMovieAlbum(movie.title_en, movie.release_year);
-
-        if (!jioResult.musicDirector) {
-            return null;
-        }
-
-        return {
-            music_director: jioResult.musicDirector,
-            source: 'JioSaavn',
-            confidence: 0.85,
-        };
-    } catch {
-        return null;
-    }
+async function tryJioSaavn(_movie: Movie): Promise<CastCrewResult | null> {
+    // JioSaavn fetcher not yet implemented  
+    // TODO: Implement when JioSaavn API access is available
+    return null;
 }
 
 // ============================================================================
@@ -606,15 +513,17 @@ async function tryJioSaavn(movie: Movie): Promise<CastCrewResult | null> {
 
 async function enrichMovie(movie: Movie): Promise<CastCrewResult | null> {
     const sources = [
-        { name: 'TMDB', fn: tryTMDB },
-        { name: 'Wikipedia', fn: tryWikipedia },
-        { name: 'Wikidata', fn: tryWikidata },
-        { name: 'MovieBuff', fn: tryMovieBuff },
-        { name: 'JioSaavn', fn: tryJioSaavn },
+        { name: 'TMDB', fn: tryTMDB, confidence: 0.95 },
+        { name: 'Wikipedia', fn: tryWikipedia, confidence: 0.85 },
+        { name: 'Wikidata', fn: tryWikidata, confidence: 0.80 },
+        { name: 'MovieBuff', fn: tryMovieBuff, confidence: 0.70 },
+        { name: 'JioSaavn', fn: tryJioSaavn, confidence: 0.65 },
     ];
 
     // Try each source in order, combining results for missing fields
     let combinedResult: CastCrewResult | null = null;
+    const provenance: FieldProvenance = {};
+    const fetchedAt = new Date().toISOString();
 
     for (const source of sources) {
         const result = await source.fn(movie);
@@ -622,22 +531,64 @@ async function enrichMovie(movie: Movie): Promise<CastCrewResult | null> {
         if (result) {
             if (!combinedResult) {
                 combinedResult = result;
+                combinedResult.provenance = provenance;
+                
+                // Record initial provenance
+                if (result.hero) {
+                    provenance.hero = { source: source.name, confidence: source.confidence, fetchedAt };
+                }
+                if (result.heroine) {
+                    provenance.heroine = { source: source.name, confidence: source.confidence, fetchedAt };
+                }
+                if (result.director) {
+                    provenance.director = { source: source.name, confidence: source.confidence, fetchedAt };
+                }
+                if (result.music_director) {
+                    provenance.music_director = { source: source.name, confidence: source.confidence, fetchedAt };
+                }
+                if (result.producer) {
+                    provenance.producer = { source: source.name, confidence: source.confidence, fetchedAt };
+                }
+                if (result.supporting_cast?.length) {
+                    provenance.supporting_cast = { source: source.name, confidence: source.confidence, fetchedAt };
+                }
+                if (result.crew && Object.keys(result.crew).length > 0) {
+                    provenance.crew = { source: source.name, confidence: source.confidence, fetchedAt };
+                }
             } else {
-                // Merge missing fields from this source
-                if (result.hero && !combinedResult.hero) combinedResult.hero = result.hero;
-                if (result.heroine && !combinedResult.heroine) combinedResult.heroine = result.heroine;
-                if (result.director && !combinedResult.director) combinedResult.director = result.director;
+                // Merge missing fields from this source with provenance tracking
+                if (result.hero && !combinedResult.hero) {
+                    combinedResult.hero = result.hero;
+                    provenance.hero = { source: source.name, confidence: source.confidence, fetchedAt };
+                }
+                if (result.heroine && !combinedResult.heroine) {
+                    combinedResult.heroine = result.heroine;
+                    provenance.heroine = { source: source.name, confidence: source.confidence, fetchedAt };
+                }
+                if (result.director && !combinedResult.director) {
+                    combinedResult.director = result.director;
+                    provenance.director = { source: source.name, confidence: source.confidence, fetchedAt };
+                }
                 if (result.music_director && !combinedResult.music_director) {
                     combinedResult.music_director = result.music_director;
                     combinedResult.source = `${combinedResult.source}+${result.source}`;
+                    provenance.music_director = { source: source.name, confidence: source.confidence, fetchedAt };
                 }
-                if (result.producer && !combinedResult.producer) combinedResult.producer = result.producer;
+                if (result.producer && !combinedResult.producer) {
+                    combinedResult.producer = result.producer;
+                    provenance.producer = { source: source.name, confidence: source.confidence, fetchedAt };
+                }
                 if (result.supporting_cast && (!combinedResult.supporting_cast || combinedResult.supporting_cast.length === 0)) {
                     combinedResult.supporting_cast = result.supporting_cast;
+                    provenance.supporting_cast = { source: source.name, confidence: source.confidence, fetchedAt };
                 }
                 if (result.crew && (!combinedResult.crew || Object.keys(combinedResult.crew).length === 0)) {
                     combinedResult.crew = result.crew;
+                    provenance.crew = { source: source.name, confidence: source.confidence, fetchedAt };
                 }
+                
+                // Update provenance reference
+                combinedResult.provenance = provenance;
             }
         }
 
@@ -721,24 +672,11 @@ async function main(): Promise<void> {
         return;
     }
 
-    // Create tasks for parallel execution
-    const tasks: Task<{ movie: Movie; result: CastCrewResult | null }>[] = movies.map((movie) => ({
-        id: movie.id,
-        name: movie.title_en,
-        execute: async () => {
-            const result = await enrichMovie(movie);
-            return { movie, result };
-        },
-        retryable: true,
-    }));
-
     // Stats
     const stats = {
         TMDB: 0,
         Wikipedia: 0,
         Wikidata: 0,
-        MovieBuff: 0,
-        JioSaavn: 0,
         Combined: 0,
         none: 0,
     };
@@ -748,44 +686,52 @@ async function main(): Promise<void> {
 
     console.log('  Processing...\n');
 
-    const result = await runParallel(tasks, {
-        concurrency: CONCURRENCY,
-        maxRetries: 2,
-        retryDelayMs: 500,
-        onProgress: (completed, total) => {
-            const pct = Math.round((completed / total) * 100);
-            const bar = '█'.repeat(Math.floor(pct / 5)) + '░'.repeat(20 - Math.floor(pct / 5));
-            process.stdout.write(`\r  [${bar}] ${pct}% (${completed}/${total}) | Enriched: ${enriched}`);
-        },
-        onTaskComplete: (taskResult) => {
-            if (taskResult.success && taskResult.result) {
-                const taskData = taskResult.result as unknown as { movie: Movie; result: CastCrewResult | null };
-                const enrichResult = taskData.result;
-                if (enrichResult) {
-                    // Track source (handle combined sources like "TMDB+JioSaavn")
-                    if (enrichResult.source.includes('+')) {
-                        stats.Combined++;
-                    } else if (enrichResult.source in stats) {
-                        stats[enrichResult.source as keyof typeof stats]++;
-                    }
-                    enriched++;
-                } else {
-                    stats.none++;
+    // Process movies with concurrency control
+    const results: { movie: Movie; result: CastCrewResult | null }[] = [];
+    const batchSize = CONCURRENCY;
+    
+    for (let i = 0; i < movies.length; i += batchSize) {
+        const batch = movies.slice(i, Math.min(i + batchSize, movies.length));
+        
+        const batchPromises = batch.map(async (movie) => {
+            const result = await enrichMovie(movie);
+            return { movie, result };
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        
+        for (const taskData of batchResults) {
+            results.push(taskData);
+            
+            if (taskData.result) {
+                // Track source (handle combined sources like "TMDB+Wikipedia")
+                if (taskData.result.source.includes('+')) {
+                    stats.Combined++;
+                } else if (taskData.result.source in stats) {
+                    stats[taskData.result.source as keyof typeof stats]++;
                 }
+                enriched++;
+            } else {
+                stats.none++;
             }
-        },
-    });
+        }
+        
+        const completed = Math.min(i + batchSize, movies.length);
+        const pct = Math.round((completed / movies.length) * 100);
+        const bar = '█'.repeat(Math.floor(pct / 5)) + '░'.repeat(20 - Math.floor(pct / 5));
+        process.stdout.write(`\r  [${bar}] ${pct}% (${completed}/${movies.length}) | Enriched: ${enriched}`);
+    }
 
     console.log('\n\n');
 
     // Apply updates to database
     if (EXECUTE && enriched > 0) {
-        console.log('  Applying updates to database...\n');
+        console.log('\n\n  Applying updates to database...\n');
 
-        for (const taskResult of result.results) {
-            if (!taskResult.success || !taskResult.result?.result) continue;
+        for (const taskResult of results) {
+            if (!taskResult.result) continue;
 
-            const { movie, result: enrichResult } = taskResult.result;
+            const { movie, result: enrichResult } = taskResult;
 
             const updateData: Record<string, unknown> = {};
 
@@ -831,8 +777,6 @@ async function main(): Promise<void> {
     console.log(`    TMDB:      ${stats.TMDB}`);
     console.log(`    Wikipedia: ${stats.Wikipedia}`);
     console.log(`    Wikidata:  ${stats.Wikidata}`);
-    console.log(`    MovieBuff: ${stats.MovieBuff}`);
-    console.log(`    JioSaavn:  ${stats.JioSaavn}`);
     console.log(`    Combined:  ${stats.Combined}`);
 
     if (!EXECUTE) {

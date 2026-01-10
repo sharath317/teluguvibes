@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, CheckCircle, Sparkles, User, Briefcase, GraduationCap, Users } from 'lucide-react';
-import type { CelebrityTrivia } from '@/lib/celebrity/types';
+import type { CelebrityTrivia, TriviaCategory } from '@/lib/celebrity/types';
 
 interface TriviaCardsProps {
   trivia: CelebrityTrivia[];
@@ -16,14 +16,14 @@ interface TriviaCardsProps {
 
 export function TriviaCards({ trivia, className = '' }: TriviaCardsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<TriviaCategory | null>(null);
 
   if (trivia.length === 0) {
     return null;
   }
 
-  // Group by category
-  const categories = [...new Set(trivia.map(t => t.category))];
+  // Group by category (filter out undefined values)
+  const categories = [...new Set(trivia.map(t => t.category).filter((c): c is TriviaCategory => c !== undefined))];
   
   const filteredTrivia = activeCategory 
     ? trivia.filter(t => t.category === activeCategory)
@@ -110,7 +110,7 @@ function TriviaCard({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const Icon = getCategoryIcon(item.category);
+  const Icon = getCategoryIcon(item.category || 'other');
   const hasTeluguText = item.trivia_text_te && item.trivia_text_te !== item.trivia_text;
 
   return (
@@ -143,7 +143,7 @@ function TriviaCard({
         </div>
 
         {/* Expand indicator */}
-        {(hasTeluguText || item.trivia_text.length > 100) && (
+        {(hasTeluguText || (item.trivia_text?.length ?? 0) > 100) && (
           <ChevronDown 
             className={`w-5 h-5 text-gray-500 transition-transform flex-shrink-0 ${
               isExpanded ? 'rotate-180' : ''

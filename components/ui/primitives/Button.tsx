@@ -51,6 +51,8 @@ type BaseProps = {
   children: ReactNode;
   /** Additional CSS classes */
   className?: string;
+  /** Disabled state (for button element) */
+  disabled?: boolean;
 };
 
 type ButtonAsButton = BaseProps &
@@ -210,12 +212,15 @@ export const IconButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, Icon
       lg: 'w-12 h-12',
     }[size];
 
+    // Type assertion needed due to union type discrimination
+    const buttonProps = props as ButtonProps;
+
     return (
       <Button
         ref={ref}
         size={size}
         className={`!p-0 ${sizeClass} ${className}`}
-        {...props}
+        {...buttonProps}
       >
         {icon}
       </Button>

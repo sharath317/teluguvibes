@@ -82,15 +82,17 @@ export function ReviewInsightsPanel({
         <div className={`transition-all duration-300 ${isExpanded ? 'max-h-[2000px]' : 'max-h-96'} overflow-hidden`}>
           <div className="p-6 space-y-6">
             {/* Confidence Indicator */}
-            <div className="flex items-center gap-4 p-3 bg-[var(--bg-tertiary,#1a1a1a)] rounded-lg">
-              <Info className="w-4 h-4 text-[var(--text-secondary,#999)]" />
-              <div className="flex gap-4 text-xs">
-                <ConfidenceBadge label="Performances" value={insights.section_confidence.performances} />
-                <ConfidenceBadge label="Direction" value={insights.section_confidence.direction} />
-                <ConfidenceBadge label="Technical" value={insights.section_confidence.technical} />
-                <ConfidenceBadge label="Themes" value={insights.section_confidence.themes} />
+            {insights.section_confidence && (
+              <div className="flex items-center gap-4 p-3 bg-[var(--bg-tertiary,#1a1a1a)] rounded-lg">
+                <Info className="w-4 h-4 text-[var(--text-secondary,#999)]" />
+                <div className="flex gap-4 text-xs">
+                  <ConfidenceBadge label="Performances" value={insights.section_confidence.performances ?? 0} />
+                  <ConfidenceBadge label="Direction" value={insights.section_confidence.direction ?? 0} />
+                  <ConfidenceBadge label="Technical" value={insights.section_confidence.technical ?? 0} />
+                  <ConfidenceBadge label="Themes" value={insights.section_confidence.themes ?? 0} />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Performances */}
             {insights.performances && insights.performances.length > 0 && (
@@ -134,13 +136,17 @@ export function ReviewInsightsPanel({
             )}
 
             {/* Themes */}
-            {insights.themes && (
+            {insights.themes && insights.themes.length > 0 && (
               <InsightSection
                 icon={<Palette className="w-5 h-5" />}
                 title="Themes & Impact"
                 titleTe="థీమ్‌లు"
               >
-                <ThemeCard theme={insights.themes} />
+                <div className="space-y-2">
+                  {insights.themes.map((theme, idx) => (
+                    <ThemeCard key={idx} theme={theme} />
+                  ))}
+                </div>
               </InsightSection>
             )}
           </div>
@@ -154,7 +160,9 @@ export function ReviewInsightsPanel({
                   Soft insights included
                 </span>
               )}
-              <span>Generated: {new Date(insights.generated_at).toLocaleDateString()}</span>
+              {insights.generated_at && (
+                <span>Generated: {new Date(insights.generated_at).toLocaleDateString()}</span>
+              )}
             </div>
           </div>
         </div>
@@ -214,9 +222,11 @@ function PerformanceCard({ performance }: { performance: PerformanceInsight }) {
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="font-medium text-[var(--text-primary)]">{performance.actor}</span>
-          <span className={`px-2 py-0.5 text-xs rounded-full ${toneColors[performance.tone.type] || 'bg-gray-500/20 text-[var(--text-secondary)]'}`}>
-            {performance.tone.type}
-          </span>
+          {performance.tone && (
+            <span className={`px-2 py-0.5 text-xs rounded-full ${toneColors[performance.tone.type] || 'bg-gray-500/20 text-[var(--text-secondary)]'}`}>
+              {performance.tone.type}
+            </span>
+          )}
         </div>
         <span className="text-xs text-[var(--text-tertiary,#666)] capitalize">
           {performance.role_type}
@@ -251,15 +261,21 @@ function DirectionCard({ direction }: { direction: DirectionInsight }) {
   return (
     <div className="p-4 bg-[var(--bg-tertiary,#1a1a1a)] rounded-lg">
       <div className="flex flex-wrap gap-2 mb-3">
-        <span className={`px-3 py-1 text-sm rounded-full ${styleColors[direction.style] || 'bg-gray-500/20 text-[var(--text-secondary)]'}`}>
-          {direction.style} style
-        </span>
-        <span className={`px-3 py-1 text-sm rounded-full bg-gray-700 ${pacingColors[direction.pacing_control]}`}>
-          {direction.pacing_control} pacing
-        </span>
-        <span className={`px-3 py-1 text-sm rounded-full ${direction.emotional_payoff === 'strong' ? 'bg-green-500/20 text-green-400' : direction.emotional_payoff === 'weak' ? 'bg-red-500/20 text-red-400' : 'bg-gray-700 text-[var(--text-secondary)]'}`}>
-          {direction.emotional_payoff} payoff
-        </span>
+        {direction.style && (
+          <span className={`px-3 py-1 text-sm rounded-full ${styleColors[direction.style] || 'bg-gray-500/20 text-[var(--text-secondary)]'}`}>
+            {direction.style} style
+          </span>
+        )}
+        {direction.pacing_control && (
+          <span className={`px-3 py-1 text-sm rounded-full bg-gray-700 ${pacingColors[direction.pacing_control] || ''}`}>
+            {direction.pacing_control} pacing
+          </span>
+        )}
+        {direction.emotional_payoff && (
+          <span className={`px-3 py-1 text-sm rounded-full ${direction.emotional_payoff === 'strong' ? 'bg-green-500/20 text-green-400' : direction.emotional_payoff === 'weak' ? 'bg-red-500/20 text-red-400' : 'bg-gray-700 text-[var(--text-secondary)]'}`}>
+            {direction.emotional_payoff} payoff
+          </span>
+        )}
       </div>
       <p className="text-[var(--text-secondary,#999)] text-sm leading-relaxed">
         {direction.note_en}
@@ -308,27 +324,37 @@ function TechnicalCard({ technical }: { technical: TechnicalInsight }) {
 function ThemeCard({ theme }: { theme: ThemeInsight }) {
   return (
     <div className="p-4 bg-[var(--bg-tertiary,#1a1a1a)] rounded-lg">
-      <div className="flex flex-wrap gap-2 mb-3">
-        {theme.core_themes.map((t, idx) => (
-          <span key={idx} className="px-3 py-1 bg-purple-500/20 text-purple-400 text-sm rounded-full capitalize">
-            {t}
-          </span>
-        ))}
-      </div>
+      {theme.core_themes && theme.core_themes.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {theme.core_themes.map((t, idx) => (
+            <span key={idx} className="px-3 py-1 bg-purple-500/20 text-purple-400 text-sm rounded-full capitalize">
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="flex gap-4 mb-3 text-xs">
-        <span className={theme.cultural_relevance === 'high' ? 'text-green-400' : 'text-[var(--text-tertiary,#666)]'}>
-          Cultural Relevance: <span className="capitalize">{theme.cultural_relevance}</span>
-        </span>
-        <span className={theme.emotional_resonance === 'deep' ? 'text-blue-400' : 'text-[var(--text-tertiary,#666)]'}>
-          Emotional Depth: <span className="capitalize">{theme.emotional_resonance}</span>
-        </span>
+        {theme.cultural_relevance && (
+          <span className={theme.cultural_relevance === 'high' ? 'text-green-400' : 'text-[var(--text-tertiary,#666)]'}>
+            Cultural Relevance: <span className="capitalize">{theme.cultural_relevance}</span>
+          </span>
+        )}
+        {theme.emotional_resonance && (
+          <span className={theme.emotional_resonance === 'deep' ? 'text-blue-400' : 'text-[var(--text-tertiary,#666)]'}>
+            Emotional Depth: <span className="capitalize">{theme.emotional_resonance}</span>
+          </span>
+        )}
       </div>
-      <p className="text-[var(--text-secondary,#999)] text-sm leading-relaxed">
-        {theme.note_en}
-      </p>
-      <p className="text-[var(--text-tertiary,#666)] text-sm mt-1 italic">
-        {theme.note_te}
-      </p>
+      {theme.note_en && (
+        <p className="text-[var(--text-secondary,#999)] text-sm leading-relaxed">
+          {theme.note_en}
+        </p>
+      )}
+      {theme.note_te && (
+        <p className="text-[var(--text-tertiary,#666)] text-sm mt-1 italic">
+          {theme.note_te}
+        </p>
+      )}
     </div>
   );
 }

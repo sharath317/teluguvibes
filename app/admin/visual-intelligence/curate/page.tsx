@@ -97,7 +97,7 @@ const INITIAL_FORM: FormData = {
 // ICON MAPPING
 // ============================================================
 
-const sourceTypeIcons: Record<ArchivalSourceType, typeof Building> = {
+const sourceTypeIcons: Partial<Record<ArchivalSourceType, typeof Building>> = {
   government_archive: Building,
   state_cultural_dept: Building,
   university: BookOpen,
@@ -509,7 +509,7 @@ export default function CuratePage() {
                 <label className="block text-sm text-gray-400 mb-2">Quick Select Known Source</label>
                 <div className="flex flex-wrap gap-2">
                   {KNOWN_SOURCES.slice(0, 8).map((source) => {
-                    const Icon = sourceTypeIcons[source.type];
+                    const Icon = sourceTypeIcons[source.type] || Building;
                     return (
                       <button
                         key={source.code}

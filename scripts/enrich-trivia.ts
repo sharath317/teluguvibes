@@ -66,6 +66,92 @@ interface Movie {
     director?: string;
     trivia?: unknown;
     box_office?: unknown;
+    box_office_category?: string;
+}
+
+// ============================================================================
+// BOX OFFICE CATEGORY DERIVATION
+// ============================================================================
+
+type BoxOfficeCategory = 
+    | 'industry-hit'
+    | 'blockbuster'
+    | 'super-hit'
+    | 'hit'
+    | 'average'
+    | 'below-average'
+    | 'disaster';
+
+/**
+ * Derives box_office_category from box_office_data
+ * Uses budget-to-gross ratio and verdict text
+ */
+function deriveBoxOfficeCategory(boxOffice: BoxOfficeData): BoxOfficeCategory {
+    // 1. Check explicit verdict first
+    if (boxOffice.verdict) {
+        const verdict = boxOffice.verdict.toLowerCase();
+        if (verdict.includes('industry hit') || verdict.includes('all time') || verdict.includes('highest grossing')) {
+            return 'industry-hit';
+        }
+        if (verdict.includes('blockbuster')) {
+            return 'blockbuster';
+        }
+        if (verdict.includes('super hit') || verdict.includes('superhit')) {
+            return 'super-hit';
+        }
+        if (verdict.includes('hit') && !verdict.includes('flop') && !verdict.includes('disaster')) {
+            return 'hit';
+        }
+        if (verdict.includes('average')) {
+            return 'average';
+        }
+        if (verdict.includes('below average') || verdict.includes('flop')) {
+            return 'below-average';
+        }
+        if (verdict.includes('disaster')) {
+            return 'disaster';
+        }
+    }
+
+    // 2. Calculate from numbers if available
+    const parseAmount = (str?: string): number => {
+        if (!str) return 0;
+        // Handle crore/lakhs notation
+        const cleanStr = str.toLowerCase().replace(/[₹$,]/g, '').trim();
+        const croreMatch = cleanStr.match(/([\d.]+)\s*cr/);
+        if (croreMatch) return parseFloat(croreMatch[1]);
+        const lakhMatch = cleanStr.match(/([\d.]+)\s*lakh/);
+        if (lakhMatch) return parseFloat(lakhMatch[1]) / 100;
+        // Try direct number
+        const num = parseFloat(cleanStr);
+        return isNaN(num) ? 0 : num;
+    };
+
+    const budget = parseAmount(boxOffice.budget);
+    const lifetime = parseAmount(boxOffice.lifetime_gross);
+
+    if (budget > 0 && lifetime > 0) {
+        const ratio = lifetime / budget;
+        if (ratio >= 4) return 'industry-hit';
+        if (ratio >= 3) return 'blockbuster';
+        if (ratio >= 2) return 'super-hit';
+        if (ratio >= 1.5) return 'hit';
+        if (ratio >= 1) return 'average';
+        if (ratio >= 0.5) return 'below-average';
+        return 'disaster';
+    }
+
+    // 3. Default to 'hit' if we have gross data but no budget
+    if (lifetime > 0) {
+        // Use lifetime amount to guess
+        if (lifetime >= 200) return 'blockbuster';
+        if (lifetime >= 100) return 'super-hit';
+        if (lifetime >= 50) return 'hit';
+        return 'average';
+    }
+
+    // 4. Default when no data
+    return 'average';
 }
 
 // ============================================================================
@@ -278,7 +364,7 @@ async function main(): Promise<void> {
         .from('movies')
         .select('id, title_en, release_year, hero, director, trivia, box_office')
         .eq('language', 'Telugu')
-        .order('ox_rating', { ascending: false }) // Start with highest rated
+        .order('release_year', { ascending: false }) // Start with most recent
         .limit(LIMIT);
 
     if (DECADE) {
@@ -311,18 +397,25 @@ async function main(): Promise<void> {
             const boxOffice = await tryWikipediaBoxOffice(movie);
             if (boxOffice) {
                 enrichedBoxOffice++;
-                console.log(`  📊 Box Office: ${boxOffice.lifetime_gross || 'N/A'} (${boxOffice.verdict || 'N/A'})`);
+                
+                // Derive box_office_category from the data
+                const category = deriveBoxOfficeCategory(boxOffice);
+                
+                console.log(`  📊 Box Office: ${boxOffice.lifetime_gross || 'N/A'} (${boxOffice.verdict || 'N/A'}) → ${category}`);
 
                 if (EXECUTE) {
                     const { error: updateError } = await supabase
                         .from('movies')
-                        .update({ box_office: boxOffice })
+                        .update({ 
+                            box_office_data: boxOffice,
+                            box_office_category: category
+                        })
                         .eq('id', movie.id);
 
                     if (updateError) {
                         console.log(`  ❌ Update failed: ${updateError.message}`);
                     } else {
-                        console.log(`  ✅ Box office updated`);
+                        console.log(`  ✅ Box office and category updated`);
                     }
                 }
             }

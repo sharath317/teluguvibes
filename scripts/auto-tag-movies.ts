@@ -226,23 +226,37 @@ async function autoTagMovies() {
 
 /**
  * Apply enhanced v2.0 tags using the tag-derivation engine
+ * 
+ * Flags:
+ *   --force : Reprocess all movies, even those with existing mood_tags
+ *   --limit N : Process N movies (default: 100)
  */
 async function applyEnhancedV2Tags() {
   console.log('\n🚀 ENHANCED V2.0 TAGGING\n');
   
-  // Parse limit from args
+  // Parse arguments
   const limitArg = process.argv.find(arg => arg.startsWith('--limit'));
   const limit = limitArg ? parseInt(process.argv[process.argv.indexOf(limitArg) + 1]) || 100 : 100;
+  const forceAll = process.argv.includes('--force');
   
-  // Fetch movies to process
-  const { data: movies, error } = await supabase
+  console.log(`  Mode: ${forceAll ? 'FORCE (all movies)' : 'INCREMENTAL (missing only)'}`);
+  console.log(`  Limit: ${limit} movies\n`);
+
+  // Build query
+  let query = supabase
     .from('movies')
-    .select('id, title_en, title_te, release_year, avg_rating, tmdb_rating, imdb_rating, popularity_score, total_reviews, hero, director, genres, is_underrated, is_blockbuster, is_classic, overview, tagline, awards, content_flags')
+    .select('id, title_en, title_te, release_year, avg_rating, tmdb_rating, imdb_rating, popularity_score, total_reviews, hero, director, genres, is_underrated, is_blockbuster, is_classic, overview, tagline, awards, content_flags, mood_tags')
     .eq('is_published', true)
-    .is('mood_tags', null) // Only movies without mood_tags
     .order('updated_at', { ascending: true })
     .limit(limit);
   
+  // Only filter for null/empty mood_tags if not forcing
+  if (!forceAll) {
+    query = query.or('mood_tags.is.null,mood_tags.eq.{}');
+  }
+
+  const { data: movies, error } = await query;
+
   if (error || !movies) {
     console.error('Error fetching movies for v2 tagging:', error);
     return;
@@ -301,17 +315,17 @@ async function applyEnhancedV2Tags() {
         stats.processed++;
         
         // Track stats
-        derived.mood_tags.forEach(tag => {
+        derived.mood_tags?.forEach(tag => {
           stats.byMood[tag] = (stats.byMood[tag] || 0) + 1;
         });
-        derived.quality_tags.forEach(tag => {
+        derived.quality_tags?.forEach(tag => {
           stats.byQuality[tag] = (stats.byQuality[tag] || 0) + 1;
         });
         if (derived.box_office_category) {
           stats.byBoxOffice[derived.box_office_category] = (stats.byBoxOffice[derived.box_office_category] || 0) + 1;
         }
         
-        console.log(`✅ ${movie.title_en}: ${derived.mood_tags.join(', ') || 'no mood'} | ${derived.quality_tags.join(', ') || 'no quality'}`);
+        console.log(`✅ ${movie.title_en}: ${derived.mood_tags?.join(', ') || 'no mood'} | ${derived.quality_tags?.join(', ') || 'no quality'}`);
       }
     } catch (err) {
       console.error(`❌ Error processing ${movie.title_en}:`, err);

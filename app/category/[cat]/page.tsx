@@ -8,7 +8,7 @@ import { BottomInfoBar } from '@/components/BottomInfoBar';
 import { AdSlot } from '@/components/AdSlot';
 import { RelatedSectionsServer } from '@/components/RelatedSectionsServer';
 import { CATEGORY_META, MORE_MENU_SECTIONS, type NavItem } from '@/lib/config/navigation';
-import type { Post } from '@/types/database';
+import type { Post, Category } from '@/types/database';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,12 +43,12 @@ function getCategoryInfo(cat: string) {
     };
   }
   return {
-    label: meta.name.te,
-    labelEn: meta.name.en,
-    description: meta.description.te,
-    descriptionEn: meta.description.en,
-    icon: meta.icon,
-    gradient: meta.gradient,
+    label: meta.labelTe || meta.label,
+    labelEn: meta.label,
+    description: meta.descriptionTe || meta.description,
+    descriptionEn: meta.description,
+    icon: meta.icon || '📰',
+    gradient: meta.gradient || 'from-gray-500 to-gray-600',
   };
 }
 
@@ -240,15 +240,17 @@ function generateSamplePosts(category: string, count: number = 8): Post[] {
   return titles.slice(0, count).map((title, i) => ({
     id: `sample-${category}-${i}`,
     title,
+    title_en: `${info.labelEn} News ${i + 1}`,
     slug: `${category}-sample-${i + 1}`,
     excerpt: `${info.label} విభాగంలో తాజా వార్తలు. ${info.description}`,
     content: '',
-    category,
+    category: category as Category,
     image_url: `https://picsum.photos/seed/${category}${i}/800/450`,
     author: 'TeluguVibes',
     status: 'published' as const,
     views: Math.floor(Math.random() * 5000) + 500,
     likes: Math.floor(Math.random() * 300) + 50,
+    comments_count: Math.floor(Math.random() * 50),
     created_at: new Date(Date.now() - i * 3600000 * 4).toISOString(),
     updated_at: new Date().toISOString(),
     is_featured: i === 0,

@@ -81,8 +81,8 @@ export function usePersonalization() {
 
   // Get personalized section order
   const getSectionOrder = useCallback((sections: string[]): SectionRanking[] => {
-    if (!isClient) return sections.map(s => ({ sectionId: s, score: 50 }));
-    return getPersonalizedSectionRankings(sections);
+    if (!isClient) return sections.map(s => ({ sectionId: s, score: 50, hidden: false }));
+    return getPersonalizedSectionRankings();
   }, [isClient]);
 
   // Hide a section

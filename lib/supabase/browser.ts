@@ -1,17 +1,16 @@
+'use client';
+
 /**
- * Supabase Client for Browser/Client-Side Operations
- * 
- * Uses the anon key which is safe to expose in the browser.
- * For server-side operations, use client.ts instead.
+ * Supabase Browser Client
+ * Client-side Supabase instance for browser operations
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
 
 let browserClient: SupabaseClient | null = null;
 
 /**
- * Get a Supabase client instance for browser use.
- * Uses the public anon key which is safe for client-side.
+ * Create or return existing browser Supabase client
  */
 export function createBrowserClient(): SupabaseClient {
   if (browserClient) {
@@ -22,20 +21,23 @@ export function createBrowserClient(): SupabaseClient {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      'Missing Supabase credentials. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
-    );
+    throw new Error('Missing Supabase environment variables');
   }
 
-  browserClient = createClient(supabaseUrl, supabaseAnonKey, {
+  browserClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
-      autoRefreshToken: true
-    }
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
   });
 
   return browserClient;
 }
 
-export default createBrowserClient;
-
+/**
+ * Get the browser client (alias for createBrowserClient)
+ */
+export function getBrowserClient(): SupabaseClient {
+  return createBrowserClient();
+}

@@ -126,12 +126,12 @@ export function CelebrityHero({ celebrity }: CelebrityHeroProps) {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <StatCard 
                   label="Movies" 
-                  value={stats.total_movies} 
+                  value={stats.total_movies ?? stats.total_films ?? 0} 
                   icon={Film}
                 />
                 <StatCard 
                   label="Hits" 
-                  value={stats.hits} 
+                  value={stats.hits ?? 0} 
                   color="text-green-400"
                 />
                 <StatCard 

@@ -9,7 +9,7 @@ interface NewsCardProps {
   featured?: boolean;
 }
 
-const categoryLabels: Record<Category, string> = {
+const categoryLabels: Partial<Record<Category, string>> = {
   gossip: 'గాసిప్',
   sports: 'స్పోర్ట్స్',
   politics: 'రాజకీయాలు',
@@ -34,9 +34,88 @@ function formatTimeAgo(dateString: string): string {
   }
 }
 
+// Default category styling for categories not in CATEGORY_META
+const DEFAULT_CATEGORY_META = {
+  color: '#6366f1',
+  glowColor: 'rgba(99, 102, 241, 0.3)',
+};
+
+// Category-specific colors for common categories
+const CATEGORY_COLORS: Record<string, { color: string; glowColor: string }> = {
+  entertainment: { color: '#a855f7', glowColor: 'rgba(168, 85, 247, 0.3)' },
+  sports: { color: '#22c55e', glowColor: 'rgba(34, 197, 94, 0.3)' },
+  politics: { color: '#3b82f6', glowColor: 'rgba(59, 130, 246, 0.3)' },
+  trending: { color: '#f97316', glowColor: 'rgba(249, 115, 22, 0.3)' },
+  gossip: { color: '#ec4899', glowColor: 'rgba(236, 72, 153, 0.3)' },
+  crime: { color: '#ef4444', glowColor: 'rgba(239, 68, 68, 0.3)' },
+};
+
+// Allowed image hosts for next/image
+const ALLOWED_IMAGE_HOSTS = [
+  'picsum.photos',
+  'images.unsplash.com',
+  'upload.wikimedia.org',
+  'commons.wikimedia.org',
+  'image.tmdb.org',
+  'www.themoviedb.org',
+  'm.media-amazon.com',
+  'i.ytimg.com',
+];
+
+// Check if URL is a valid image URL for next/image
+function isValidImageUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  
+  try {
+    const parsed = new URL(url);
+    
+    // Check if host is allowed
+    if (ALLOWED_IMAGE_HOSTS.includes(parsed.hostname)) {
+      return true;
+    }
+    
+    // Check if URL ends with common image extensions
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif'];
+    const pathname = parsed.pathname.toLowerCase();
+    if (imageExtensions.some(ext => pathname.endsWith(ext))) {
+      return true;
+    }
+    
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// Get a safe image URL with fallback
+function getSafeImageUrl(post: Post): string {
+  const fallback = `https://picsum.photos/seed/${post.id}/800/600`;
+  
+  // Try post.image_url first
+  if (isValidImageUrl(post.image_url)) {
+    return post.image_url!;
+  }
+  
+  // Try first image in array
+  const firstImage = post.image_urls?.[0];
+  if (firstImage && isValidImageUrl(firstImage)) {
+    return firstImage;
+  }
+  
+  // Return fallback
+  return fallback;
+}
+
 export function NewsCard({ post, featured = false }: NewsCardProps) {
-  const imageUrl = post.image_url || post.image_urls?.[0] || `https://picsum.photos/seed/${post.id}/800/600`;
-  const categoryMeta = getCategoryMeta(post.category);
+  const imageUrl = getSafeImageUrl(post);
+  const baseMeta = getCategoryMeta(post.category);
+  
+  // Get category colors with fallback
+  const categoryColors = CATEGORY_COLORS[post.category] || DEFAULT_CATEGORY_META;
+  const categoryMeta = {
+    color: baseMeta?.color || categoryColors.color,
+    glowColor: categoryColors.glowColor,
+  };
 
   return (
     <Link href={`/post/${post.slug}`}>

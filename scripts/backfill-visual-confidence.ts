@@ -120,10 +120,9 @@ async function backfillVisualConfidence(): Promise<BackfillResult> {
   
   // Apply limit if specified
   const movies = limit ? allMovies.slice(0, limit) : allMovies;
-  const fetchError = null;
 
-  if (fetchError || !movies) {
-    console.error('❌ Failed to fetch movies:', fetchError?.message);
+  if (!movies || movies.length === 0) {
+    console.error('❌ No movies found to process');
     return result;
   }
 

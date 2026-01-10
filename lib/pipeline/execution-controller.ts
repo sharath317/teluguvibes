@@ -1,427 +1,424 @@
 /**
- * Execution Controller
+ * Execution Controller for Pipeline Operations
  * 
- * Provides bounded parallel execution with retry logic, failure isolation,
- * and idempotency enforcement for pipeline operations.
- * 
- * Key features:
- * - Configurable concurrency limits
- * - Automatic retry with exponential backoff
- * - Failure isolation (one task failure doesn't stop batch)
- * - Progress tracking and reporting
+ * Provides concurrency control, rate limiting, and batch processing
+ * for enrichment and validation scripts.
  */
+
+import chalk from 'chalk';
 
 // ============================================================
 // TYPES
 // ============================================================
 
-export interface Task<T> {
-  id: string;
-  name: string;
-  execute: () => Promise<T>;
-  retryable?: boolean;
+export interface ExecutionOptions {
+  concurrency: number;
+  rateLimitMs: number;
+  batchSize: number;
+  retryAttempts: number;
+  retryDelayMs: number;
+  onProgress?: (progress: ProgressInfo) => void;
+  onError?: (error: Error, item: unknown) => void;
+  abortSignal?: AbortSignal;
 }
 
-export interface TaskResult<T> {
-  id: string;
-  name: string;
-  success: boolean;
-  result?: T;
-  error?: string;
-  attempts: number;
-  duration: number;
+export interface ProgressInfo {
+  total: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  currentItem?: string;
+  elapsedMs: number;
+  estimatedRemainingMs: number;
 }
 
 export interface BatchResult<T> {
-  total: number;
-  successful: number;
-  failed: number;
-  results: TaskResult<T>[];
-  duration: number;
-  failedTasks: string[];
+  succeeded: T[];
+  failed: Array<{ item: T; error: Error }>;
+  totalProcessed: number;
+  durationMs: number;
 }
 
-export interface ExecutionOptions {
-  concurrency: number;
-  maxRetries: number;
-  retryDelayMs: number;
-  retryBackoffMultiplier: number;
-  onProgress?: (completed: number, total: number, current: string) => void;
-  onTaskComplete?: <T>(result: TaskResult<T>) => void;
-  abortOnFailure?: boolean;
-}
-
-export interface SerialOptions {
-  continueOnError?: boolean;
-  onProgress?: (completed: number, total: number, current: string) => void;
-  onTaskComplete?: <T>(result: TaskResult<T>) => void;
-}
-
-const DEFAULT_OPTIONS: ExecutionOptions = {
-  concurrency: 5,
-  maxRetries: 3,
-  retryDelayMs: 1000,
-  retryBackoffMultiplier: 2,
-  abortOnFailure: false,
-};
-
-// ============================================================
-// UTILITIES
-// ============================================================
-
-async function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function executeWithRetry<T>(
-  task: Task<T>,
-  options: ExecutionOptions
-): Promise<TaskResult<T>> {
-  const startTime = Date.now();
-  let lastError: string = '';
-  
-  for (let attempt = 1; attempt <= options.maxRetries; attempt++) {
-    try {
-      const result = await task.execute();
-      return {
-        id: task.id,
-        name: task.name,
-        success: true,
-        result,
-        attempts: attempt,
-        duration: Date.now() - startTime,
-      };
-    } catch (error: any) {
-      lastError = error?.message || String(error);
-      
-      // Don't retry if task is marked as non-retryable
-      if (task.retryable === false) {
-        break;
-      }
-      
-      // Don't retry on last attempt
-      if (attempt < options.maxRetries) {
-        const delay = options.retryDelayMs * Math.pow(options.retryBackoffMultiplier, attempt - 1);
-        await sleep(delay);
-      }
-    }
-  }
-  
-  return {
-    id: task.id,
-    name: task.name,
-    success: false,
-    error: lastError,
-    attempts: options.maxRetries,
-    duration: Date.now() - startTime,
-  };
-}
-
-// ============================================================
-// PARALLEL EXECUTION
-// ============================================================
-
-/**
- * Run tasks in parallel with bounded concurrency
- * 
- * Features:
- * - Respects concurrency limit
- * - Automatic retry with exponential backoff
- * - Failure isolation (failed tasks don't stop others)
- * - Progress reporting
- */
-export async function runParallel<T>(
-  tasks: Task<T>[],
-  options: Partial<ExecutionOptions> = {}
-): Promise<BatchResult<T>> {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
-  const startTime = Date.now();
-  const results: TaskResult<T>[] = [];
-  const failedTasks: string[] = [];
-  
-  let completed = 0;
-  let aborted = false;
-  
-  // Process tasks in chunks based on concurrency
-  const chunks: Task<T>[][] = [];
-  for (let i = 0; i < tasks.length; i += opts.concurrency) {
-    chunks.push(tasks.slice(i, i + opts.concurrency));
-  }
-  
-  for (const chunk of chunks) {
-    if (aborted) break;
-    
-    const chunkResults = await Promise.all(
-      chunk.map(async (task) => {
-        if (aborted) {
-          return {
-            id: task.id,
-            name: task.name,
-            success: false,
-            error: 'Aborted',
-            attempts: 0,
-            duration: 0,
-          } as TaskResult<T>;
-        }
-        
-        const result = await executeWithRetry(task, opts);
-        
-        completed++;
-        opts.onProgress?.(completed, tasks.length, task.name);
-        opts.onTaskComplete?.(result);
-        
-        if (!result.success) {
-          failedTasks.push(task.id);
-          if (opts.abortOnFailure) {
-            aborted = true;
-          }
-        }
-        
-        return result;
-      })
-    );
-    
-    results.push(...chunkResults);
-  }
-  
-  const successful = results.filter(r => r.success).length;
-  
-  return {
-    total: tasks.length,
-    successful,
-    failed: results.length - successful,
-    results,
-    duration: Date.now() - startTime,
-    failedTasks,
-  };
-}
-
-// ============================================================
-// SERIAL EXECUTION
-// ============================================================
-
-/**
- * Run tasks sequentially (for operations requiring serialization)
- * 
- * Use for:
- * - Identity resolution
- * - Deduplication
- * - Entity linking
- * - Cross-record operations
- */
-export async function runSerial<T>(
-  tasks: Task<T>[],
-  options: SerialOptions = {}
-): Promise<BatchResult<T>> {
-  const startTime = Date.now();
-  const results: TaskResult<T>[] = [];
-  const failedTasks: string[] = [];
-  
-  for (let i = 0; i < tasks.length; i++) {
-    const task = tasks[i];
-    const taskStart = Date.now();
-    
-    try {
-      const result = await task.execute();
-      const taskResult: TaskResult<T> = {
-        id: task.id,
-        name: task.name,
-        success: true,
-        result,
-        attempts: 1,
-        duration: Date.now() - taskStart,
-      };
-      
-      results.push(taskResult);
-      options.onProgress?.(i + 1, tasks.length, task.name);
-      options.onTaskComplete?.(taskResult);
-      
-    } catch (error: any) {
-      const taskResult: TaskResult<T> = {
-        id: task.id,
-        name: task.name,
-        success: false,
-        error: error?.message || String(error),
-        attempts: 1,
-        duration: Date.now() - taskStart,
-      };
-      
-      results.push(taskResult);
-      failedTasks.push(task.id);
-      options.onProgress?.(i + 1, tasks.length, task.name);
-      options.onTaskComplete?.(taskResult);
-      
-      if (!options.continueOnError) {
-        break;
-      }
-    }
-  }
-  
-  const successful = results.filter(r => r.success).length;
-  
-  return {
-    total: tasks.length,
-    successful,
-    failed: results.length - successful,
-    results,
-    duration: Date.now() - startTime,
-    failedTasks,
-  };
-}
-
-// ============================================================
-// BATCH HELPERS
-// ============================================================
-
-/**
- * Create tasks from an array of items
- */
-export function createTasks<T, R>(
-  items: T[],
-  processor: (item: T) => Promise<R>,
-  nameExtractor: (item: T) => string,
-  idExtractor: (item: T) => string
-): Task<R>[] {
-  return items.map(item => ({
-    id: idExtractor(item),
-    name: nameExtractor(item),
-    execute: () => processor(item),
-    retryable: true,
-  }));
-}
-
-/**
- * Split items into batches
- */
-export function createBatches<T>(items: T[], batchSize: number): T[][] {
-  const batches: T[][] = [];
-  for (let i = 0; i < items.length; i += batchSize) {
-    batches.push(items.slice(i, i + batchSize));
-  }
-  return batches;
-}
-
-/**
- * Run processor on items in parallel batches
- */
-export async function runBatchParallel<T, R>(
-  items: T[],
-  processor: (item: T) => Promise<R>,
-  options: {
-    batchSize?: number;
-    concurrency?: number;
-    nameExtractor?: (item: T) => string;
-    idExtractor?: (item: T) => string;
-    onProgress?: (completed: number, total: number) => void;
-  } = {}
-): Promise<BatchResult<R>> {
-  const {
-    batchSize = 20,
-    concurrency = 5,
-    nameExtractor = (item: any) => item?.id || item?.name || 'item',
-    idExtractor = (item: any) => item?.id || String(Math.random()),
-  } = options;
-  
-  const batches = createBatches(items, batchSize);
-  const allResults: TaskResult<R>[] = [];
-  const allFailedTasks: string[] = [];
-  const startTime = Date.now();
-  let totalCompleted = 0;
-  
-  for (const batch of batches) {
-    const tasks = createTasks(batch, processor, nameExtractor, idExtractor);
-    
-    const batchResult = await runParallel(tasks, {
-      concurrency,
-      onProgress: () => {
-        totalCompleted++;
-        options.onProgress?.(totalCompleted, items.length);
-      },
-    });
-    
-    allResults.push(...batchResult.results);
-    allFailedTasks.push(...batchResult.failedTasks);
-  }
-  
-  const successful = allResults.filter(r => r.success).length;
-  
-  return {
-    total: items.length,
-    successful,
-    failed: allResults.length - successful,
-    results: allResults,
-    duration: Date.now() - startTime,
-    failedTasks: allFailedTasks,
-  };
+export interface RateLimiter {
+  acquire(): Promise<void>;
+  release(): void;
 }
 
 // ============================================================
 // EXECUTION CONTROLLER CLASS
 // ============================================================
 
-/**
- * ExecutionController provides a unified interface for managing
- * parallel and serial execution of pipeline tasks
- */
 export class ExecutionController {
   private options: ExecutionOptions;
-  
+  private activeCount: number = 0;
+  private lastRequestTime: number = 0;
+  private startTime: number = 0;
+  private processed: number = 0;
+  private succeeded: number = 0;
+  private failed: number = 0;
+  private total: number = 0;
+
   constructor(options: Partial<ExecutionOptions> = {}) {
-    this.options = { ...DEFAULT_OPTIONS, ...options };
+    this.options = {
+      concurrency: options.concurrency || 10,
+      rateLimitMs: options.rateLimitMs || 200,
+      batchSize: options.batchSize || 50,
+      retryAttempts: options.retryAttempts || 3,
+      retryDelayMs: options.retryDelayMs || 1000,
+      onProgress: options.onProgress,
+      onError: options.onError,
+      abortSignal: options.abortSignal,
+    };
   }
-  
+
   /**
-   * Run tasks in parallel with bounded concurrency
+   * Process items with concurrency control and rate limiting
    */
-  async parallel<T>(
-    tasks: Task<T>[],
-    options?: Partial<ExecutionOptions>
-  ): Promise<BatchResult<T>> {
-    return runParallel(tasks, { ...this.options, ...options });
-  }
-  
-  /**
-   * Run tasks sequentially
-   */
-  async serial<T>(
-    tasks: Task<T>[],
-    options?: SerialOptions
-  ): Promise<BatchResult<T>> {
-    return runSerial(tasks, options);
-  }
-  
-  /**
-   * Run a batch processor on items
-   */
-  async batchProcess<T, R>(
+  async processAll<T, R>(
     items: T[],
-    processor: (item: T) => Promise<R>,
-    options?: Parameters<typeof runBatchParallel>[2]
-  ): Promise<BatchResult<R>> {
-    return runBatchParallel(items, processor, {
-      concurrency: this.options.concurrency,
-      ...options,
+    processor: (item: T, index: number) => Promise<R>
+  ): Promise<BatchResult<T>> {
+    this.startTime = Date.now();
+    this.total = items.length;
+    this.processed = 0;
+    this.succeeded = 0;
+    this.failed = 0;
+
+    const succeededItems: T[] = [];
+    const failedItems: Array<{ item: T; error: Error }> = [];
+
+    // Process in batches
+    for (let i = 0; i < items.length; i += this.options.batchSize) {
+      if (this.options.abortSignal?.aborted) {
+        break;
+      }
+
+      const batch = items.slice(i, i + this.options.batchSize);
+      const batchResults = await this.processBatch(batch, processor, i);
+
+      succeededItems.push(...batchResults.succeeded);
+      failedItems.push(...batchResults.failed);
+    }
+
+    return {
+      succeeded: succeededItems,
+      failed: failedItems,
+      totalProcessed: this.processed,
+      durationMs: Date.now() - this.startTime,
+    };
+  }
+
+  /**
+   * Process a batch of items with concurrency control
+   */
+  private async processBatch<T, R>(
+    items: T[],
+    processor: (item: T, index: number) => Promise<R>,
+    startIndex: number
+  ): Promise<{ succeeded: T[]; failed: Array<{ item: T; error: Error }> }> {
+    const succeeded: T[] = [];
+    const failed: Array<{ item: T; error: Error }> = [];
+
+    const promises = items.map(async (item, i) => {
+      const index = startIndex + i;
+      
+      // Wait for rate limit
+      await this.waitForRateLimit();
+      
+      // Wait for concurrency slot
+      await this.acquireConcurrencySlot();
+
+      try {
+        await this.processWithRetry(item, index, processor);
+        succeeded.push(item);
+        this.succeeded++;
+      } catch (error) {
+        failed.push({ item, error: error as Error });
+        this.failed++;
+        this.options.onError?.(error as Error, item);
+      } finally {
+        this.releaseConcurrencySlot();
+        this.processed++;
+        this.reportProgress(item);
+      }
+    });
+
+    await Promise.all(promises);
+    return { succeeded, failed };
+  }
+
+  /**
+   * Process with retry logic
+   */
+  private async processWithRetry<T, R>(
+    item: T,
+    index: number,
+    processor: (item: T, index: number) => Promise<R>
+  ): Promise<R> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= this.options.retryAttempts; attempt++) {
+      try {
+        return await processor(item, index);
+      } catch (error) {
+        lastError = error as Error;
+        
+        if (attempt < this.options.retryAttempts) {
+          const delay = this.options.retryDelayMs * attempt;
+          await this.sleep(delay);
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
+  /**
+   * Wait for rate limit
+   */
+  private async waitForRateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.options.rateLimitMs) {
+      await this.sleep(this.options.rateLimitMs - timeSinceLastRequest);
+    }
+    
+    this.lastRequestTime = Date.now();
+  }
+
+  /**
+   * Acquire concurrency slot
+   */
+  private async acquireConcurrencySlot(): Promise<void> {
+    while (this.activeCount >= this.options.concurrency) {
+      await this.sleep(10);
+    }
+    this.activeCount++;
+  }
+
+  /**
+   * Release concurrency slot
+   */
+  private releaseConcurrencySlot(): void {
+    this.activeCount--;
+  }
+
+  /**
+   * Report progress
+   */
+  private reportProgress<T>(item: T): void {
+    const elapsedMs = Date.now() - this.startTime;
+    const avgTimePerItem = elapsedMs / this.processed;
+    const remaining = this.total - this.processed;
+    const estimatedRemainingMs = avgTimePerItem * remaining;
+
+    const itemStr = typeof item === 'object' && item !== null
+      ? (item as Record<string, unknown>).title_en || (item as Record<string, unknown>).id || 'item'
+      : String(item);
+
+    this.options.onProgress?.({
+      total: this.total,
+      processed: this.processed,
+      succeeded: this.succeeded,
+      failed: this.failed,
+      currentItem: String(itemStr),
+      elapsedMs,
+      estimatedRemainingMs,
     });
   }
-  
+
   /**
-   * Get current concurrency setting
+   * Sleep helper
    */
-  getConcurrency(): number {
-    return this.options.concurrency;
-  }
-  
-  /**
-   * Update concurrency limit
-   */
-  setConcurrency(concurrency: number): void {
-    this.options.concurrency = concurrency;
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 
 // ============================================================
-// EXPORT DEFAULT INSTANCE
+// RATE LIMITER
 // ============================================================
 
-export const defaultController = new ExecutionController();
+export class TokenBucketRateLimiter implements RateLimiter {
+  private tokens: number;
+  private maxTokens: number;
+  private refillRateMs: number;
+  private lastRefill: number;
+
+  constructor(maxTokens: number = 10, refillRateMs: number = 1000) {
+    this.maxTokens = maxTokens;
+    this.tokens = maxTokens;
+    this.refillRateMs = refillRateMs;
+    this.lastRefill = Date.now();
+  }
+
+  async acquire(): Promise<void> {
+    this.refill();
+    
+    while (this.tokens < 1) {
+      await new Promise(resolve => setTimeout(resolve, this.refillRateMs / this.maxTokens));
+      this.refill();
+    }
+    
+    this.tokens--;
+  }
+
+  release(): void {
+    // No-op for token bucket
+  }
+
+  private refill(): void {
+    const now = Date.now();
+    const elapsed = now - this.lastRefill;
+    const tokensToAdd = (elapsed / this.refillRateMs) * this.maxTokens;
+    
+    this.tokens = Math.min(this.maxTokens, this.tokens + tokensToAdd);
+    this.lastRefill = now;
+  }
+}
+
+// ============================================================
+// PROGRESS REPORTER
+// ============================================================
+
+export class ProgressReporter {
+  private startTime: number = 0;
+  private lastReportTime: number = 0;
+  private reportIntervalMs: number;
+
+  constructor(reportIntervalMs: number = 1000) {
+    this.reportIntervalMs = reportIntervalMs;
+  }
+
+  start(): void {
+    this.startTime = Date.now();
+    this.lastReportTime = this.startTime;
+  }
+
+  report(info: ProgressInfo, force: boolean = false): void {
+    const now = Date.now();
+    
+    if (!force && now - this.lastReportTime < this.reportIntervalMs) {
+      return;
+    }
+
+    this.lastReportTime = now;
+    const pct = Math.round((info.processed / info.total) * 100);
+    const etaMin = Math.round(info.estimatedRemainingMs / 1000 / 60);
+    
+    process.stdout.write(`\r  Progress: ${pct}% (${info.processed}/${info.total}) | ` +
+      `✓ ${info.succeeded} ✗ ${info.failed} | ETA: ${etaMin}m`);
+  }
+
+  complete(result: BatchResult<unknown>): void {
+    console.log('\n');
+    console.log(chalk.green(`✅ Completed in ${(result.durationMs / 1000).toFixed(1)}s`));
+    console.log(chalk.gray(`   Succeeded: ${result.succeeded.length}`));
+    console.log(chalk.gray(`   Failed: ${result.failed.length}`));
+  }
+}
+
+// ============================================================
+// TASK INTERFACE FOR PARALLEL EXECUTION
+// ============================================================
+
+export interface Task<T = unknown> {
+  id: string;
+  data: T;
+  execute: () => Promise<unknown>;
+}
+
+// ============================================================
+// PARALLEL EXECUTION FUNCTION
+// ============================================================
+
+export interface ParallelOptions {
+  concurrency?: number;
+  rateLimitMs?: number;
+  onProgress?: (completed: number, total: number, current?: string) => void;
+  onError?: (error: Error, task: Task) => void;
+}
+
+/**
+ * Run tasks in parallel with concurrency control
+ */
+export async function runParallel<T, R>(
+  tasks: Task<T>[],
+  options: ParallelOptions = {}
+): Promise<Map<string, R | Error>> {
+  const {
+    concurrency = 10,
+    rateLimitMs = 100,
+    onProgress,
+    onError,
+  } = options;
+
+  const results = new Map<string, R | Error>();
+  let completed = 0;
+  let activeCount = 0;
+  let lastRequestTime = 0;
+
+  const queue = [...tasks];
+
+  async function processTask(task: Task<T>): Promise<void> {
+    // Rate limiting
+    const now = Date.now();
+    const elapsed = now - lastRequestTime;
+    if (elapsed < rateLimitMs) {
+      await new Promise(resolve => setTimeout(resolve, rateLimitMs - elapsed));
+    }
+    lastRequestTime = Date.now();
+
+    try {
+      const result = await task.execute();
+      results.set(task.id, result as R);
+    } catch (error) {
+      results.set(task.id, error as Error);
+      onError?.(error as Error, task);
+    } finally {
+      completed++;
+      activeCount--;
+      onProgress?.(completed, tasks.length, task.id);
+    }
+  }
+
+  // Process queue with concurrency limit
+  const promises: Promise<void>[] = [];
+
+  while (queue.length > 0 || activeCount > 0) {
+    // Start new tasks up to concurrency limit
+    while (queue.length > 0 && activeCount < concurrency) {
+      const task = queue.shift()!;
+      activeCount++;
+      promises.push(processTask(task));
+    }
+
+    // Wait a bit before checking again
+    if (queue.length > 0 || activeCount > 0) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+  }
+
+  await Promise.all(promises);
+  return results;
+}
+
+// ============================================================
+// FACTORY FUNCTIONS
+// ============================================================
+
+export function createExecutionController(options?: Partial<ExecutionOptions>): ExecutionController {
+  return new ExecutionController(options);
+}
+
+export function createRateLimiter(tokensPerSecond: number = 5): RateLimiter {
+  return new TokenBucketRateLimiter(tokensPerSecond, 1000);
+}
+
+// ============================================================
+// DEFAULT EXPORT
+// ============================================================
+
+export default ExecutionController;
 

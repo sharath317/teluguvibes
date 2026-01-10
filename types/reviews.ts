@@ -1,261 +1,173 @@
-// Movie Reviews & Dedications Types
+/**
+ * Review Types
+ * Type definitions for movie reviews and related entities
+ */
 
 export type Genre =
-  | 'Action' | 'Drama' | 'Romance' | 'Comedy' | 'Thriller'
-  | 'Horror' | 'Fantasy' | 'Crime' | 'Family' | 'Mystery'
-  | 'Adventure' | 'Music' | 'Documentary';
+  | 'Action'
+  | 'Comedy'
+  | 'Drama'
+  | 'Romance'
+  | 'Thriller'
+  | 'Horror'
+  | 'Family'
+  | 'Musical'
+  | 'Crime'
+  | 'Historical'
+  | 'Biographical'
+  | 'Fantasy'
+  | 'Science Fiction'
+  | 'Adventure'
+  | 'Mystery'
+  | 'Sports'
+  | 'Documentary'
+  | 'Animation'
+  | 'Devotional'
+  | 'Social'
+  | 'Political';
 
-export type DedicationType =
-  | 'birthday' | 'anniversary' | 'achievement' | 'memorial'
-  | 'congratulations' | 'thank_you' | 'love' | 'friendship' | 'general';
-
-export type AnimationType =
-  | 'flowers' | 'crackers' | 'confetti' | 'hearts' | 'stars'
-  | 'balloons' | 'sparkles' | 'fireworks' | 'petals' | 'none';
+export interface ReviewFilters {
+  sortBy: 'rating' | 'release_year' | 'title' | 'popularity' | 'date_added';
+  sortOrder: 'asc' | 'desc';
+  genre?: Genre | string;
+  language?: string;
+  era?: string;
+  actor?: string;
+  director?: string;
+  minRating?: number;
+  maxRating?: number;
+  decade?: string;
+  yearRange?: { from: number; to: number };
+  isClassic?: boolean;
+  isBlockbuster?: boolean;
+  isUnderrated?: boolean;
+  searchQuery?: string;
+}
 
 export interface Movie {
   id: string;
   title_en: string;
   title_te?: string;
   slug: string;
-  release_date?: string;
-  release_year?: number;
-  runtime_minutes?: number;
-  genres: Genre[];
-  language: string;
-  certification?: string;
   poster_url?: string;
   backdrop_url?: string;
-  trailer_url?: string;
-  tmdb_id?: number;
-  imdb_id?: string;
+  release_year?: number;
+  release_date?: string;
+  genres?: string[];
+  runtime?: number;
+  language?: string;
+  // Crew
   director?: string;
-  directors: string[];
-  producers: string[];
-  music_director?: string;
-  cinematographer?: string;
-  editor?: string;
-  writer?: string;
-  cast_members: string[];
   hero?: string;
   heroine?: string;
+  music_director?: string;
+  producer?: string;
+  cinematographer?: string;
+  // Ratings
+  avg_rating?: number;
+  our_rating?: number;
+  editorial_score?: number;
+  imdb_rating?: number;
+  // Tags
+  is_blockbuster?: boolean;
+  is_classic?: boolean;
+  is_underrated?: boolean;
+  is_featured?: boolean;
+  // Synopsis
   synopsis?: string;
   synopsis_te?: string;
-  avg_rating: number;
-  total_reviews: number;
-  tags: string[];
-  is_underrated: boolean;
-  is_blockbuster: boolean;
-  is_classic: boolean;
-  is_published: boolean;
-  created_at: string;
-  updated_at: string;
+  tagline?: string;
+  // Additional
+  budget?: string;
+  box_office?: string;
+  certification?: string;
+  status?: 'released' | 'upcoming' | 'in_production';
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface MovieReview {
   id: string;
   movie_id: string;
-  movie?: Movie;
-  reviewer_type: 'admin' | 'critic' | 'user';
-  reviewer_name: string;
-  reviewer_avatar?: string;
-  overall_rating: number;
-  direction_rating?: number;
-  screenplay_rating?: number;
-  acting_rating?: number;
-  music_rating?: number;
-  cinematography_rating?: number;
-  production_rating?: number;
-  entertainment_rating?: number;
-  title?: string;
+  title: string;
   title_te?: string;
+  content: string;
+  content_te?: string;
+  author_name?: string;
+  reviewer_name?: string;
+  reviewer_type?: 'critic' | 'audience' | 'editor' | 'expert';
+  rating?: number;
+  overall_rating?: number;
+  is_featured?: boolean;
+  is_published?: boolean;
+  status: 'draft' | 'published' | 'archived';
+  likes?: number;
+  views?: number;
+  helpful_votes?: number;
+  created_at: string;
+  updated_at: string;
+  // Review text sections
   summary?: string;
   summary_te?: string;
   direction_review?: string;
   screenplay_review?: string;
   acting_review?: string;
   music_review?: string;
-  cinematography_review?: string;
-  production_review?: string;
-  directors_vision?: string;
-  strengths: string[];
-  weaknesses: string[];
   verdict?: string;
   verdict_te?: string;
-  worth_watching: boolean;
-  recommended_for: string[];
-  views: number;
-  likes: number;
-  helpful_votes: number;
-  is_featured: boolean;
-  is_spoiler_free: boolean;
-  status: 'draft' | 'published' | 'archived';
-  created_at: string;
-  updated_at: string;
+  // Review verdicts (ratings)
+  story_verdict?: string;
+  performance_verdict?: string;
+  direction_verdict?: string;
+  music_verdict?: string;
+  technical_verdict?: string;
+  final_verdict?: string;
 }
 
-export interface Dedication {
+export interface ReviewCategory {
   id: string;
-  dedication_type: DedicationType;
-  from_name: string;
-  from_location?: string;
-  to_name: string;
-  to_relation?: string;
-  message: string;
-  message_te?: string;
-  celebrity_id?: string;
-  celebrity_name?: string;
-  photo_url?: string;
-  animation_type: AnimationType;
-  display_date: string;
-  display_duration_hours: number;
-  is_premium: boolean;
-  status: 'pending' | 'approved' | 'rejected';
-  views: number;
-  likes: number;
-  created_at: string;
-  expires_at: string;
+  name: string;
+  slug: string;
+  description?: string;
 }
 
-// Filter types for reviews page
-export interface ReviewFilters {
-  genre?: Genre;
-  actor?: string;
-  director?: string;
-  year?: number;
-  yearRange?: { from: number; to: number };
-  minRating?: number;
-  isUnderrated?: boolean;
-  isBlockbuster?: boolean;
-  isClassic?: boolean;
-  sortBy?: 'rating' | 'year' | 'reviews' | 'recent';
-  sortOrder?: 'asc' | 'desc';
+export interface CastMember {
+  id: string;
+  name: string;
+  name_te?: string;
+  role: string;
+  role_te?: string;
+  character_name?: string;
+  image_url?: string;
+  order: number;
 }
 
-// Animation config for dedications
-export const ANIMATION_CONFIG: Record<AnimationType, {
-  emoji: string;
-  color: string;
-  particles: string[];
-  sound?: string;
-}> = {
-  flowers: {
-    emoji: '🌸',
-    color: '#ff69b4',
-    particles: ['🌸', '🌺', '🌷', '🌹', '💐'],
-  },
-  crackers: {
-    emoji: '🎆',
-    color: '#ffd700',
-    particles: ['🎆', '🎇', '✨', '💥', '🎉'],
-  },
-  confetti: {
-    emoji: '🎊',
-    color: '#ff6347',
-    particles: ['🎊', '🎉', '🎈', '🎀', '🎁'],
-  },
-  hearts: {
-    emoji: '❤️',
-    color: '#ff1493',
-    particles: ['❤️', '💕', '💖', '💗', '💓'],
-  },
-  stars: {
-    emoji: '⭐',
-    color: '#ffd700',
-    particles: ['⭐', '🌟', '✨', '💫', '🌠'],
-  },
-  balloons: {
-    emoji: '🎈',
-    color: '#87ceeb',
-    particles: ['🎈', '🎁', '🎉', '🎀', '🎊'],
-  },
-  sparkles: {
-    emoji: '✨',
-    color: '#9370db',
-    particles: ['✨', '💎', '🔮', '💜', '🌟'],
-  },
-  fireworks: {
-    emoji: '🎆',
-    color: '#ff4500',
-    particles: ['🎆', '🎇', '💥', '🌟', '✨'],
-  },
-  petals: {
-    emoji: '🌸',
-    color: '#ffb6c1',
-    particles: ['🌸', '🍃', '🌺', '🌷', '💮'],
-  },
-  none: {
-    emoji: '💝',
-    color: '#808080',
-    particles: [],
-  },
-};
+export interface CrewMember {
+  id: string;
+  name: string;
+  name_te?: string;
+  role: string;
+  department: string;
+  image_url?: string;
+}
 
-// Dedication type labels
-export const DEDICATION_TYPE_LABELS: Record<DedicationType, {
-  label: string;
-  labelTe: string;
-  defaultAnimation: AnimationType;
-  icon: string;
-}> = {
-  birthday: {
-    label: 'Birthday Wishes',
-    labelTe: 'పుట్టినరోజు శుభాకాంక్షలు',
-    defaultAnimation: 'balloons',
-    icon: '🎂',
-  },
-  anniversary: {
-    label: 'Anniversary',
-    labelTe: 'వార్షికోత్సవం',
-    defaultAnimation: 'hearts',
-    icon: '💑',
-  },
-  achievement: {
-    label: 'Congratulations',
-    labelTe: 'అభినందనలు',
-    defaultAnimation: 'confetti',
-    icon: '🏆',
-  },
-  memorial: {
-    label: 'In Memory',
-    labelTe: 'స్మరణ',
-    defaultAnimation: 'petals',
-    icon: '🕯️',
-  },
-  congratulations: {
-    label: 'Congratulations',
-    labelTe: 'అభినందనలు',
-    defaultAnimation: 'crackers',
-    icon: '🎉',
-  },
-  thank_you: {
-    label: 'Thank You',
-    labelTe: 'ధన్యవాదాలు',
-    defaultAnimation: 'flowers',
-    icon: '🙏',
-  },
-  love: {
-    label: 'Love',
-    labelTe: 'ప్రేమ',
-    defaultAnimation: 'hearts',
-    icon: '❤️',
-  },
-  friendship: {
-    label: 'Friendship',
-    labelTe: 'స్నేహం',
-    defaultAnimation: 'stars',
-    icon: '🤝',
-  },
-  general: {
-    label: 'Dedication',
-    labelTe: 'అంకితం',
-    defaultAnimation: 'sparkles',
-    icon: '💝',
-  },
-};
+export interface MovieImage {
+  id: string;
+  movie_id: string;
+  url: string;
+  thumbnail_url?: string;
+  type: 'poster' | 'backdrop' | 'still' | 'promotional';
+  caption?: string;
+  is_primary?: boolean;
+}
 
-
-
-
-
-
+export interface MovieVideo {
+  id: string;
+  movie_id: string;
+  url: string;
+  embed_url?: string;
+  type: 'trailer' | 'teaser' | 'song' | 'making' | 'interview';
+  title?: string;
+  thumbnail_url?: string;
+  duration?: string;
+}

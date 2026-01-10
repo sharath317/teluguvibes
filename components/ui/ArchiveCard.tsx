@@ -131,7 +131,7 @@ export function ArchiveCard({
 }: ArchiveCardProps) {
   const classes = sizeClasses[size];
   const subtitle = getArchiveCardSubtitle(data);
-  const reasonText = getArchiveReasonDisplay(data.archive_reason);
+  const reasonText = getArchiveReasonDisplay(data.archival_reasons?.[0] || '');
 
   return (
     <div
@@ -164,11 +164,11 @@ export function ArchiveCard({
           weight="bold"
           className={`line-clamp-2 mb-1 ${classes.title}`}
         >
-          {data.title}
+          {data.title || data.movie_title}
         </Text>
 
         {/* Year */}
-        {data.year > 0 && (
+        {(data.year || data.movie_year || 0) > 0 && (
           <Text
             as="span"
             variant="caption"
@@ -176,7 +176,7 @@ export function ArchiveCard({
             weight="medium"
             className={`mb-1 ${classes.year}`}
           >
-            {data.year}
+            {data.year || data.movie_year}
           </Text>
         )}
 
@@ -252,10 +252,10 @@ export function ArchiveCardCompact({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <Text variant="caption" weight="medium" truncate>
-          {data.title}
+          {data.title || data.movie_title}
         </Text>
         <Text variant="caption" color="tertiary">
-          {data.year} • {data.lead_actor || 'Classic Film'}
+          {data.year || data.movie_year} • {data.lead_actor || 'Classic Film'}
         </Text>
       </div>
 
@@ -280,7 +280,7 @@ interface ArchiveCardTooltipProps {
 }
 
 export function ArchiveCardTooltip({ data }: ArchiveCardTooltipProps) {
-  const reasonText = getArchiveReasonDisplay(data.archive_reason);
+  const reasonText = getArchiveReasonDisplay(data.archive_reason || data.archival_reasons?.[0] || '');
 
   return (
     <div className="p-3 max-w-xs bg-[var(--bg-secondary)] rounded-lg border border-[var(--border-primary)] shadow-xl">
@@ -288,10 +288,10 @@ export function ArchiveCardTooltip({ data }: ArchiveCardTooltipProps) {
         <Archive className="w-4 h-4 text-[var(--text-tertiary)] mt-0.5" />
         <div>
           <Text variant="caption" weight="medium">
-            {data.title}
+            {data.title || data.movie_title}
           </Text>
           <Text variant="caption" color="tertiary">
-            {data.year} • {data.lead_actor || 'Classic Film'}
+            {data.year || data.movie_year} • {data.lead_actor || 'Classic Film'}
           </Text>
         </div>
       </div>

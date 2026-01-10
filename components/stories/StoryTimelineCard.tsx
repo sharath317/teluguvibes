@@ -14,7 +14,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import type { StoryArc, StoryPost, StoryTimeline } from '@/lib/story-engine/connected-stories';
+import type { StoryArc, StoryPost, StoryTimeline, StoryPostType, StoryType, StoryStatus, StoryEntityType } from '@/lib/story-engine/connected-stories';
 
 // ============================================================
 // TYPES
@@ -42,7 +42,7 @@ interface PostTypeConfig {
 // CONSTANTS
 // ============================================================
 
-const POST_TYPE_CONFIG: Record<StoryPost['post_type'], PostTypeConfig> = {
+const POST_TYPE_CONFIG: Record<StoryPostType, PostTypeConfig> = {
   initial: {
     label: 'Started',
     labelTe: 'ప్రారంభం',
@@ -71,22 +71,43 @@ const POST_TYPE_CONFIG: Record<StoryPost['post_type'], PostTypeConfig> = {
     color: 'text-purple-600',
     bgColor: 'bg-purple-100',
   },
+  development: {
+    label: 'Development',
+    labelTe: 'పురోగతి',
+    icon: '📈',
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-100',
+  },
+  conclusion: {
+    label: 'Conclusion',
+    labelTe: 'ముగింపు',
+    icon: '🏁',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-100',
+  },
+  'follow-up': {
+    label: 'Follow-up',
+    labelTe: 'ఫాలో-అప్',
+    icon: '🔄',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-100',
+  },
 };
 
-const STORY_TYPE_CONFIG: Record<StoryArc['story_type'], { label: string; labelTe: string; icon: string }> = {
+const STORY_TYPE_CONFIG: Record<StoryType, { label: string; labelTe: string; icon: string }> = {
   breaking: { label: 'Breaking', labelTe: 'బ్రేకింగ్', icon: '⚡' },
   developing: { label: 'Developing', labelTe: 'డెవలపింగ్', icon: '📈' },
   feature: { label: 'Feature', labelTe: 'ఫీచర్', icon: '⭐' },
   series: { label: 'Series', labelTe: 'సీరీస్', icon: '📚' },
 };
 
-const STATUS_CONFIG: Record<StoryArc['status'], { label: string; labelTe: string; color: string; bgColor: string }> = {
+const STATUS_CONFIG: Record<StoryStatus, { label: string; labelTe: string; color: string; bgColor: string }> = {
   active: { label: 'Active', labelTe: 'యాక్టివ్', color: 'text-green-700', bgColor: 'bg-green-100' },
   concluded: { label: 'Concluded', labelTe: 'ముగిసింది', color: 'text-gray-700', bgColor: 'bg-gray-100' },
   dormant: { label: 'Dormant', labelTe: 'డార్మెంట్', color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
 };
 
-const ENTITY_TYPE_ICONS: Record<StoryArc['entity_type'], string> = {
+const ENTITY_TYPE_ICONS: Record<StoryEntityType, string> = {
   movie: '🎬',
   celebrity: '⭐',
   event: '🎉',
@@ -147,7 +168,7 @@ interface TimelineNodeProps {
 }
 
 function TimelineNode({ post, isFirst, isLast, locale, expanded, onToggle }: TimelineNodeProps) {
-  const config = POST_TYPE_CONFIG[post.post_type];
+  const config = POST_TYPE_CONFIG[post.post_type || 'update'];
   
   return (
     <div className="flex gap-3 relative">
@@ -175,10 +196,12 @@ function TimelineNode({ post, isFirst, isLast, locale, expanded, onToggle }: Tim
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs text-gray-500">
-              {getRelativeTime(post.published_at, locale)}
-            </span>
-            {post.is_main_post && (
+            {post.published_at && (
+              <span className="text-xs text-gray-500">
+                {getRelativeTime(post.published_at, locale)}
+              </span>
+            )}
+            {(post as any).is_main_post && (
               <span className="text-xs px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">
                 Main
               </span>
@@ -212,7 +235,7 @@ export function StoryTimelineCard({
       return posts;
     }
     if (timeline?.length) {
-      return timeline.flatMap(t => t.posts);
+      return timeline.flatMap(t => t.posts || []).filter((p): p is StoryPost => p !== undefined);
     }
     return [];
   }, [posts, timeline]);
@@ -221,13 +244,13 @@ export function StoryTimelineCard({
     ? displayPosts.slice(0, 3) 
     : displayPosts;
 
-  const storyTypeConfig = STORY_TYPE_CONFIG[story.story_type];
-  const statusConfig = STATUS_CONFIG[story.status];
-  const entityIcon = ENTITY_TYPE_ICONS[story.entity_type];
+  const storyTypeConfig = story.story_type ? STORY_TYPE_CONFIG[story.story_type] : STORY_TYPE_CONFIG['developing'];
+  const statusConfig = story.status ? STATUS_CONFIG[story.status] : STATUS_CONFIG['active'];
+  const entityIcon = story.entity_type ? ENTITY_TYPE_ICONS[story.entity_type] : '📰';
 
-  const daysSpan = getDaysSpan(story.started_at, story.last_updated_at);
-  const title = locale === 'te' && story.title_te ? story.title_te : story.title_en;
-  const summary = locale === 'te' && story.summary_te ? story.summary_te : story.summary_en;
+  const daysSpan = story.started_at && story.last_updated_at ? getDaysSpan(story.started_at, story.last_updated_at) : 0;
+  const title = locale === 'te' && story.title_te ? story.title_te : (story.title_en || story.title);
+  const summary = locale === 'te' && story.summary_te ? story.summary_te : (story.summary_en || story.description);
 
   return (
     <div className={`story-timeline-card rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow ${className}`}>
@@ -265,11 +288,13 @@ export function StoryTimelineCard({
 
         {/* Meta info */}
         <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+          {story.started_at && (
+            <span className="flex items-center gap-1">
+              📅 {formatDate(story.started_at, locale)}
+            </span>
+          )}
           <span className="flex items-center gap-1">
-            📅 {formatDate(story.started_at, locale)}
-          </span>
-          <span className="flex items-center gap-1">
-            📰 {story.post_count} {locale === 'te' ? 'పోస్టులు' : 'posts'}
+            📰 {story.post_count ?? story.posts?.length ?? 0} {locale === 'te' ? 'పోస్టులు' : 'posts'}
           </span>
           {daysSpan > 0 && (
             <span className="flex items-center gap-1">
@@ -323,7 +348,7 @@ export function StoryTimelineCard({
       )}
 
       {/* Keywords */}
-      {story.keywords?.length > 0 && (
+      {story.keywords && story.keywords.length > 0 && (
         <div className="px-4 pb-3">
           <div className="flex flex-wrap gap-1">
             {story.keywords.slice(0, 5).map((keyword, index) => (
@@ -420,9 +445,9 @@ export interface CompactStoryCardProps {
 }
 
 export function CompactStoryCard({ story, locale = 'en', className = '' }: CompactStoryCardProps) {
-  const statusConfig = STATUS_CONFIG[story.status];
-  const storyTypeConfig = STORY_TYPE_CONFIG[story.story_type];
-  const title = locale === 'te' && story.title_te ? story.title_te : story.title_en;
+  const statusConfig = story.status ? STATUS_CONFIG[story.status] : STATUS_CONFIG['active'];
+  const storyTypeConfig = story.story_type ? STORY_TYPE_CONFIG[story.story_type] : STORY_TYPE_CONFIG['developing'];
+  const title = locale === 'te' && story.title_te ? story.title_te : (story.title_en || story.title);
 
   return (
     <Link

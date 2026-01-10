@@ -26,6 +26,7 @@ import {
   AudienceRating,
   ContentWarning,
   SensitivityFlags,
+  SensitivityFlagsWithMeta,
   DEFAULT_FAMILY_SAFE_PROFILE
 } from '../types/content';
 
@@ -41,7 +42,7 @@ const supabase = createClient(
 /**
  * Genre to sensitivity mapping
  */
-const GENRE_SENSITIVITY: Record<string, Partial<SensitivityFlags>> = {
+const GENRE_SENSITIVITY: Record<string, SensitivityFlagsWithMeta> = {
   'Horror': { horror: 'moderate', themes: 'moderate' },
   'Thriller': { themes: 'mild', violence: 'mild' },
   'Action': { violence: 'moderate' },
@@ -301,7 +302,7 @@ async function main() {
     familySafe: 0,
     adult: 0,
     needsReview: 0,
-    byRating: { U: 0, 'U/A': 0, A: 0, S: 0 },
+    byRating: { U: 0, UA: 0, 'U/A': 0, A: 0, S: 0 },
   };
 
   // Process each movie
@@ -315,12 +316,12 @@ async function main() {
     // Update stats
     if (profile.isFamilySafe) stats.familySafe++;
     if (profile.isAdult) stats.adult++;
-    if (profile.confidence < 0.7) stats.needsReview++;
+    if ((profile.confidence ?? 1) < 0.7) stats.needsReview++;
     stats.byRating[profile.audienceRating]++;
 
     if (!execute) {
       console.log(`📽️  ${movie.title_en}`);
-      console.log(`    Rating: ${profile.audienceRating} | Family Safe: ${profile.isFamilySafe ? '✅' : '❌'} | Confidence: ${(profile.confidence * 100).toFixed(0)}%`);
+      console.log(`    Rating: ${profile.audienceRating} | Family Safe: ${profile.isFamilySafe ? '✅' : '❌'} | Confidence: ${((profile.confidence ?? 1) * 100).toFixed(0)}%`);
       if (profile.warnings.length > 0) {
         console.log(`    Warnings: ${profile.warnings.join(', ')}`);
       }
@@ -372,4 +373,5 @@ async function main() {
 }
 
 main().catch(console.error);
+
 

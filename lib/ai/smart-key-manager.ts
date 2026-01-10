@@ -1,667 +1,454 @@
 /**
- * Smart AI Key Manager with Intelligent Routing
+ * Smart AI Key Manager
  * 
- * Features:
- * - Pre-validation of all keys at startup
- * - Smart routing based on response times & success rates
- * - Timeout-based switching with pre-warmed fallbacks
- * - Parallel provider support for batch processing
- * - Intelligent cooldown (hours for auth errors, minutes for rate limits)
- * - Async key preparation before switching
- * - Health-based key scoring
+ * Provides multi-provider, multi-model AI access with:
+ * - Key rotation on rate limits
+ * - Model fallback on deprecation
+ * - Provider fallback (Groq → OpenAI → Cohere)
+ * - Cooldown management
+ * - Usage tracking
+ * 
+ * @example
+ * ```ts
+ * import { smartAI } from '@/lib/ai/smart-key-manager';
+ * await smartAI.initialize();
+ * const result = await smartAI.chat('Translate this to Telugu: Hello');
+ * ```
  */
 
-import dotenv from 'dotenv';
 import Groq from 'groq-sdk';
-import OpenAI from 'openai';
-import { aiMetrics } from './metrics';
-
-dotenv.config({ path: '.env.local' });
-
-// ============================================================
-// TYPES
-// ============================================================
-
-type AIProvider = 'groq' | 'openai' | 'cohere' | 'huggingface';
-type KeyHealth = 'healthy' | 'slow' | 'rate_limited' | 'error' | 'unknown';
-
-interface KeyMetrics {
-  key: string;
-  provider: AIProvider;
-  health: KeyHealth;
-  avgResponseTime: number;
-  successCount: number;
-  failureCount: number;
-  lastUsed: number;
-  lastError?: string;
-  cooldownUntil?: number;
-  validated: boolean;
-}
-
-interface ProviderMetrics {
-  provider: AIProvider;
-  model: string;
-  avgResponseTime: number;
-  successRate: number;
-  isAvailable: boolean;
-  keys: KeyMetrics[];
-}
 
 // ============================================================
 // CONFIGURATION
 // ============================================================
 
-const PROVIDER_CONFIG = {
-  groq: {
-    model: 'llama-3.3-70b-versatile',
-    timeout: 30000, // 30 seconds
-    priority: 1, // Lower = higher priority
-  },
-  openai: {
-    model: 'gpt-4o-mini',
-    timeout: 60000, // 60 seconds
-    priority: 2,
-  },
-  cohere: {
-    model: 'command-r-plus',
-    timeout: 60000,
-    priority: 3,
-  },
-  huggingface: {
-    model: 'meta-llama/Llama-3.3-70B-Instruct',
-    timeout: 90000,
-    priority: 4,
-  },
-} as const;
+interface ModelConfig {
+  name: string;
+  maxTokens: number;
+  supportsJson: boolean;
+  speed: 'fast' | 'medium' | 'slow';
+  quality: 'high' | 'medium' | 'low';
+}
 
-const COOLDOWN_DURATIONS = {
-  rate_limit: 5 * 60 * 1000,       // 5 minutes (increased from 1 min)
-  rate_limit_extended: 30 * 60 * 1000, // 30 minutes for TPM limits
-  slow: 5 * 60 * 1000,             // 5 minutes
-  error: 2 * 60 * 60 * 1000,       // 2 hours for auth/unknown errors
-};
+interface ProviderConfig {
+  name: string;
+  models: ModelConfig[];
+  rateLimit: number; // requests per minute
+  cooldownMs: number;
+}
 
-const SLOW_THRESHOLD_MS = 15000; // Consider response slow if > 15s
+// Groq models - updated Jan 2026
+const GROQ_MODELS: ModelConfig[] = [
+  { name: 'llama-3.3-70b-versatile', maxTokens: 32768, supportsJson: true, speed: 'fast', quality: 'high' },
+  { name: 'llama-3.1-8b-instant', maxTokens: 8192, supportsJson: true, speed: 'fast', quality: 'medium' },
+  { name: 'mixtral-8x7b-32768', maxTokens: 32768, supportsJson: true, speed: 'medium', quality: 'high' },
+  { name: 'llama3-70b-8192', maxTokens: 8192, supportsJson: true, speed: 'medium', quality: 'high' },
+  { name: 'gemma2-9b-it', maxTokens: 8192, supportsJson: true, speed: 'fast', quality: 'medium' },
+];
+
+// OpenAI models
+const OPENAI_MODELS: ModelConfig[] = [
+  { name: 'gpt-4o-mini', maxTokens: 16384, supportsJson: true, speed: 'fast', quality: 'high' },
+  { name: 'gpt-4o', maxTokens: 4096, supportsJson: true, speed: 'medium', quality: 'high' },
+  { name: 'gpt-3.5-turbo', maxTokens: 4096, supportsJson: true, speed: 'fast', quality: 'medium' },
+];
+
+// Provider configurations
+const PROVIDERS: ProviderConfig[] = [
+  { name: 'groq', models: GROQ_MODELS, rateLimit: 30, cooldownMs: 60000 },
+  { name: 'openai', models: OPENAI_MODELS, rateLimit: 60, cooldownMs: 60000 },
+];
 
 // ============================================================
-// SMART KEY MANAGER CLASS
+// TYPES
 // ============================================================
 
-class SmartKeyManager {
-  private providers: Map<AIProvider, ProviderMetrics> = new Map();
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatOptions {
+  temperature?: number;
+  maxTokens?: number;
+  jsonMode?: boolean;
+  preferFast?: boolean;
+  preferQuality?: boolean;
+}
+
+export interface ChatResult {
+  content: string;
+  model: string;
+  provider: string;
+  tokensUsed?: number;
+  latencyMs: number;
+}
+
+interface KeyState {
+  key: string;
+  provider: string;
+  failCount: number;
+  lastFail?: Date;
+  cooldownUntil?: Date;
+  requestCount: number;
+}
+
+// ============================================================
+// SMART AI MANAGER
+// ============================================================
+
+class SmartAIManager {
+  private keys: KeyState[] = [];
+  private currentKeyIndex = 0;
   private initialized = false;
-  private validating = false;
-  private prewarmedClients: Map<string, any> = new Map();
-
-  constructor() {
-    this.loadKeys();
-  }
+  private groqClient?: Groq;
 
   /**
-   * Load all keys from environment
+   * Initialize the AI manager with available API keys
    */
-  private loadKeys(): void {
-    const keyPatterns: Record<AIProvider, string[]> = {
-        // UPGRADED/UNLIMITED KEY FIRST for priority
-        groq: ['GROQ_API_KEY_UNLIMITED', 'GROQ_API_KEY', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4', 'GROQ_API_KEY_5', 'GROQ_API_KEY_6'],
-      openai: ['OPENAI_API_KEY', 'OPENAI_API_KEY_2', 'OPENAI_API_KEY_3', 'OPENAI_API_KEY_4', 'OPENAI_API_KEY_5', 'OPENAI_API_KEY_6', 'OPENAI_API_KEY_7'],
-      cohere: ['COHERE_API_KEY', 'COHERE_API_KEY_2'],
-      huggingface: ['HUGGINGFACE_API_KEY', 'HF_API_KEY'],
-    };
+  async initialize(): Promise<void> {
+    if (this.initialized) return;
 
-    for (const [provider, patterns] of Object.entries(keyPatterns) as [AIProvider, string[]][]) {
-      const keys: KeyMetrics[] = [];
-      
-      for (const pattern of patterns) {
-        const key = process.env[pattern];
-        if (key && key.length > 10) {
-          keys.push({
-            key,
-            provider,
-            health: 'unknown',
-            avgResponseTime: 0,
-            successCount: 0,
-            failureCount: 0,
-            lastUsed: 0,
-            validated: false,
-          });
-        }
-      }
+    // Load Groq keys
+    const groqKeys = [
+      process.env.GROQ_API_KEY,
+      process.env.GROQ_API_KEY_2,
+      process.env.GROQ_API_KEY_3,
+      process.env.GROQ_API_KEY_4,
+      process.env.GROQ_API_KEY_5,
+      process.env.GROQ_API_KEY_6,
+      process.env.GROQ_API_KEY_UNLIMITED,
+    ].filter(Boolean) as string[];
 
-      this.providers.set(provider, {
-        provider,
-        model: PROVIDER_CONFIG[provider].model,
-        avgResponseTime: 0,
-        successRate: 0,
-        isAvailable: keys.length > 0,
-        keys,
-      });
+    // Load OpenAI keys
+    const openaiKeys = [
+      process.env.OPENAI_API_KEY,
+      process.env.OPENAI_API_KEY_2,
+      process.env.OPENAI_API_KEY_3,
+      process.env.OPENAI_API_KEY_4,
+    ].filter(Boolean) as string[];
+
+    // Register keys
+    groqKeys.forEach(key => {
+      this.keys.push({ key, provider: 'groq', failCount: 0, requestCount: 0 });
+    });
+
+    openaiKeys.forEach(key => {
+      this.keys.push({ key, provider: 'openai', failCount: 0, requestCount: 0 });
+    });
+
+    // Initialize Groq client with first key
+    if (groqKeys.length > 0) {
+      this.groqClient = new Groq({ apiKey: groqKeys[0] });
     }
 
-    console.log('🔑 Smart Key Manager loaded:');
-    for (const [provider, metrics] of this.providers) {
-      console.log(`   ${provider}: ${metrics.keys.length} keys`);
-    }
-  }
+    console.log(`🔑 AI Key Manager initialized:`);
+    console.log(`   Groq keys: ${groqKeys.length}`);
+    console.log(`   OpenAI keys: ${openaiKeys.length}`);
 
-  /**
-   * Validate all keys at startup (async, non-blocking)
-   */
-  async validateAllKeys(): Promise<void> {
-    if (this.validating) return;
-    this.validating = true;
-
-    console.log('🔍 Validating all API keys...');
-    const validationPromises: Promise<void>[] = [];
-
-    for (const [provider, metrics] of this.providers) {
-      for (const keyMetrics of metrics.keys) {
-        validationPromises.push(this.validateKey(provider, keyMetrics));
-      }
-    }
-
-    // Run validations in parallel with timeout
-    await Promise.allSettled(validationPromises);
-    
     this.initialized = true;
-    this.validating = false;
-    this.printStatus();
   }
 
   /**
-   * Validate a single key
+   * Get the next available key, rotating on failures
    */
-  private async validateKey(provider: AIProvider, keyMetrics: KeyMetrics): Promise<void> {
-    const startTime = Date.now();
+  private getNextKey(provider?: string): KeyState | null {
+    const now = new Date();
     
-    try {
-      const testPrompt = 'Say "OK" in one word.';
-      let success = false;
-
-      if (provider === 'groq') {
-        const client = new Groq({ apiKey: keyMetrics.key });
-        const response = await Promise.race([
-          client.chat.completions.create({
-            messages: [{ role: 'user', content: testPrompt }],
-            model: 'llama-3.1-8b-instant', // Use fast model for validation
-            max_tokens: 10,
-          }),
-          this.timeout(3000), // 3 second validation timeout
-        ]);
-        success = !!response;
-      } else if (provider === 'openai') {
-        const client = new OpenAI({ apiKey: keyMetrics.key });
-        const response = await Promise.race([
-          client.chat.completions.create({
-            messages: [{ role: 'user', content: testPrompt }],
-            model: PROVIDER_CONFIG.openai.model,
-            max_tokens: 10,
-          }),
-          this.timeout(5000),
-        ]);
-        success = !!response;
-      } else {
-        // For cohere/huggingface, just mark as validated without test
-        keyMetrics.validated = true;
-        keyMetrics.health = 'unknown';
-        return;
-      }
-
-      const responseTime = Date.now() - startTime;
-      keyMetrics.validated = true;
-      keyMetrics.avgResponseTime = responseTime;
-      keyMetrics.health = responseTime > SLOW_THRESHOLD_MS ? 'slow' : 'healthy';
-      
-      console.log(`   ✅ ${provider} key validated (${responseTime}ms)`);
-    } catch (error: any) {
-      keyMetrics.validated = true;
-      keyMetrics.health = 'error';
-      keyMetrics.lastError = error.message;
-      keyMetrics.cooldownUntil = Date.now() + COOLDOWN_DURATIONS.error;
-      
-      console.log(`   ❌ ${provider} key failed: ${error.message?.substring(0, 50)}`);
-    }
-  }
-
-  /**
-   * Get the best available key for a provider
-   */
-  getBestKey(provider: AIProvider): KeyMetrics | null {
-    const metrics = this.providers.get(provider);
-    if (!metrics) return null;
-
-    const now = Date.now();
-    
-    // Filter available keys (not in cooldown, healthy or unknown)
-    const availableKeys = metrics.keys.filter(k => {
+    // Filter available keys
+    const availableKeys = this.keys.filter(k => {
+      if (provider && k.provider !== provider) return false;
       if (k.cooldownUntil && k.cooldownUntil > now) return false;
-      if (k.health === 'error') return false;
       return true;
     });
 
     if (availableKeys.length === 0) return null;
 
-    // Sort by: health (healthy > unknown > slow), then by response time, then by success rate
-    availableKeys.sort((a, b) => {
-      const healthScore = { healthy: 0, unknown: 1, slow: 2, rate_limited: 3, error: 4 };
-      const healthDiff = healthScore[a.health] - healthScore[b.health];
-      if (healthDiff !== 0) return healthDiff;
-      
-      // Prefer less recently used to distribute load
-      return a.lastUsed - b.lastUsed;
-    });
-
-    return availableKeys[0];
+    // Round-robin selection
+    const key = availableKeys[this.currentKeyIndex % availableKeys.length];
+    this.currentKeyIndex++;
+    return key;
   }
 
   /**
-   * Get the best available provider
+   * Mark a key as failed and apply cooldown
    */
-  getBestProvider(): AIProvider | null {
-    const now = Date.now();
-    const available: { provider: AIProvider; score: number }[] = [];
+  private markKeyFailed(keyState: KeyState, errorType: 'rate_limit' | 'auth' | 'model' | 'other'): void {
+    keyState.failCount++;
+    keyState.lastFail = new Date();
 
-    for (const [provider, metrics] of this.providers) {
-      const bestKey = this.getBestKey(provider);
-      if (!bestKey) continue;
+    // Different cooldowns for different errors
+    const cooldownMs = errorType === 'rate_limit' ? 60000 :
+                       errorType === 'auth' ? 3600000 : // 1 hour for auth errors
+                       errorType === 'model' ? 0 : // No cooldown for model errors, just skip
+                       30000;
 
-      // Calculate provider score (lower = better)
-      const priorityScore = PROVIDER_CONFIG[provider].priority * 10;
-      const healthScore = { healthy: 0, unknown: 5, slow: 10, rate_limited: 100, error: 1000 }[bestKey.health];
-      const responseScore = bestKey.avgResponseTime / 1000;
-
-      available.push({
-        provider,
-        score: priorityScore + healthScore + responseScore,
-      });
-    }
-
-    if (available.length === 0) return null;
-
-    available.sort((a, b) => a.score - b.score);
-    return available[0].provider;
-  }
-
-  /**
-   * Get client with pre-warming
-   */
-  getClient(provider: AIProvider): { client: any; key: string } | null {
-    const keyMetrics = this.getBestKey(provider);
-    if (!keyMetrics) return null;
-
-    keyMetrics.lastUsed = Date.now();
-
-    // Check for pre-warmed client
-    const cacheKey = `${provider}:${keyMetrics.key.substring(0, 10)}`;
-    let client = this.prewarmedClients.get(cacheKey);
-
-    if (!client) {
-      if (provider === 'groq') {
-        client = new Groq({ apiKey: keyMetrics.key });
-      } else if (provider === 'openai') {
-        client = new OpenAI({ apiKey: keyMetrics.key });
-      }
-      if (client) {
-        this.prewarmedClients.set(cacheKey, client);
-      }
-    }
-
-    // Pre-warm next key in background
-    this.prewarmNextKey(provider, keyMetrics.key);
-
-    return client ? { client, key: keyMetrics.key } : null;
-  }
-
-  /**
-   * Pre-warm the next available key
-   */
-  private prewarmNextKey(provider: AIProvider, currentKey: string): void {
-    const metrics = this.providers.get(provider);
-    if (!metrics) return;
-
-    const nextKey = metrics.keys.find(k => 
-      k.key !== currentKey && 
-      k.health !== 'error' && 
-      (!k.cooldownUntil || k.cooldownUntil < Date.now())
-    );
-
-    if (nextKey) {
-      const cacheKey = `${provider}:${nextKey.key.substring(0, 10)}`;
-      if (!this.prewarmedClients.has(cacheKey)) {
-        if (provider === 'groq') {
-          this.prewarmedClients.set(cacheKey, new Groq({ apiKey: nextKey.key }));
-        } else if (provider === 'openai') {
-          this.prewarmedClients.set(cacheKey, new OpenAI({ apiKey: nextKey.key }));
-        }
-      }
+    if (cooldownMs > 0) {
+      keyState.cooldownUntil = new Date(Date.now() + cooldownMs);
     }
   }
 
   /**
-   * Record success for a key
+   * Execute a chat completion with automatic fallback
    */
-  recordSuccess(provider: AIProvider, key: string, responseTime: number): void {
-    const metrics = this.providers.get(provider);
-    if (!metrics) return;
-
-    const keyMetrics = metrics.keys.find(k => k.key === key);
-    if (!keyMetrics) return;
-
-    keyMetrics.successCount++;
-    keyMetrics.avgResponseTime = 
-      (keyMetrics.avgResponseTime * (keyMetrics.successCount - 1) + responseTime) / keyMetrics.successCount;
-    keyMetrics.health = responseTime > SLOW_THRESHOLD_MS ? 'slow' : 'healthy';
-    keyMetrics.cooldownUntil = undefined;
-  }
-
-  /**
-   * Record failure for a key
-   */
-  recordFailure(provider: AIProvider, key: string, error: any): void {
-    const metrics = this.providers.get(provider);
-    if (!metrics) return;
-
-    const keyMetrics = metrics.keys.find(k => k.key === key);
-    if (!keyMetrics) return;
-
-    keyMetrics.failureCount++;
-    keyMetrics.lastError = error.message || 'Unknown error';
-
-    // Determine cooldown based on error type
-    const status = error?.status || error?.response?.status;
-    const message = error?.message || '';
-
-    if (status === 429 || message.includes('rate limit') || message.includes('Rate limit')) {
-      keyMetrics.health = 'rate_limited';
-      
-      // Parse retry time from OpenAI error if available (e.g., "try again in 25m29.28s")
-      const retryMatch = message.match(/try again in (\d+)m/i);
-      if (retryMatch) {
-        const retryMinutes = parseInt(retryMatch[1], 10);
-        const cooldownMs = (retryMinutes + 1) * 60 * 1000; // Add 1 minute buffer
-        keyMetrics.cooldownUntil = Date.now() + cooldownMs;
-        console.log(`⏳ ${provider} key rate limited, cooldown ${retryMinutes + 1} min`);
-      } else if (message.includes('TPM') || message.includes('tokens per min')) {
-        // Token per minute limit - needs longer cooldown
-        keyMetrics.cooldownUntil = Date.now() + COOLDOWN_DURATIONS.rate_limit_extended;
-        console.log(`⏳ ${provider} key TPM limited, cooldown 30 min`);
-      } else {
-        keyMetrics.cooldownUntil = Date.now() + COOLDOWN_DURATIONS.rate_limit;
-        console.log(`⏳ ${provider} key rate limited, cooldown 5 min`);
-      }
-    } else if (status === 401 || status === 403 || message.includes('invalid_api_key')) {
-      keyMetrics.health = 'error';
-      keyMetrics.cooldownUntil = Date.now() + COOLDOWN_DURATIONS.error;
-      console.log(`🚫 ${provider} key auth error, cooldown 2 hours`);
-    } else {
-      keyMetrics.health = 'error';
-      keyMetrics.cooldownUntil = Date.now() + COOLDOWN_DURATIONS.error;
-      console.log(`❌ ${provider} key error, cooldown 2 hours`);
-    }
-  }
-
-  /**
-   * Get all healthy providers for parallel processing
-   */
-  getHealthyProviders(): AIProvider[] {
-    const healthy: AIProvider[] = [];
-    
-    for (const [provider] of this.providers) {
-      const bestKey = this.getBestKey(provider);
-      if (bestKey && (bestKey.health === 'healthy' || bestKey.health === 'unknown')) {
-        healthy.push(provider);
-      }
-    }
-
-    return healthy;
-  }
-
-  /**
-   * Create timeout promise
-   */
-  private timeout(ms: number): Promise<never> {
-    return new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), ms)
-    );
-  }
-
-  /**
-   * Print current status
-   */
-  printStatus(): void {
-    console.log('\n📊 Key Manager Status:');
-    console.log('─'.repeat(50));
-    
-    for (const [provider, metrics] of this.providers) {
-      const healthyCount = metrics.keys.filter(k => k.health === 'healthy').length;
-      const errorCount = metrics.keys.filter(k => k.health === 'error').length;
-      const rateLimitedCount = metrics.keys.filter(k => k.health === 'rate_limited').length;
-      
-      console.log(`${provider}: ${metrics.keys.length} keys (✅${healthyCount} ⏳${rateLimitedCount} ❌${errorCount})`);
-    }
-    console.log('─'.repeat(50));
-  }
-
-  /**
-   * Check if any provider is available
-   */
-  hasAvailableProvider(): boolean {
-    return this.getBestProvider() !== null;
-  }
-
-  /**
-   * Get next available time (when shortest cooldown expires)
-   */
-  getNextAvailableTime(): number | null {
-    let nextTime: number | null = null;
-    
-    for (const [_, metrics] of this.providers) {
-      for (const key of metrics.keys) {
-        if (key.cooldownUntil && key.health !== 'error') {
-          if (!nextTime || key.cooldownUntil < nextTime) {
-            nextTime = key.cooldownUntil;
-          }
-        }
-      }
-    }
-    
-    return nextTime;
-  }
-}
-
-// ============================================================
-// AI COMPLETION WITH SMART ROUTING
-// ============================================================
-
-export class SmartAIClient {
-  private keyManager: SmartKeyManager;
-  private initialized = false;
-
-  constructor() {
-    this.keyManager = new SmartKeyManager();
-  }
-
-  /**
-   * Initialize and validate keys
-   */
-  async initialize(): Promise<void> {
-    if (this.initialized) return;
-    await this.keyManager.validateAllKeys();
-    this.initialized = true;
-  }
-
-  /**
-   * Make AI completion with smart routing
-   */
-  async complete(prompt: string, options: {
-    maxTokens?: number;
-    temperature?: number;
-    timeout?: number;
-  } = {}): Promise<string> {
+  async chat(
+    messages: ChatMessage[] | string,
+    options: ChatOptions = {}
+  ): Promise<ChatResult> {
     if (!this.initialized) {
       await this.initialize();
     }
 
-    const { maxTokens = 1000, temperature = 0.7, timeout = 60000 } = options;
-    const maxRetries = 3;
-    let lastError: Error | null = null;
+    const {
+      temperature = 0.7,
+      maxTokens = 1500,
+      jsonMode = false,
+      preferFast = false,
+      preferQuality = false,
+    } = options;
 
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      const provider = this.keyManager.getBestProvider();
-      if (!provider) {
-        throw new Error('No available AI providers');
+    // Normalize messages
+    const chatMessages: ChatMessage[] = typeof messages === 'string'
+      ? [{ role: 'user', content: messages }]
+      : messages;
+
+    // Try Groq first (faster and cheaper)
+    const groqResult = await this.tryGroq(chatMessages, { temperature, maxTokens, jsonMode, preferFast, preferQuality });
+    if (groqResult) return groqResult;
+
+    // Fall back to OpenAI
+    const openaiResult = await this.tryOpenAI(chatMessages, { temperature, maxTokens, jsonMode });
+    if (openaiResult) return openaiResult;
+
+    throw new Error('All AI providers failed. Please check your API keys and try again.');
+  }
+
+  /**
+   * Try Groq provider with model fallback
+   */
+  private async tryGroq(
+    messages: ChatMessage[],
+    options: { temperature: number; maxTokens: number; jsonMode: boolean; preferFast: boolean; preferQuality: boolean }
+  ): Promise<ChatResult | null> {
+    const keyState = this.getNextKey('groq');
+    if (!keyState) return null;
+
+    // Sort models based on preference
+    let models = [...GROQ_MODELS];
+    if (options.preferFast) {
+      models.sort((a, b) => (a.speed === 'fast' ? -1 : 1) - (b.speed === 'fast' ? -1 : 1));
+    }
+    if (options.preferQuality) {
+      models.sort((a, b) => (a.quality === 'high' ? -1 : 1) - (b.quality === 'high' ? -1 : 1));
+    }
+
+    for (const model of models) {
+      try {
+        const startTime = Date.now();
+        
+        const groq = new Groq({ apiKey: keyState.key });
+        
+        const response = await groq.chat.completions.create({
+          model: model.name,
+          messages,
+          temperature: options.temperature,
+          max_tokens: Math.min(options.maxTokens, model.maxTokens),
+          ...(options.jsonMode && model.supportsJson ? { response_format: { type: 'json_object' } } : {}),
+        });
+
+        const content = response.choices[0]?.message?.content?.trim();
+        if (!content) continue;
+
+        keyState.requestCount++;
+        
+        return {
+          content,
+          model: model.name,
+          provider: 'groq',
+          tokensUsed: response.usage?.total_tokens,
+          latencyMs: Date.now() - startTime,
+        };
+      } catch (error: any) {
+        const errorMessage = error?.message || '';
+        const errorCode = error?.error?.code || error?.code || '';
+        
+        // Handle specific errors
+        if (errorCode === 'model_decommissioned' || errorMessage.includes('decommissioned')) {
+          console.warn(`⚠️ Groq model ${model.name} decommissioned, trying next...`);
+          continue; // Try next model
+        }
+        
+        if (errorCode === 'rate_limit_exceeded' || error?.status === 429) {
+          this.markKeyFailed(keyState, 'rate_limit');
+          console.warn(`⚠️ Groq rate limit hit, rotating key...`);
+          // Try with a different key
+          const newKeyState = this.getNextKey('groq');
+          if (newKeyState && newKeyState.key !== keyState.key) {
+            continue; // Retry with new key
+          }
+          return null; // All keys exhausted
+        }
+        
+        if (error?.status === 401 || errorCode === 'invalid_api_key') {
+          this.markKeyFailed(keyState, 'auth');
+          console.error(`❌ Groq auth error, key invalid`);
+          return null;
+        }
+        
+        console.warn(`⚠️ Groq error with ${model.name}:`, errorMessage);
+        continue; // Try next model
       }
+    }
 
-      const clientInfo = this.keyManager.getClient(provider);
-      if (!clientInfo) {
+    return null;
+  }
+
+  /**
+   * Try OpenAI provider with model fallback
+   */
+  private async tryOpenAI(
+    messages: ChatMessage[],
+    options: { temperature: number; maxTokens: number; jsonMode: boolean }
+  ): Promise<ChatResult | null> {
+    const keyState = this.getNextKey('openai');
+    if (!keyState) return null;
+
+    for (const model of OPENAI_MODELS) {
+      try {
+        const startTime = Date.now();
+        
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${keyState.key}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: model.name,
+            messages,
+            temperature: options.temperature,
+            max_tokens: Math.min(options.maxTokens, model.maxTokens),
+            ...(options.jsonMode ? { response_format: { type: 'json_object' } } : {}),
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          
+          if (response.status === 429) {
+            this.markKeyFailed(keyState, 'rate_limit');
+            console.warn(`⚠️ OpenAI rate limit hit`);
+            return null;
+          }
+          
+          if (response.status === 401) {
+            this.markKeyFailed(keyState, 'auth');
+            return null;
+          }
+          
+          console.warn(`⚠️ OpenAI error with ${model.name}:`, errorData);
+          continue;
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content?.trim();
+        if (!content) continue;
+
+        keyState.requestCount++;
+        
+        return {
+          content,
+          model: model.name,
+          provider: 'openai',
+          tokensUsed: data.usage?.total_tokens,
+          latencyMs: Date.now() - startTime,
+        };
+      } catch (error: any) {
+        console.warn(`⚠️ OpenAI error with ${model.name}:`, error.message);
         continue;
       }
-
-      const { client, key } = clientInfo;
-      const startTime = Date.now();
-
-      try {
-        let result: string = '';
-
-        const completionPromise = (async () => {
-          if (provider === 'groq') {
-            const completion = await client.chat.completions.create({
-              messages: [{ role: 'user', content: prompt }],
-              model: PROVIDER_CONFIG.groq.model,
-              temperature,
-              max_tokens: maxTokens,
-            });
-            return completion.choices[0]?.message?.content || '';
-          } else if (provider === 'openai') {
-            const completion = await client.chat.completions.create({
-              messages: [{ role: 'user', content: prompt }],
-              model: PROVIDER_CONFIG.openai.model,
-              temperature,
-              max_tokens: maxTokens,
-            });
-            return completion.choices[0]?.message?.content || '';
-          }
-          return '';
-        })();
-
-        // Race with timeout
-        result = await Promise.race([
-          completionPromise,
-          new Promise<string>((_, reject) => 
-            setTimeout(() => reject(new Error('Request timeout')), timeout)
-          ),
-        ]);
-
-        if (result) {
-          const responseTime = Date.now() - startTime;
-          this.keyManager.recordSuccess(provider, key, responseTime);
-          
-          // Track metrics
-          const inputTokens = Math.ceil(prompt.length / 3.5);
-          const outputTokens = Math.ceil(result.length / 3.5);
-          aiMetrics.record({
-            provider,
-            model: PROVIDER_CONFIG[provider].model,
-            feature: 'ai_completion',
-            inputTokens,
-            outputTokens,
-            latencyMs: responseTime,
-            cached: false,
-            success: true,
-          });
-          
-          return result;
-        }
-      } catch (error: any) {
-        lastError = error;
-        this.keyManager.recordFailure(provider, key, error);
-        
-        // Track failed request
-        aiMetrics.record({
-          provider,
-          model: PROVIDER_CONFIG[provider].model,
-          feature: 'ai_completion',
-          inputTokens: Math.ceil(prompt.length / 3.5),
-          outputTokens: 0,
-          latencyMs: Date.now() - startTime,
-          cached: false,
-          success: false,
-          error: error.message,
-        });
-        
-        // Small delay before retry
-        await new Promise(r => setTimeout(r, 500));
-      }
     }
 
-    // All providers exhausted - wait for shortest cooldown and retry ONCE
-    const nextAvailable = this.keyManager.getNextAvailableTime();
-    if (nextAvailable) {
-      const waitTime = nextAvailable - Date.now();
-      if (waitTime > 0 && waitTime < 10 * 60 * 1000) { // Only wait up to 10 minutes
-        console.log(`\n⏰ All keys exhausted. Waiting ${Math.ceil(waitTime / 1000)}s for cooldown...`);
-        await new Promise(r => setTimeout(r, waitTime + 1000)); // Add 1s buffer
-        
-        // Try one more time
-        const retryProviders = this.keyManager.getPrioritizedProviders();
-        for (const provider of retryProviders) {
-          const key = this.keyManager.getAvailableKey(provider);
-          if (!key) continue;
-          
-          const client = this.getClient(provider, key);
-          if (!client) continue;
-          
-          try {
-            let result = '';
-            if (provider === 'groq') {
-              const completion = await client.chat.completions.create({
-                messages: [{ role: 'user', content: prompt }],
-                model: PROVIDER_CONFIG.groq.model,
-                temperature,
-                max_tokens: maxTokens,
-              });
-              result = completion.choices[0]?.message?.content || '';
-            } else if (provider === 'openai') {
-              const completion = await client.chat.completions.create({
-                messages: [{ role: 'user', content: prompt }],
-                model: PROVIDER_CONFIG.openai.model,
-                temperature,
-                max_tokens: maxTokens,
-              });
-              result = completion.choices[0]?.message?.content || '';
-            }
-            
-            if (result) {
-              this.keyManager.recordSuccess(provider, key, Date.now());
-              return result;
-            }
-          } catch (e) {
-            this.keyManager.recordFailure(provider, key, e);
-          }
-        }
-      }
-    }
-
-    throw lastError || new Error('All AI providers failed');
+    return null;
   }
 
   /**
-   * Get status
+   * Get usage statistics
    */
-  getStatus(): void {
-    this.keyManager.printStatus();
+  getStats(): { provider: string; keys: number; requests: number; failures: number }[] {
+    const stats = new Map<string, { keys: number; requests: number; failures: number }>();
+    
+    for (const key of this.keys) {
+      const current = stats.get(key.provider) || { keys: 0, requests: 0, failures: 0 };
+      current.keys++;
+      current.requests += key.requestCount;
+      current.failures += key.failCount;
+      stats.set(key.provider, current);
+    }
+    
+    return Array.from(stats.entries()).map(([provider, data]) => ({ provider, ...data }));
   }
 
   /**
-   * Get healthy providers for parallel processing
+   * Quick translate helper
    */
-  getHealthyProviders(): AIProvider[] {
-    return this.keyManager.getHealthyProviders();
+  async translate(text: string, targetLang: string = 'te'): Promise<string | null> {
+    const languageNames: Record<string, string> = {
+      'te': 'Telugu (తెలుగు)',
+      'hi': 'Hindi (हिंदी)',
+      'ta': 'Tamil (தமிழ்)',
+      'kn': 'Kannada (ಕನ್ನಡ)',
+    };
+    
+    const targetLanguageName = languageNames[targetLang] || targetLang;
+    
+    try {
+      const result = await this.chat([
+        {
+          role: 'system',
+          content: `You are an expert translator specializing in Indian cinema. Translate the following text to ${targetLanguageName}. 
+Maintain the essence and style of movie descriptions. 
+Use natural ${targetLanguageName} that a native speaker would use.
+Only output the translated text, nothing else.`,
+        },
+        { role: 'user', content: text },
+      ], { temperature: 0.3, maxTokens: 1500 });
+      
+      return result.content;
+    } catch (error) {
+      console.error('Translation failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Quick JSON completion helper
+   */
+  async jsonCompletion<T>(prompt: string, schema?: string): Promise<T | null> {
+    const systemPrompt = schema 
+      ? `You are a helpful assistant that responds only with valid JSON matching this schema: ${schema}`
+      : 'You are a helpful assistant that responds only with valid JSON.';
+    
+    try {
+      const result = await this.chat([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt },
+      ], { temperature: 0.1, jsonMode: true });
+      
+      return JSON.parse(result.content) as T;
+    } catch (error) {
+      console.error('JSON completion failed:', error);
+      return null;
+    }
   }
 }
 
-// Singleton instance
-export const smartAI = new SmartAIClient();
+// Export singleton instance
+export const smartAI = new SmartAIManager();
 
-export default smartAI;
+// Export class for testing
+export { SmartAIManager };
+
+// Export types
+export type { ModelConfig, ProviderConfig, KeyState };
 

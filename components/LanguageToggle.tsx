@@ -15,12 +15,12 @@ interface LanguageToggleProps {
 }
 
 export function LanguageToggle({ variant = 'pill', className = '' }: LanguageToggleProps) {
-  const { lang, toggleLang, isEnglish } = useLanguage();
+  const { lang, toggleLanguage, isEnglish } = useLanguage();
 
   if (variant === 'icon') {
     return (
       <button
-        onClick={toggleLang}
+        onClick={toggleLanguage}
         className={`p-2 rounded-lg hover:bg-[var(--bg-hover)] transition-all touch-target haptic group ${className}`}
         aria-label={`Switch to ${isEnglish ? 'Telugu' : 'English'}`}
         title={isEnglish ? 'తెలుగులో చూడండి' : 'View in English'}
@@ -39,7 +39,7 @@ export function LanguageToggle({ variant = 'pill', className = '' }: LanguageTog
           style={{ background: 'var(--bg-tertiary)' }}
         >
           <button
-            onClick={() => !isEnglish && toggleLang()}
+            onClick={() => !isEnglish && toggleLanguage()}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all haptic ${
               !isEnglish 
                 ? 'text-white shadow-md' 
@@ -54,7 +54,7 @@ export function LanguageToggle({ variant = 'pill', className = '' }: LanguageTog
             తెలుగు
           </button>
           <button
-            onClick={() => isEnglish || toggleLang()}
+            onClick={() => isEnglish || toggleLanguage()}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all haptic ${
               isEnglish 
                 ? 'text-white shadow-md' 
@@ -76,7 +76,7 @@ export function LanguageToggle({ variant = 'pill', className = '' }: LanguageTog
   // Default: pill variant
   return (
     <button
-      onClick={toggleLang}
+      onClick={toggleLanguage}
       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all touch-target haptic group ${className}`}
       style={{ 
         background: 'var(--bg-tertiary)',

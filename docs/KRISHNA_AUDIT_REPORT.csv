@@ -1,0 +1,494 @@
+Type,Title,Year,ID,Issue,Recommendation,Missing Fields
+Duplicate,"Pandati Samsaram",1975,0fd90ad0-dadc-4f80-92c4-8f3f12a5a442,"Title similarity: 90%",REVIEW,-
+Duplicate,"Samsaram",1975,488ca9d6-6a1e-4023-af29-aafe8ea14384,"Title similarity: 90%",REVIEW,-
+Duplicate,"Nagastram",1990,13696ef1-0ae7-44ba-a7a7-fa0abf1d1967,"Title similarity: 82%",REVIEW,-
+Duplicate,"Nagastharam",1991,556c42e6-6b86-43c7-a2f0-4357f2cc6cf9,"Title similarity: 82%",REVIEW,-
+Duplicate,"Raktha Tarpanam",1992,c6c614a8-0e36-45b9-b836-c8cfec53441b,"Title similarity: 94%",REVIEW,-
+Duplicate,"Raktha Tharpanam",1992,c0989e3e-9f2e-4be3-adeb-036b1191908e,"Title similarity: 94%",REVIEW,-
+MissingData,"Murali Krishna",1964,8af49d3a-83c4-4aaf-8e70-6789a666cbb5,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Thene Manasulu",1965,037286a6-1f07-4a89-acb8-d0a07e8f1be7,-,ENRICH,"backdrop_url"
+MissingData,"Hantakulostunnaru Jagratha",1966,77ea2e79-49e8-4190-974c-13b37ac11a9c,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Kanne Manasulu",1966,d279f238-3f1b-421a-9ec2-89342e0213b1,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Chilaka Gorinka",1966,30c58bda-7730-4ca4-9e23-6777d9eed3ec,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Sakshi",1967,e3d9e063-3e25-4e1e-8c48-59a5afaf6dc2,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Stree Janma",1967,6e28b00d-3e9e-4b20-8341-6a5cab32c378,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Upayamlo Apayam",1967,3e2d22e0-23fd-419e-b1f4-4063de8f2a41,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Ave Kallu",1967,b7621e78-1384-413c-a612-323268b61bbb,-,ENRICH,"backdrop_url"
+MissingData,"Marapurani Katha",1967,c47a3eb3-17d8-4e13-bb20-7c00bb022366,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Private Master",1967,6e26be4b-d185-4180-bfd8-8a543218058d,-,ENRICH,"backdrop_url"
+MissingData,"Iddaru Monagallu",1967,ac58c0cc-c202-4a6c-b3a2-8f983dc8fd1a,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Vintha Kapuram",1968,3a39095a-5bf2-40b2-a5d7-e69ae0e16f78,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Bhale Monagadu",1968,06cab2b9-2dbb-4b0b-a2ef-abe918e9713a,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Undamma Bottu Pedata",1968,b9ebf01f-401e-4d17-adbd-b90a0ec05eff,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Asadhyudu",1968,61e132f9-ab79-4672-b08f-bc05be6c0589,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Circar Express",1968,3ee8b83f-8ec9-4cb7-8243-4ec7cec6816f,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Papa Kosam",1968,258f2df6-52f2-4d89-bafd-c1c1388c6783,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Chelleli Kosam",1968,f0d0f7a0-32fc-49d3-9091-b762a12876a2,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Manchi Kutumbam",1968,593a78f8-4e54-46ad-91c7-f708259cf46b,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Lakshmi Nivasam",1968,8a5d426d-0241-497b-ba22-57b8164500bd,-,ENRICH,"backdrop_url"
+MissingData,"Attagaru Kotha Kodalu",1968,3375e740-b354-43d7-9060-32ff3e015276,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Niluvu Dopidi",1968,54cca62c-b7b9-432f-a49e-46c2404139db,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Amayakudu",1968,2331342c-74a0-4f89-a678-0839286c8dd0,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Devakanya",1968,0bc33857-7ce8-497f-a535-2cbba86eba73,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Nenante Nene",1968,57d783f9-6889-4b27-b114-ce00d205c117,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Takkari Donga Chakkani Chukka",1969,8d228b89-4ac8-43ec-9f37-a547d94dfda5,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Bhale Abbailu",1969,9d3cbf93-6d72-477d-964c-56d2860148b8,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Karpoora Harathi",1969,e640cd85-5b6d-4aa6-8417-67d9472f727d,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Bommalu Cheppina Katha",1969,5404f1f4-6257-4bfd-9abd-3c20a11c9f08,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Ekaveera",1969,e9019ee2-6e0d-4b58-87f5-8d692d574410,-,ENRICH,"music_director"
+MissingData,"Manchi Mithrulu",1969,629cd431-21b5-410d-9bac-c5ef5264ba43,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Mahabaludu",1969,d233f204-2a93-4e77-bfb8-9d8ecfce0d73,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Bandipotu Bheemanna",1969,7b05a559-77e9-451a-ab5d-d0ec36c509ce,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Annadammulu",1969,f6880242-fd8d-491d-a59f-7108cc7a4a26,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Sabash Satyam",1969,5ee2d793-ca0e-4873-8e01-00cfbc62d6f8,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Vichitra Kutumbam",1969,ad84cef6-52de-41d7-9e1c-425b22cb1faa,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Muhrutha Balam",1969,0dd1f322-d921-4551-976c-e7d839b35c32,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Astulu Anthastulu",1969,e7383fd9-b3d1-45b1-91cd-7ed82a6467df,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Sattekalapu Satteya",1969,4a0a9bc8-335b-4d0a-9d46-f33a22b3ca28,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Jagath Kiladeelu",1969,2e559869-3f87-4570-a605-73dcc9e31c74,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Jarigina Katha",1969,445ac329-5d51-4bc4-a86c-57ebe8f49887,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Love in Andhra",1969,6117e088-1801-4370-884d-47617cb0c47f,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Paga Sadista",1970,83170baa-62f1-43e1-b004-2019b27322f1,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Malli Pelli",1970,b0faf75b-bcbb-49ae-aaee-f3d3a7a08e91,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Jai Jawan",1970,6d73816f-1851-4132-957b-efd1e7b4dcd4,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Pelli Koothuru",1970,005d72e2-96a1-458b-8cfa-977c1d0cde3e,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Pachhani Samsaram",1970,6e54a5cf-cc83-40fd-bf63-fad0e04fa1ec,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Agni Pariksha",1970,bddeaf2b-254d-4b5c-95d7-3529588cc2fc,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Drohi",1970,fb0fa735-0d4e-4836-9d7d-ead62af6d219,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Pelli Sambandham",1970,c0528105-29cc-4515-bdc1-4f5d2355ec98,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Vidhi Vilasam",1970,aca393b6-a80d-49a7-86af-c8de1d0a8027,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Maa Manchi Akkayya",1970,22914b7b-a2d7-4c1a-af89-9f57bfd76fb3,-,ENRICH,"backdrop_url; music_director; tmdb_id; genres"
+MissingData,"Akhandudu",1970,355b4949-e673-481a-b289-0b16ebec5e61,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Allude Menalludu",1970,dbb41489-2d4c-46dd-afe6-6e211a1e5538,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Andarki Monagadu",1970,2a677ff5-e70a-4d77-a66e-7205e0cef6e8,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Rendu Kutumbala Katha",1970,122e12ef-e6b0-4765-8b9a-56a50725aaac,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Amma Kosam",1970,44d8a85e-dd7d-4e09-9b47-6f0cee89cb67,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Akka Chellelu",1970,5da7c4fb-1dbf-4db5-a61c-162405647f30,-,ENRICH,"backdrop_url"
+MissingData,"Thaali Bottu",1970,03607e35-715f-4f63-838c-02c22d3fc376,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Maa Nanna Nirdhoshi",1970,addcee73-0033-4686-8518-b6654927e4bb,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Pattukunte Laksha",1971,abbfbc93-56f9-4a34-a638-d488ca213cd0,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Suputhrudu",1971,9b47d3b9-6558-4137-bfd1-3131d626e146,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Anuradha",1971,3207f40e-18e1-40de-91aa-2ea6719d3bd3,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"James Bond 777",1971,97134a53-6418-4b80-ab36-4204db9bb47c,-,ENRICH,"backdrop_url"
+MissingData,"Gudachari 003",1971,5b98fbdf-933b-4f7c-b9a9-e637a9e63966,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Mosagallaku Mosagadu",1971,6ec75b79-260a-4347-a16c-263632936bd8,-,ENRICH,"backdrop_url"
+MissingData,"Chalaki Rani Kiladi Raja",1971,935a066b-9a1b-40bd-9ded-e4759bd9b3f9,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Master Kiladi",1971,d9998e01-202c-47c6-8730-61a08912f5e9,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Nammaka Drohulu",1971,9328d50b-074b-4396-970f-1c88b424aa52,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Prema Jeevulu",1971,6f4940f6-0872-49a5-b703-addeedfd2ee0,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Bangaru Kutumbam",1971,372c0e78-0cb5-497c-8f50-fbe621bd5d37,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Nenu Manishine",1971,f1064462-f3e7-46f3-93bf-f81b1f6b3095,-,ENRICH,"backdrop_url"
+MissingData,"Athalu Kodallu",1971,65f9dfe5-1e9f-4886-b7c2-79ed0c2cb03b,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Chelleli Kapuram",1971,2d1225b1-6e85-42fc-9527-69936be77712,-,ENRICH,"backdrop_url"
+MissingData,"Hantakulu Devantakulu",1972,ed02724c-6286-41bd-9144-10bd5f145f3d,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Monagadostunnadu Jagartta",1972,fe2267ad-f54b-44c5-a087-5ef740103f5c,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Praja Nayakudu",1972,efb6e0d4-9c19-4d53-b3d8-3ca80efc8067,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Maa Inti Velugu",1972,e538de00-3afa-4dac-8220-c14e54cd855e,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Marapurani Talli",1972,4e2e1bcb-4b11-4f86-872a-f1a12ee2b384,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Beedala Patlu",1972,06a422b9-f932-4685-a698-d8f02239b473,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Raj Mahal",1972,282b44e1-a8a8-489a-99aa-defdd3403fcd,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Illu Illalu",1972,a0f37805-eeaa-44d7-8dbd-b6bbe0048c54,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Inspector Bharya",1972,92491f4f-564b-487e-808c-e9de93ff6f86,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Pandanti Kapuram",1972,0f52c402-d8e0-4d01-bb15-b5cae040467f,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Guduputani",1972,fe1763ff-7384-48af-885f-5e9d63c68669,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Kalam Marindi",1972,a68381b7-5d56-43d3-8fd4-c45ca7f7b9ae,-,ENRICH,"backdrop_url"
+MissingData,"Nijam Nirupista",1972,74c0b113-bbbe-4c0b-9c1d-fff430aa76bc,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Bale Mosagadu",1972,d74eeb8a-4d66-42cb-a5e1-52daf32cc545,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Abbaigaru Ammaigaru",1972,8af9362a-3c26-420c-97ad-cb1e2573eec2,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Menakodalu",1972,1d604c78-6355-4d2d-8e84-8f928e1f3d6c,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Maa Oori Monagallu",1972,9c3d5ed4-7585-4e00-8f6f-ff6d8eea3404,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Kattula Rattayya",1972,6f610c14-1ac7-4d13-81cc-fa32062e79ca,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Kodalupilla",1972,f889942d-3b51-4a32-a3c8-2784d5b8cf1e,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Antha Mana Manichike",1972,404e002c-5ee0-4197-adee-a5d000a79c67,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Vintha Katha",1973,dbafca08-6c2c-4d6d-a193-7ccaa27c8ea7,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Inti Dongalu",1973,0b1b99bc-2627-4b8d-9c9b-c209dd273f5c,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Ganga Manga",1973,8a1ece7f-e0e1-4bc3-a997-61ab9f8178a7,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Neramu Siksha",1973,fbc6c7ad-51e3-43be-986d-b6c119b3393b,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Memu Manushulame",1973,ad83ea55-3760-46d9-b7c3-ae001917159d,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Desoddharakulu",1973,8cb85383-3202-4170-b196-ebe450f19a14,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Sneha Bandham",1973,db9a5c4b-1645-4f27-b9ce-b40e864736b8,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Mayadari Malligadu",1973,fc655b38-c336-41b3-8e2c-85ef3bb4ff31,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Puttinillu Mettinillu",1973,80168554-0583-4d30-8fba-1f3cff3984b9,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Mallamma Katha",1973,4a7917e6-cd05-4b99-a4b0-122236255ce9,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Mamatha",1973,dca211a3-43dc-4706-b6eb-88699910bb51,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Desa Drohulu",1973,4d9dc27f-db44-40f4-b934-274dc4260be0,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Samsaram Sagaram",1973,4e7dc0e7-bf4e-4372-8e86-31a0b48a06dc,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Manchi Vallaki Manchivadu",1973,afaa0be5-d1b4-472a-a4c7-57d19170d288,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Sthri Chandra Kala",1973,57c4f315-fe39-44a2-8437-9dde11f7aa4b,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Nindu Kutumbam",1973,d481e53f-7c7e-4461-a860-5cd95183328e,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Srivaru Maavaru",1973,b110e074-b59b-46fa-80f0-a346e44c04a1,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Talli Kodukulu",1973,75a7e9f1-6e52-4b69-8512-671b515337f0,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Devudu Chesina Manushulu",1973,e94a04d5-b139-4e7d-837b-8160b8fd7df8,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Pasi Hrudayalu",1973,0b69fb92-3895-4638-8df7-4b71ce72a844,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Visali",1973,c749b3b5-7d1d-4bc4-890b-00164bcf7e4b,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Jeevana Tarangalu",1973,e6c35e83-0115-49a9-8b10-ec447ed0462c,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Kanna Koduku",1973,160398c3-948a-49a8-8c3c-8fb431ab1560,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Poola Mala",1973,6099d1ae-9f12-46fb-b70a-52273c9ceb1e,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Meena",1973,8a1f483d-f2b3-4c77-8c9f-79748daf7e41,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Deergha Sumangali",1974,d59b473e-fc72-4960-a44a-db8090a78a3d,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Manchi Manushulu",1974,cd891082-fa40-4d91-8c14-2e89c9278117,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Alluri Seetarama Raju",1974,40ef5083-636f-47ed-834d-21188a41222d,-,ENRICH,"backdrop_url"
+MissingData,"Adapillala Tandri",1974,b015a810-470e-451c-8112-0e6422dda472,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Devadasu",1974,59a0fee8-7033-40a2-bcb7-ecd4211b7aab,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Amma Manasu",1974,858664f1-15de-4b3a-bf40-67bbcf58250a,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Inti Kodalu",1974,66c1d729-070c-4ade-9ca7-cf934dcae1b5,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Dhanavanthulu Gunavanthulu",1974,647a826d-fd03-46c9-a149-ff4308ca47e4,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Peddalu Marali",1974,474fe16f-04d7-4235-8ad5-27f402852518,-,ENRICH,"poster_url; backdrop_url; music_director"
+MissingData,"Thathamma Kala",1974,420f8186-9bd4-426e-9864-876c59751ff0,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Uthama Illalu",1974,f8536e05-0222-42fc-9ca6-caddbc6969ef,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Manshulu Mati Bommalu",1974,0d5e4e5e-701f-4da1-a2d5-9da9cde60a51,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Satyaniki Sankellu",1974,c4e6040a-c857-4519-8b1d-1bc8f607faac,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Radhamma Pelli",1974,bd37fb07-1006-45f8-b0fe-198da173fa96,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Gowri",1974,f2b535d6-6b34-4609-aed5-2ca0f0dafefc,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Intiniti Katha",1974,34ac1a12-ecbf-42b0-ba15-4767b200cbaf,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Adambaralu Anubandhalu",1974,d1c5e2ed-798f-4a3a-a399-fbc550b89543,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Gali Patalu",1974,7f285510-4cfd-4775-a826-394c4ce0c620,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Rakthasambandhalu",1975,84ee87ef-e44f-4aab-9ef8-edde39fbfa81,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Vaikuntapali",1975,2c662944-f456-4f15-aa13-5ea0e7cc2d99,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Abhimanavathi",1975,da136a55-d837-43fd-b47c-5dd342c040da,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Gajula Kishtayya",1975,44aea47c-41e3-485e-aafb-479e5bc4a75b,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Devudulanti Manishi",1975,4481bb41-c6f2-46ca-a5ac-8480ab29056e,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Santanam Soubhagyam",1975,fb3a5548-9e5f-4959-b2c1-b11f1825401a,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Kothakapuram",1975,133e02f0-37ed-4be9-a0cc-459da2d6646c,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Ramayya Thandri",1975,b8382609-9597-4286-9543-e1600f08d45d,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Soubhagyavathi",1975,6907bb64-ae7e-46f7-b8e0-579db0dae36a,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Pandati Samsaram",1975,0fd90ad0-dadc-4f80-92c4-8f3f12a5a442,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Samsaram",1975,488ca9d6-6a1e-4023-af29-aafe8ea14384,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Zamindarugari Ammayi",1975,a5b9b52b-f9de-40b5-a8de-f6c256e8e564,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Cheekati Velugulu",1975,2b3afeb0-9fe3-4bce-8f21-5a6658af3b7d,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Bhale Dongalu",1976,2b6791f3-5531-46ae-879f-afa276fefad1,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Kolleti Kapuram",1976,c7d71ad2-e32c-415d-b318-9c03711334a4,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Manavoori Katha",1976,d1b078bc-cf7b-42f3-a9b9-9f51d2563b4e,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Sri Rajeshwari Vilas Coffee Club",1976,1f79523d-bd3f-4418-a97e-0b74c19b2e86,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Devude Gelichadu",1976,024fc735-e681-466b-9ffb-d846134ba03a,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Padi Pantalu",1976,8d10e24a-55aa-4286-a7b5-61ef264f2abe,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Ramarajyamlo Rakthapasam",1976,b63c4d3c-e79a-451c-be1f-3bf68c8a4d2e,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Adavi Ramudu",1977,b5d0ff8b-4368-46af-a161-076915bdab91,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Kurukshetram",1977,704edb69-90f9-4d4f-a61e-ea105e06e853,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Manushulu Chesina Dongalu",1977,d780fe52-5a00-46bd-b95d-725b1b070371,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Manassakshi",1977,5e1ee9ba-7f83-4d83-bf12-53fc7cd73643,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Dongalaku Donga",1977,70794e5a-dc58-4696-98f4-b067469c8b0d,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Panchaithi",1977,98ea2391-9459-4543-958c-bd14e7b1fa4c,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Eenatibandham ye Natido",1977,c980839c-48f8-4777-86d9-a4cccebd8fdd,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Savasagallu",1977,6e60b98a-b4e7-40fa-98e8-3656dcf36606,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Janmajanmala Bandham",1977,3363d2b4-2521-41c2-a0f1-bb0ccec396cc,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Allari Bullodu",1978,96931682-0fb3-4fd2-945b-20f5056563aa,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Indradhanasu",1978,279f8440-e8ff-4e17-9e0c-aa0239188784,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Mugguru Muggure",1978,f1d111a3-e18d-40d7-8dcf-3ddea22606c5,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Mundadugu",1978,b7f47489-8097-4ec0-8940-f44454a13594,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Simha Garjana",1978,8447fe05-36f7-4622-9eec-a5e6cbd19322,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Chal Mohana Ranga",1978,d136831f-eeb8-4b2f-92e3-bc8da412abbc,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Athani Kante Ghanudu",1978,f1e40220-9e78-4c3b-917c-ba6b1341c664,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Annadammula Savaal",1978,06e1e232-3907-4be9-9909-ebb315251f5d,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Dongala Veta",1978,5f032754-9671-4d14-9369-3696752f1a6f,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Agent Gopi",1978,c999d4d5-b069-41f4-b568-f2e136f002ac,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Kumara Raja",1978,72d3754b-c76d-48f3-baec-637f0f29a895,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Cheppindi Chestha",1978,8b93b5dd-323f-4d3c-8c6b-345bb61599c6,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Dongala Dopidi",1978,4149ea50-16e7-4f87-960c-5d9943ca4de8,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Patnavasam",1978,4de7fdbf-68d6-4500-9c06-4a090acd460b,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Captain Krishna",1979,d3cc338c-f3b6-4ced-b16e-95c862c5d8cd,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Sanku Teertham",1979,7d5061a3-df91-44d6-ac8a-acaab611ab30,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Hema Hemeelu",1979,b1f54466-076d-4648-b6ab-ccc9a0b51c33,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Yevadabbasommu",1979,68296ecd-20ee-487e-bc6f-d18376c5b3c9,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Vetagadu",1979,8e7d73b3-b9a1-4831-99ba-7dfaed87476e,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"ViyyalavariKayyalu",1979,c4fb906a-05c5-4c46-b662-c29ab33d2e62,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Kotta Alludu",1979,ef7e347f-4dba-47cb-8e4b-85baa712c33b,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Dongalaku Savaal",1979,7e309a84-eb89-401a-a14c-bab95c790e18,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Moodu Puvvulu Aaru Kayalu",1979,4bc4307e-beb0-469b-80ff-bc82feb84bcc,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Mande Gundelu",1979,8cc4cbb8-ccca-4799-855f-4e9fdb944888,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Burripalem Bullodu",1979,331b31fe-33e0-4438-a64d-d6a02c5a4186,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Muthaiduva",1979,2a164638-bb73-4bed-9726-7960d9fd17bd,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Iddaru Asadhyule",1979,20e59aa7-a5c9-477e-bc9b-2ae946def935,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Samajaniki Savaal",1979,4d6cc573-1d72-41e6-9991-ca8322ca4be7,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Allari Bava",1980,2d320607-8159-440b-9180-528a89ac18b3,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Bhale Krishnudu",1980,aa7f7874-6997-4961-a60d-da232d0b2ce7,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Ramudu Parasuramudu",1980,43669ad6-8865-42d1-897d-70d12e486994,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Ammayi Mogudu Mamaku Yamudu",1980,efc17809-aac3-452b-8462-2fcef9bd44df,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Gharana Donga",1980,5986f3e3-5d62-402b-94f5-990a119ea46c,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Devudichina Koduku",1980,eaead374-d4ed-4894-8048-b9a7b4bc1bc1,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Kottapeta Rowdy",1980,a1c8a8c8-e5f4-41bb-a4f0-bc3faab09e5e,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Hare Krishna Hallo Radha",1980,95b6bb73-fbea-46ff-ad93-251787827086,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Adhrustavanthudu",1980,60eb07bb-2a6b-43e7-b2e0-f3cd2586e79c,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Mama Allulla Saval",1980,43e8eba4-eca2-4ad7-8d4e-a8ff98560815,-,ENRICH,"backdrop_url"
+MissingData,"Kiladi Krishnudu",1980,568387da-7f56-4b55-ba95-3986bb761e41,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Ragile Hrudayalu",1980,edf03aba-fb65-4895-b39c-8de570b77b02,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Chuttalunnaru Jagratha",1980,fed09355-3d94-4653-bffa-d26e52727cc9,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Bandodu Gundamma",1980,6470fbea-7d86-482c-8d6d-976c8d722d8d,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Bangaru Bava",1980,7e66d9fa-6b07-4276-949d-e2652a09f307,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Maa Inti Devatha",1980,6efe9780-ac1c-44a2-a3f9-fed50e71c54c,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Bhogimanthulu",1981,676d13d1-deaf-4838-9fe5-82684c78daf4,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Rahasya Gudachari",1981,8fd64134-9ec6-47cb-ac2d-cdf8ff21562a,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Antham Kaadidi Aarambham",1981,2ebb7c19-7136-4dba-8cbe-073a3c8fa9d0,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Jagamondi",1981,052658b3-f5bc-4867-8a2b-c0ef4d6e1210,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Gadasari Atha Sogasari Kodalu",1981,8189a985-4783-40d1-8362-51da95660455,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Nayudu gari Abbai",1981,2454ce4b-6d23-478c-82fa-91b9929f30eb,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Mayadari Alludu",1981,c11a6394-9269-4a25-8a98-ec92d2fc0567,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Jathagadu",1981,ce1390a1-940c-4590-a5f5-d75e14c32336,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Bhoga Bagyalu",1981,6e97dc8d-58b6-4f0d-812a-8b469bf083bf,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Thodu Dongalu",1981,f35ab8c9-de5d-4a2c-bde8-626eeb5799af,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Guru Sishyulu",1981,96cec6ee-31bb-48a0-bc45-2077b2af14fe,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Ooriki Ichina Maata",1981,8ce2f51a-b044-4348-9d2e-23afe50903ea,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Pralaya Rudrudu",1982,190f454e-0e83-436c-8953-f2f81f22a4bf,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Garuda Rekhe",1982,779c852a-287e-4fe6-9c4c-003d507fa466,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Pagabattina Simham",1982,9ad4d972-73fe-4c46-8d29-8e2acf38011a,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Doctor Cine Actor",1982,1cc11b7e-96cf-45f5-a96a-e10ea3a39879,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Bangaru Koduku",1982,03fc282a-0009-4fe6-975a-bf2c6c9036fd,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Bangaru Bhoomi",1982,bce93471-98d5-4f89-ae68-ecd82a67fab3,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Eenadu",1982,11401b59-424f-4087-88c4-96b04f254e19,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Nivuru Gappina Nippu",1982,fb8bb1c4-9b69-48b3-9786-683758978e63,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Ekalavya",1982,69bbfa31-ba9d-4951-b6bf-fcab8d931f1e,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Vayyari Bhamalu Vagalamari Bhartalu",1982,e1a69469-3bde-4163-9e95-2f6f508edc82,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Krishnavataram",1982,35e7e719-2d02-4104-8065-20b916313bb6,-,ENRICH,"backdrop_url"
+MissingData,"Krishnaarjunulu",1982,6712c7c7-734b-4f85-b2e1-e2a7ebadcf84,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Prema Nakshathram",1982,1c313a4f-edae-42ef-a23f-36d5a193f78b,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Jagannatha Radhachakralu",1982,a808a99a-b312-4a2d-a936-ddf6420c11aa,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Shamshare Shankar",1982,44f16014-ce4c-44c5-a6a1-75145dedd217,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Kalavari Samsaram",1982,22e305a7-41e2-4015-809d-c3b8e14672fd,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Shakthi",1983,e673902e-9d0c-4a48-a172-349b08648ad3,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Chattaniki Veyi Kallu",1983,16fb7078-cea6-44f4-90b0-a45d632e3d5a,-,ENRICH,"backdrop_url; tmdb_id; genres"
+MissingData,"Amayakudu Kadhu Asadhyudu",1983,ebb81519-3817-4707-8a88-5e5dae33bfd5,-,ENRICH,"poster_url; backdrop_url; tmdb_id; genres"
+MissingData,"Pralaya Gharjana",1983,eb33de26-dcfb-4e5c-8b3a-fe6e4ad45dea,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Kirayi Kotigadu",1983,c2fa1a8d-85ac-45da-9703-35878e29f352,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Kala Yamudu",1983,52b61517-9a55-43f7-b402-6aec1e1d49a0,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Adavi Simhalu",1983,9a78ec2d-737e-4275-8101-af80545874fa,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Ramarajyamlo Bheemaraju",1983,367ff50e-efb4-4ecc-b291-142847d70d16,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Bezawada Bebbuli",1983,a3b5fdc4-f43d-45dd-87e4-4fd08085b529,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Kanne Donga",1983,03ed5923-c608-48a4-b45d-a628c47b840a,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Oorantha Sankranthi",1983,9ab83448-1a15-481d-87da-026dc7e896e0,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Monagadu Vastunnadu Jagratha",1983,947644cc-0531-427b-a40a-45a33e564baa,-,ENRICH,"poster_url; backdrop_url; tmdb_id"
+MissingData,"Lankebindelu",1983,4928ce91-1a69-481d-bf8b-7e6a9d34195a,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Poratam",1983,b3a84d00-fe39-43bc-8036-0d87d18cd183,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Sangharshana",1983,aca1d60c-9410-4e5b-86f8-39ccc8a55da8,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Praja Rajyam",1983,1a19c8b8-fda6-46b6-9327-cb6eb91f5616,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Siripuram Monagadu",1983,dd0f847f-73d6-4dec-97a4-0bee0f95fdcf,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Mukhyamanthri",1984,2781335e-3245-42d0-874e-c323e3d89f95,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Dongalu Baboi Dongalu",1984,157e267e-93ad-4f29-9b51-4c7c42e4c530,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Kanchu Kaagada",1984,582cc445-7101-4789-adb2-7657b0c6d0b4,-,ENRICH,"backdrop_url"
+MissingData,"Pulijoodam",1984,d82fc1c8-52a8-4b82-ba24-a24934d66a75,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Uddhandudu",1984,ea255a02-b452-47af-9e91-7b29890a9dfa,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Kirai Alludu",1984,bea79920-e985-4cfb-9bc3-86c8714843ed,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Raktha Sambandham",1984,b4a8f455-6cd1-41cf-8eca-a7d44dd684a7,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Bangaru Kapuram",1984,34d0456a-4d90-4f72-ab5d-d91f64ad33b4,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Nayakulaku Saval",1984,d01557a8-5a48-4ffe-92d0-968bb83d19e3,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Iddaru Dongalu",1984,e96747b6-ecec-4d55-99f2-a87090a30c02,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Yuddham",1984,539f7f42-abc0-45c6-a539-4a3d9021ad14,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Andharikante Monagadu",1985,19f855d5-4c9d-4e66-8afc-3ab2422ccc2f,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Maha Sangramam",1985,eca18f78-0c78-4285-8634-f842e7c2e503,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Vajrayudham",1985,bd09ae1d-9276-4c46-ade9-d831231c5e51,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Pachani Kapuram",1985,2a11d0b7-eaf7-45b2-9591-76c5d8f421f6,-,ENRICH,"backdrop_url; music_director"
+MissingData,"America Alludu",1985,c165fd3c-06f9-4f54-b611-de158d898cda,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Palnati Simham",1985,8cf429be-6735-4ba7-8e82-5a40eac497cc,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Ragile Gundelu",1985,044c8eff-8bbd-48ce-9a90-098828985982,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Agni Parvatham",1985,36cf849f-541a-4f93-8d51-d628df275f07,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Surya Chandra",1985,433709ad-baed-40ea-b2c6-80692bd07786,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Maha Manishi",1985,925b01c0-9ae7-4e97-b975-b1da54f9037a,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Brahmasthram",1986,619b4273-6a96-487c-b0db-30795fc5449f,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Jayam Manade",1986,6e3594ff-f559-4114-bfe6-0c048a0fab64,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Parasuramudu",1986,1a396f01-d1be-4cab-86b3-a6670bafe007,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Naa Pilupe Prabahanajam",1986,f07f07e2-d6af-4501-b66e-6acb0e8529be,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Khaidi Rudraiah",1986,2b8c03e3-9e52-44bd-bc6c-d1a01c4034e3,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Santhi Nivasam",1986,97d2ba05-cff4-41b7-91cd-013658ae83fb,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Prathibhavanthudu",1986,6fe14c3f-1588-4be5-8642-df0897a4dc5f,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Brahma Rudrulu",1986,04097a54-5667-432c-9514-84adecc538cd,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Krishna Paramathma",1986,c715a5e6-8618-406a-9e9d-32c1ec1071f6,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Maa Voori Magadu",1987,84f4802e-92df-4b1a-bbfb-05048c435a2e,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Makutamleni Maharaju",1987,3ffc387a-ffcc-49ea-8ccd-5025a9d6b488,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Shankharavam",1987,d8ba2880-d3be-4364-9b4d-ebd027ee0663,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Donga Garu Swagatham",1987,b51bd480-b466-40a1-9cff-cbd124dc029a,-,ENRICH,"backdrop_url; music_director; tmdb_id; genres"
+MissingData,"Thandri Kodukula Challenge",1987,219eb581-a41c-4258-9b80-a4d1b0af88bd,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Vishwanatha Nayakudu",1987,97df06b3-9813-4dd8-8062-b562ba9036fc,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Tene Manasulu",1987,3d76c890-949e-4246-915a-ce1b250558c5,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Brahma Nayudu",1987,2d97b252-1de8-4604-8486-9a376171f0ec,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Sardar Krishnama Naidu",1987,07765efe-5a2d-46e9-b012-5fdedf5e4bd2,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Muddayi",1987,92aec1e4-47a7-49d4-9169-c95563a4ee80,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Dongodochhadu",1987,ed8154ff-d2b0-4b35-a218-8b24c860e672,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Muddu Bidda",1987,6d974b6c-b599-4afc-98b3-e4b02673ab4e,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Agni Keratalu",1988,39049e80-d83a-4a32-9ec0-89e2f5aaa9ea,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Dorakani Donga",1988,a551f58f-07d0-4475-855d-2ee0e828eb87,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Aswaddhama",1988,9ffd910e-0a06-4f41-8d25-2353972f2b26,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Jamadagni",1988,eaccda06-7da8-4056-b26d-9f3ad7ffabea,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Mugguru Kodukulu",1988,004d22f0-95c8-44bd-b39d-21692eef10bd,-,ENRICH,"backdrop_url"
+MissingData,"Chuttalabbayi",1988,c6eaa803-5d72-4daf-8597-3075430d586d,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Kaliyuga Karnudu",1988,addc45ea-ced8-405d-9b38-a6413dc93c54,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Praja Prathinidhi",1988,30b79e6d-aa8c-4009-9d74-93f7f046cb02,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Maharajasri Mayagadu",1988,939b71e2-c536-483f-8dad-ee6d19337f5e,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Atha Mechina Alludu",1989,4840e9ec-d15d-4c4a-8f71-cbdd7817aa96,-,ENRICH,"backdrop_url"
+MissingData,"Sahasame Naa Oopiri",1989,df88aa67-232c-47b3-b5c0-f407f558bdfd,-,ENRICH,"backdrop_url; tmdb_id"
+MissingData,"Koduku Diddina Kapuram",1989,ab5a8e48-9d62-4e11-9cc8-f99ab668a941,-,ENRICH,"music_director"
+MissingData,"Gudachari 117",1989,c6b9a581-a609-4942-ac1b-ed005cd98316,-,ENRICH,"backdrop_url"
+MissingData,"Rickshawala",1989,daa46066-a1f5-4c94-acea-ceca9525849e,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Goonda Rajyam",1989,0578dbb8-03ea-4f75-8c1e-6d6542976209,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Rajakeeya Chadarangam",1989,f8f69678-7ba5-479d-9b5f-3de70fb13469,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Parthudu",1989,e421f20f-05e5-4ca9-bcef-cb56959d31ec,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Sarvabhoumudu",1989,06438b09-8440-48d6-8892-885ac456348b,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Ajatha Satruvu",1989,bf62fe15-fc5d-46f8-985c-00c9c4747bd6,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Balachandrudu",1990,2d76d043-d506-4543-9871-fbfccc5ea99f,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Prajala Manishi",1990,6b1589a7-33e0-4c9c-b800-42be6601f51e,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Anna Thammudu",1990,fcc7f26f-a1b7-47ae-9283-474c5e7c2854,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Nagastram",1990,13696ef1-0ae7-44ba-a7a7-fa0abf1d1967,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Vishnu",1990,ce42d0e4-ef18-4693-a90d-1779a32ada95,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Aayudham",1990,dc104253-8027-4641-bae1-357c9c327fc4,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Inspector Rudra",1990,9ee75a0d-a98d-4131-b50e-221878b2acc7,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Naa Ille Naa Swargam",1991,93d522f0-3800-4051-8f79-cbe6b9c588cf,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Alludu Diddina Kapuram",1991,029088a0-f445-4e4e-974c-5078e009785e,-,ENRICH,"backdrop_url"
+MissingData,"Parama Sivudu",1991,b0b71dd9-8998-4174-a728-ec89896181ad,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Nagastharam",1991,556c42e6-6b86-43c7-a2f0-4357f2cc6cf9,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Indra Bhavanam",1991,d6d59998-bbe5-40ea-b02f-cffa021465b0,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Raktha Tarpanam",1992,c6c614a8-0e36-45b9-b836-c8cfec53441b,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Raktha Tharpanam",1992,c0989e3e-9f2e-4be3-adeb-036b1191908e,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Kirayi Gunda",1993,f532cbd5-b3c3-48d2-956f-22662814aa3d,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Rowdy Annayya",1993,988a7c5e-1021-4acb-8144-de0b4c9d9066,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Varasudu",1993,101da476-fe86-4acc-b513-dc0a0c511dda,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Raitu Bharatam",1994,f5412bd1-775c-48d3-b65b-3452a09e7ca8,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Doragariki Donga Pellam",1994,0845888a-a4c7-45bf-b06c-460f88f213ff,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Police Alludu",1994,45743030-fdb4-4012-bf61-4faedead79e2,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Gharana Alludu",1994,feb3db0a-d4fc-4545-ac8c-c5c773b5a8ce,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Palnati Pourusham",1994,bd359575-613b-4525-b64f-59a677052255,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Yes Nenante Nene",1994,63a42b99-c280-4372-a918-9ca8803e68c9,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Bharata Simham",1995,b6188415-bef1-4361-b065-59ef6e027bcb,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Telugu Veera Levara",1995,32c231ed-8459-4832-9292-9198bb1e7e4d,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Dear Brother",1995,ca6eb5e6-e4ec-4289-826c-413c10ea44bd,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Real Hero",1995,52daaa92-384a-42c8-8519-fb40b644b377,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Amma Donga!",1995,1d7675e5-3006-4fcd-a1c9-545303813bf1,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Super Mogudu",1995,e9e3bd4b-a940-43fb-a47b-c3765b5b4da0,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Jagadeka Veerudu",1996,e5e4d317-d0fd-4875-af54-d82766e3e766,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Akkum Bakkum",1996,bf7da5fb-27df-4658-81fc-0169745f734d,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Sampradayam",1996,9f64bf52-d930-4b88-93e7-8c80891eafe2,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Pellala Rajyam",1996,c99c15d3-6b06-45aa-bf67-f386c3bdfddd,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Puttinti Gowravam",1996,f8021a22-2722-42b9-bc24-098ad5ada94e,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Adhirindhi Guru",1997,26a96d53-674b-4b80-aa33-f767ff13071b,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Bobbili Dora",1997,aea336d8-45b4-492b-bf4d-56e3bc420a5f,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Encounter",1997,2ff0d645-a1c2-4c04-b684-d82c9e3608d7,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Vaibhavam",1998,5ab34a76-3589-4e96-a38d-fdeb4d77df40,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Prathista",1998,e1ed5b2a-2103-4d17-bbff-53924ab9e374,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Sambhavam",1998,0bde6bf3-d979-428f-b4b3-86a016d3bc53,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Vareva Moguda",1998,332afa52-4b47-4437-bbb8-1493665402f6,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Amma Rajinama",1998,41d15c23-a82e-421f-b983-aae6ae04eaa5,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Maanavudu Daanavudu",1999,eb8cfe6b-3d53-48d9-8842-db7d6ebcac0a,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Sultan",1999,15163a90-4e90-4bf5-afe2-a703cb931be4,-,ENRICH,"music_director"
+MissingData,"Yee Taram Nehru",2000,76f52f3c-50c5-4d4a-9d25-c6dbe151aeca,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Vamsi",2000,47424e80-abdb-4db5-be60-1f82cd1266f4,-,ENRICH,"music_director"
+MissingData,"Ravanna",2000,d447bc99-fb92-4a41-bbbd-79ea54cb4e22,-,ENRICH,"backdrop_url; music_director"
+MissingData,"Dadagiri",2001,43a9287d-1e16-45b9-b466-fb2a4e4104ce,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Pandanti Samsaram",2001,919acbde-f748-4d04-97d2-b322267f033a,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Chandravamsam",2002,f7642b7e-2414-4e1d-b2ba-d288f6f91f78,-,ENRICH,"backdrop_url; tmdb_id"
+MissingData,"Taarak",2003,3cda269f-3323-425a-8518-3e04fa2dd536,-,ENRICH,"backdrop_url; tmdb_id"
+MissingData,"24 Gantalu",2004,8218eff9-b45b-4da6-8bd8-ec34629afc2e,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Santhi Sandesam",2004,ed513d34-0294-486b-8600-077018556255,-,ENRICH,"backdrop_url; tmdb_id"
+MissingData,"CBI Officer",2004,b9fa13d1-6932-45c4-a8ef-c22697ba8227,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Sravanamasam",2005,e45f7aa0-407f-41ce-8e40-7150011f1a6b,-,ENRICH,"backdrop_url; tmdb_id"
+MissingData,"Evaru Nenu",2005,8b935f81-fd21-4f4f-a422-b9af10fdc2fb,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Ayodhya",2005,bac32006-9b9f-43c2-beaf-c42bb5c6f17b,-,ENRICH,"backdrop_url; tmdb_id"
+MissingData,"Sardar Papanna",2006,f804d85a-c725-47d4-a395-a3c0a7fc1d9b,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Amma Nanna Lekunte",2007,06778b0d-6d7b-4757-b445-37bdc25cf9ab,-,ENRICH,"poster_url; backdrop_url; music_director; tmdb_id"
+MissingData,"Sri Satyanarayana Swamy",2007,df9a5611-7b66-43f4-b6e3-6b49e56cb432,-,ENRICH,"backdrop_url"
+MissingData,"Shirdi",2007,6dca1a30-1bc2-4f43-879c-70eacfd6720b,-,ENRICH,"backdrop_url; music_director; tmdb_id"
+MissingData,"Neramu Siksha",2009,f72a7a6b-5046-466c-b0ad-78974e53920b,-,ENRICH,"backdrop_url; tmdb_id"
+MissingData,"Soldier",2009,91dbe7e9-ecc6-4f30-873b-7b067bdc289e,-,ENRICH,"backdrop_url"
+MissingData,"Sevakudu",2013,16a48b6a-72d7-4be5-b5d1-5572e8017993,-,ENRICH,"poster_url; backdrop_url; tmdb_id"
+MissingData,"Antham Kadidi Aarambam",2023,927b9c0d-7c4f-4090-b616-c542b898aba7,-,ENRICH,"backdrop_url"
+ImageIssue,"Hantakulostunnaru Jagratha",1966,77ea2e79-49e8-4190-974c-13b37ac11a9c,missing,FIX_IMAGE,-
+ImageIssue,"Attagaru Kotha Kodalu",1968,3375e740-b354-43d7-9060-32ff3e015276,missing,FIX_IMAGE,-
+ImageIssue,"Bhale Abbailu",1969,9d3cbf93-6d72-477d-964c-56d2860148b8,missing,FIX_IMAGE,-
+ImageIssue,"Karpoora Harathi",1969,e640cd85-5b6d-4aa6-8417-67d9472f727d,missing,FIX_IMAGE,-
+ImageIssue,"Annadammulu",1969,f6880242-fd8d-491d-a59f-7108cc7a4a26,missing,FIX_IMAGE,-
+ImageIssue,"Muhrutha Balam",1969,0dd1f322-d921-4551-976c-e7d839b35c32,missing,FIX_IMAGE,-
+ImageIssue,"Paga Sadista",1970,83170baa-62f1-43e1-b004-2019b27322f1,missing,FIX_IMAGE,-
+ImageIssue,"Andarki Monagadu",1970,2a677ff5-e70a-4d77-a66e-7205e0cef6e8,missing,FIX_IMAGE,-
+ImageIssue,"Gudachari 003",1971,5b98fbdf-933b-4f7c-b9a9-e637a9e63966,missing,FIX_IMAGE,-
+ImageIssue,"Hantakulu Devantakulu",1972,ed02724c-6286-41bd-9144-10bd5f145f3d,missing,FIX_IMAGE,-
+ImageIssue,"Monagadostunnadu Jagartta",1972,fe2267ad-f54b-44c5-a087-5ef740103f5c,missing,FIX_IMAGE,-
+ImageIssue,"Guduputani",1972,fe1763ff-7384-48af-885f-5e9d63c68669,missing,FIX_IMAGE,-
+ImageIssue,"Nijam Nirupista",1972,74c0b113-bbbe-4c0b-9c1d-fff430aa76bc,missing,FIX_IMAGE,-
+ImageIssue,"Bale Mosagadu",1972,d74eeb8a-4d66-42cb-a5e1-52daf32cc545,missing,FIX_IMAGE,-
+ImageIssue,"Abbaigaru Ammaigaru",1972,8af9362a-3c26-420c-97ad-cb1e2573eec2,missing,FIX_IMAGE,-
+ImageIssue,"Menakodalu",1972,1d604c78-6355-4d2d-8e84-8f928e1f3d6c,missing,FIX_IMAGE,-
+ImageIssue,"Maa Oori Monagallu",1972,9c3d5ed4-7585-4e00-8f6f-ff6d8eea3404,missing,FIX_IMAGE,-
+ImageIssue,"Kattula Rattayya",1972,6f610c14-1ac7-4d13-81cc-fa32062e79ca,missing,FIX_IMAGE,-
+ImageIssue,"Kodalupilla",1972,f889942d-3b51-4a32-a3c8-2784d5b8cf1e,missing,FIX_IMAGE,-
+ImageIssue,"Antha Mana Manichike",1972,404e002c-5ee0-4197-adee-a5d000a79c67,missing,FIX_IMAGE,-
+ImageIssue,"Sneha Bandham",1973,db9a5c4b-1645-4f27-b9ce-b40e864736b8,missing,FIX_IMAGE,-
+ImageIssue,"Sthri Chandra Kala",1973,57c4f315-fe39-44a2-8437-9dde11f7aa4b,missing,FIX_IMAGE,-
+ImageIssue,"Visali",1973,c749b3b5-7d1d-4bc4-890b-00164bcf7e4b,missing,FIX_IMAGE,-
+ImageIssue,"Amma Manasu",1974,858664f1-15de-4b3a-bf40-67bbcf58250a,missing,FIX_IMAGE,-
+ImageIssue,"Peddalu Marali",1974,474fe16f-04d7-4235-8ad5-27f402852518,missing,FIX_IMAGE,-
+ImageIssue,"Uthama Illalu",1974,f8536e05-0222-42fc-9ca6-caddbc6969ef,missing,FIX_IMAGE,-
+ImageIssue,"Manshulu Mati Bommalu",1974,0d5e4e5e-701f-4da1-a2d5-9da9cde60a51,missing,FIX_IMAGE,-
+ImageIssue,"Intiniti Katha",1974,34ac1a12-ecbf-42b0-ba15-4767b200cbaf,missing,FIX_IMAGE,-
+ImageIssue,"Adambaralu Anubandhalu",1974,d1c5e2ed-798f-4a3a-a399-fbc550b89543,low_confidence,FIX_IMAGE,-
+ImageIssue,"Gali Patalu",1974,7f285510-4cfd-4775-a826-394c4ce0c620,missing,FIX_IMAGE,-
+ImageIssue,"Rakthasambandhalu",1975,84ee87ef-e44f-4aab-9ef8-edde39fbfa81,missing,FIX_IMAGE,-
+ImageIssue,"Abhimanavathi",1975,da136a55-d837-43fd-b47c-5dd342c040da,missing,FIX_IMAGE,-
+ImageIssue,"Santanam Soubhagyam",1975,fb3a5548-9e5f-4959-b2c1-b11f1825401a,missing,FIX_IMAGE,-
+ImageIssue,"Kothakapuram",1975,133e02f0-37ed-4be9-a0cc-459da2d6646c,missing,FIX_IMAGE,-
+ImageIssue,"Ramayya Thandri",1975,b8382609-9597-4286-9543-e1600f08d45d,missing,FIX_IMAGE,-
+ImageIssue,"Pandati Samsaram",1975,0fd90ad0-dadc-4f80-92c4-8f3f12a5a442,missing,FIX_IMAGE,-
+ImageIssue,"Cheekati Velugulu",1975,2b3afeb0-9fe3-4bce-8f21-5a6658af3b7d,missing,FIX_IMAGE,-
+ImageIssue,"Manavoori Katha",1976,d1b078bc-cf7b-42f3-a9b9-9f51d2563b4e,missing,FIX_IMAGE,-
+ImageIssue,"Ramarajyamlo Rakthapasam",1976,b63c4d3c-e79a-451c-be1f-3bf68c8a4d2e,missing,FIX_IMAGE,-
+ImageIssue,"Eenatibandham ye Natido",1977,c980839c-48f8-4777-86d9-a4cccebd8fdd,missing,FIX_IMAGE,-
+ImageIssue,"Janmajanmala Bandham",1977,3363d2b4-2521-41c2-a0f1-bb0ccec396cc,missing,FIX_IMAGE,-
+ImageIssue,"Indradhanasu",1978,279f8440-e8ff-4e17-9e0c-aa0239188784,missing,FIX_IMAGE,-
+ImageIssue,"Captain Krishna",1979,d3cc338c-f3b6-4ced-b16e-95c862c5d8cd,missing,FIX_IMAGE,-
+ImageIssue,"Sanku Teertham",1979,7d5061a3-df91-44d6-ac8a-acaab611ab30,missing,FIX_IMAGE,-
+ImageIssue,"Yevadabbasommu",1979,68296ecd-20ee-487e-bc6f-d18376c5b3c9,missing,FIX_IMAGE,-
+ImageIssue,"Dongalaku Savaal",1979,7e309a84-eb89-401a-a14c-bab95c790e18,missing,FIX_IMAGE,-
+ImageIssue,"Muthaiduva",1979,2a164638-bb73-4bed-9726-7960d9fd17bd,missing,FIX_IMAGE,-
+ImageIssue,"Samajaniki Savaal",1979,4d6cc573-1d72-41e6-9991-ca8322ca4be7,missing,FIX_IMAGE,-
+ImageIssue,"Ramudu Parasuramudu",1980,43669ad6-8865-42d1-897d-70d12e486994,missing,FIX_IMAGE,-
+ImageIssue,"Ammayi Mogudu Mamaku Yamudu",1980,efc17809-aac3-452b-8462-2fcef9bd44df,missing,FIX_IMAGE,-
+ImageIssue,"Hare Krishna Hallo Radha",1980,95b6bb73-fbea-46ff-ad93-251787827086,missing,FIX_IMAGE,-
+ImageIssue,"Adhrustavanthudu",1980,60eb07bb-2a6b-43e7-b2e0-f3cd2586e79c,missing,FIX_IMAGE,-
+ImageIssue,"Kiladi Krishnudu",1980,568387da-7f56-4b55-ba95-3986bb761e41,missing,FIX_IMAGE,-
+ImageIssue,"Ragile Hrudayalu",1980,edf03aba-fb65-4895-b39c-8de570b77b02,missing,FIX_IMAGE,-
+ImageIssue,"Bhogimanthulu",1981,676d13d1-deaf-4838-9fe5-82684c78daf4,missing,FIX_IMAGE,-
+ImageIssue,"Antham Kaadidi Aarambham",1981,2ebb7c19-7136-4dba-8cbe-073a3c8fa9d0,missing,FIX_IMAGE,-
+ImageIssue,"Jagamondi",1981,052658b3-f5bc-4867-8a2b-c0ef4d6e1210,missing,FIX_IMAGE,-
+ImageIssue,"Mayadari Alludu",1981,c11a6394-9269-4a25-8a98-ec92d2fc0567,missing,FIX_IMAGE,-
+ImageIssue,"Jathagadu",1981,ce1390a1-940c-4590-a5f5-d75e14c32336,placeholder,FIX_IMAGE,-
+ImageIssue,"Bhoga Bagyalu",1981,6e97dc8d-58b6-4f0d-812a-8b469bf083bf,missing,FIX_IMAGE,-
+ImageIssue,"Garuda Rekhe",1982,779c852a-287e-4fe6-9c4c-003d507fa466,missing,FIX_IMAGE,-
+ImageIssue,"Ekalavya",1982,69bbfa31-ba9d-4951-b6bf-fcab8d931f1e,missing,FIX_IMAGE,-
+ImageIssue,"Krishnaarjunulu",1982,6712c7c7-734b-4f85-b2e1-e2a7ebadcf84,missing,FIX_IMAGE,-
+ImageIssue,"Prema Nakshathram",1982,1c313a4f-edae-42ef-a23f-36d5a193f78b,missing,FIX_IMAGE,-
+ImageIssue,"Jagannatha Radhachakralu",1982,a808a99a-b312-4a2d-a936-ddf6420c11aa,missing,FIX_IMAGE,-
+ImageIssue,"Shamshare Shankar",1982,44f16014-ce4c-44c5-a6a1-75145dedd217,missing,FIX_IMAGE,-
+ImageIssue,"Amayakudu Kadhu Asadhyudu",1983,ebb81519-3817-4707-8a88-5e5dae33bfd5,missing,FIX_IMAGE,-
+ImageIssue,"Pralaya Gharjana",1983,eb33de26-dcfb-4e5c-8b3a-fe6e4ad45dea,missing,FIX_IMAGE,-
+ImageIssue,"Kala Yamudu",1983,52b61517-9a55-43f7-b402-6aec1e1d49a0,missing,FIX_IMAGE,-
+ImageIssue,"Kanne Donga",1983,03ed5923-c608-48a4-b45d-a628c47b840a,missing,FIX_IMAGE,-
+ImageIssue,"Monagadu Vastunnadu Jagratha",1983,947644cc-0531-427b-a40a-45a33e564baa,missing,FIX_IMAGE,-
+ImageIssue,"Lankebindelu",1983,4928ce91-1a69-481d-bf8b-7e6a9d34195a,missing,FIX_IMAGE,-
+ImageIssue,"Pulijoodam",1984,d82fc1c8-52a8-4b82-ba24-a24934d66a75,missing,FIX_IMAGE,-
+ImageIssue,"Uddhandudu",1984,ea255a02-b452-47af-9e91-7b29890a9dfa,missing,FIX_IMAGE,-
+ImageIssue,"Kirai Alludu",1984,bea79920-e985-4cfb-9bc3-86c8714843ed,missing,FIX_IMAGE,-
+ImageIssue,"Bangaru Kapuram",1984,34d0456a-4d90-4f72-ab5d-d91f64ad33b4,missing,FIX_IMAGE,-
+ImageIssue,"Andharikante Monagadu",1985,19f855d5-4c9d-4e66-8afc-3ab2422ccc2f,missing,FIX_IMAGE,-
+ImageIssue,"Maha Sangramam",1985,eca18f78-0c78-4285-8634-f842e7c2e503,missing,FIX_IMAGE,-
+ImageIssue,"Palnati Simham",1985,8cf429be-6735-4ba7-8e82-5a40eac497cc,missing,FIX_IMAGE,-
+ImageIssue,"Naa Pilupe Prabahanajam",1986,f07f07e2-d6af-4501-b66e-6acb0e8529be,missing,FIX_IMAGE,-
+ImageIssue,"Brahma Nayudu",1987,2d97b252-1de8-4604-8486-9a376171f0ec,missing,FIX_IMAGE,-
+ImageIssue,"Dorakani Donga",1988,a551f58f-07d0-4475-855d-2ee0e828eb87,missing,FIX_IMAGE,-
+ImageIssue,"Parthudu",1989,e421f20f-05e5-4ca9-bcef-cb56959d31ec,missing,FIX_IMAGE,-
+ImageIssue,"Prajala Manishi",1990,6b1589a7-33e0-4c9c-b800-42be6601f51e,missing,FIX_IMAGE,-
+ImageIssue,"Nagastram",1990,13696ef1-0ae7-44ba-a7a7-fa0abf1d1967,missing,FIX_IMAGE,-
+ImageIssue,"Nagastharam",1991,556c42e6-6b86-43c7-a2f0-4357f2cc6cf9,missing,FIX_IMAGE,-
+ImageIssue,"Raitu Bharatam",1994,f5412bd1-775c-48d3-b65b-3452a09e7ca8,missing,FIX_IMAGE,-
+ImageIssue,"Gharana Alludu",1994,feb3db0a-d4fc-4545-ac8c-c5c773b5a8ce,missing,FIX_IMAGE,-
+ImageIssue,"Yes Nenante Nene",1994,63a42b99-c280-4372-a918-9ca8803e68c9,missing,FIX_IMAGE,-
+ImageIssue,"Dear Brother",1995,ca6eb5e6-e4ec-4289-826c-413c10ea44bd,low_confidence,FIX_IMAGE,-
+ImageIssue,"Super Mogudu",1995,e9e3bd4b-a940-43fb-a47b-c3765b5b4da0,missing,FIX_IMAGE,-
+ImageIssue,"Akkum Bakkum",1996,bf7da5fb-27df-4658-81fc-0169745f734d,missing,FIX_IMAGE,-
+ImageIssue,"Sampradayam",1996,9f64bf52-d930-4b88-93e7-8c80891eafe2,missing,FIX_IMAGE,-
+ImageIssue,"Puttinti Gowravam",1996,f8021a22-2722-42b9-bc24-098ad5ada94e,missing,FIX_IMAGE,-
+ImageIssue,"Adhirindhi Guru",1997,26a96d53-674b-4b80-aa33-f767ff13071b,missing,FIX_IMAGE,-
+ImageIssue,"Bobbili Dora",1997,aea336d8-45b4-492b-bf4d-56e3bc420a5f,missing,FIX_IMAGE,-
+ImageIssue,"Sambhavam",1998,0bde6bf3-d979-428f-b4b3-86a016d3bc53,missing,FIX_IMAGE,-
+ImageIssue,"Vareva Moguda",1998,332afa52-4b47-4437-bbb8-1493665402f6,missing,FIX_IMAGE,-
+ImageIssue,"Maanavudu Daanavudu",1999,eb8cfe6b-3d53-48d9-8842-db7d6ebcac0a,missing,FIX_IMAGE,-
+ImageIssue,"Yee Taram Nehru",2000,76f52f3c-50c5-4d4a-9d25-c6dbe151aeca,missing,FIX_IMAGE,-
+ImageIssue,"24 Gantalu",2004,8218eff9-b45b-4da6-8bd8-ec34629afc2e,missing,FIX_IMAGE,-
+ImageIssue,"CBI Officer",2004,b9fa13d1-6932-45c4-a8ef-c22697ba8227,missing,FIX_IMAGE,-
+ImageIssue,"Evaru Nenu",2005,8b935f81-fd21-4f4f-a422-b9af10fdc2fb,missing,FIX_IMAGE,-
+ImageIssue,"Amma Nanna Lekunte",2007,06778b0d-6d7b-4757-b445-37bdc25cf9ab,missing,FIX_IMAGE,-
+ImageIssue,"Sevakudu",2013,16a48b6a-72d7-4be5-b5d1-5572e8017993,missing,FIX_IMAGE,-

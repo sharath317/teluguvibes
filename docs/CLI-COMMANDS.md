@@ -1,7 +1,7 @@
 # TeluguVibes CLI Commands Reference
 
-> **Version:** 5.0 - Data Intelligence Update  
-> **Last Updated:** January 7, 2026
+> **Version:** 6.0 - Fast Enrichment Update  
+> **Last Updated:** January 10, 2026
 
 ---
 
@@ -105,7 +105,50 @@ All optimized commands include:
 
 ## 🎨 Enrichment
 
-### Movie Enrichment
+### Master Enrichment Orchestrator v3.0 (NEW)
+
+```bash
+# ⚡ FAST MODE - 5x faster (RECOMMENDED for daily use)
+npx tsx scripts/enrich-master.ts --multi-pass --fast --execute
+
+# 🚀 TURBO MODE - 10x faster (bulk backfill, may hit API limits)
+npx tsx scripts/enrich-master.ts --full --turbo --execute --limit=500
+
+# Standard full enrichment (all 18 phases)
+npx tsx scripts/enrich-master.ts --full --execute
+
+# Run specific layer (1-6)
+npx tsx scripts/enrich-master.ts --layer=1 --execute        # Core Data
+npx tsx scripts/enrich-master.ts --layer=2 --fast --execute # Classifications
+npx tsx scripts/enrich-master.ts --layer=4 --fast --execute # Extended Metadata
+
+# Run single phase
+npx tsx scripts/enrich-master.ts --phase=images --execute
+npx tsx scripts/enrich-master.ts --phase=telugu-synopsis --fast --execute
+npx tsx scripts/enrich-master.ts --phase=trust-confidence --execute
+
+# Resume from checkpoint (after failure)
+npx tsx scripts/enrich-master.ts --resume --execute
+
+# Check enrichment status
+npx tsx scripts/enrich-master.ts --status
+
+# Filter by actor/director
+npx tsx scripts/enrich-master.ts --full --actor="Mahesh Babu" --execute
+npx tsx scripts/enrich-master.ts --full --director="Rajamouli" --fast --execute
+
+# Custom settings
+npx tsx scripts/enrich-master.ts --full --concurrency=50 --limit=300 --execute
+```
+
+**Performance:**
+| Mode | Concurrency | 100 Movies | 500 Movies |
+|------|-------------|------------|------------|
+| Normal | 20 | ~35 min | ~120 min |
+| Fast | 50 | ~7 min | ~25 min |
+| Turbo | 100 | ~3.5 min | ~12 min |
+
+### Movie Enrichment (Legacy)
 
 ```bash
 pnpm enrich:movies                     # Enrich movie metadata
@@ -347,9 +390,11 @@ pnpm tags:rebuild:smart:apply
 
 | Task | Command |
 |------|---------|
+| **Full enrichment (fast)** | `npx tsx scripts/enrich-master.ts --multi-pass --fast --execute` |
+| **Check enrichment status** | `npx tsx scripts/enrich-master.ts --status` |
 | Ingest Telugu | `pnpm ingest:tmdb:te` |
 | Ingest Hindi | `pnpm ingest:tmdb:hi` |
-| Enrich all | `pnpm enrich:all` |
+| Enrich all (legacy) | `pnpm enrich:all` |
 | Check coverage | `pnpm movies:coverage` |
 | Find duplicates | `pnpm intel:movie-audit:duplicates` |
 | Auto-tag movies | `pnpm movies:auto-tag` |
@@ -582,5 +627,18 @@ test();
 
 ---
 
-*CLI Reference v4.0 - January 2026 (Data Intelligence Update)*
+## 🔄 Master Enrichment Layers Reference
+
+| Layer | Phases | Description |
+|-------|--------|-------------|
+| 1 | images, cast-crew | Core data (posters, cast) |
+| 2 | genres-direct, auto-tags, safe-classification, taxonomy, age-rating, content-flags | Classifications |
+| 3 | audience-fit, trigger-warnings | Derived intelligence |
+| 4 | tagline, telugu-synopsis, trivia | Extended metadata |
+| 5 | trust-confidence, collaborations | Trust scoring & graph |
+| 6 | cross-verify, comparison-validation, validation | Validation & audit |
+
+---
+
+*CLI Reference v6.0 - January 2026 (Fast Enrichment Update)*
 

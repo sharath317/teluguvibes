@@ -157,3 +157,4 @@ COMMENT ON TABLE admin_audit_log IS 'Tracks all administrative actions for audit
 COMMENT ON TABLE verification_queue IS 'Queue of facts awaiting human verification';
 COMMENT ON TABLE source_conflicts IS 'Records of data conflicts between external sources';
 
+

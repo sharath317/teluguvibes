@@ -1,86 +1,45 @@
 'use client';
 
-// ============================================
-// 🔧 AD CONFIGURATION
-// Set to true when you have AdSense approved
-// ============================================
-const ADS_ENABLED = false;
-// ============================================
+/**
+ * AdSlot Component
+ * Placeholder for advertisement slots throughout the site
+ */
+
+import React from 'react';
 
 interface AdSlotProps {
-  slot: 'header' | 'sidebar' | 'mid-article';
+  /** Unique identifier for the ad slot */
+  id?: string;
+  /** Alternative identifier */
+  slot?: string;
+  /** Size variant */
+  size?: 'banner' | 'sidebar' | 'inline' | 'leaderboard';
+  /** Additional CSS classes */
   className?: string;
 }
 
-const slotConfig = {
-  header: {
-    width: 728,
-    height: 90,
-    label: 'Header Ad (728x90)',
-  },
-  sidebar: {
-    width: 300,
-    height: 600,
-    label: 'Sidebar Ad (300x600)',
-  },
-  'mid-article': {
-    width: 300,
-    height: 250,
-    label: 'In-Article Ad (300x250)',
-  },
-};
-
-export function AdSlot({ slot, className = '' }: AdSlotProps) {
-  // Return nothing if ads are disabled
-  if (!ADS_ENABLED) {
-    return null;
-  }
-
-  const config = slotConfig[slot];
+export function AdSlot({ id, slot, size = 'banner', className = '' }: AdSlotProps) {
+  const slotId = id || slot;
+  const sizeClasses = {
+    banner: 'h-24 md:h-32',
+    sidebar: 'h-64',
+    inline: 'h-20',
+    leaderboard: 'h-20 md:h-24',
+  };
 
   return (
     <div
-      className={`flex items-center justify-center bg-[#141414] border border-dashed border-[#262626] rounded-lg ${className}`}
-      style={{
-        width: '100%',
-        maxWidth: config.width,
-        height: config.height,
-      }}
-      data-ad-slot={slot}
-      data-ad-format="auto"
+      id={slotId}
+      className={`
+        w-full ${sizeClasses[size]}
+        bg-[#1a1a1a] border border-[#262626] rounded-lg
+        flex items-center justify-center
+        text-[#525252] text-sm
+        ${className}
+      `}
     >
-      {/* Placeholder - Replace with actual AdSense code */}
-      <div className="text-center text-[#737373] text-xs">
-        <div className="mb-1">📢</div>
-        <div>{config.label}</div>
-        <div className="text-[10px] mt-1 opacity-50">
-          Replace with AdSense code
-        </div>
-      </div>
+      <span className="opacity-50">Advertisement</span>
     </div>
   );
 }
 
-// For actual AdSense integration, use this component:
-export function GoogleAdSlot({
-  client,
-  slot,
-  format = 'auto',
-  responsive = true,
-}: {
-  client: string;
-  slot: string;
-  format?: string;
-  responsive?: boolean;
-}) {
-  return (
-    <ins
-      className="adsbygoogle"
-      style={{ display: 'block' }}
-      data-ad-client={client}
-      data-ad-slot={slot}
-      data-ad-format={format}
-      data-full-width-responsive={responsive ? 'true' : 'false'}
-    />
-  );
-}

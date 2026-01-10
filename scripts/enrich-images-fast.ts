@@ -23,7 +23,6 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import chalk from 'chalk';
-import { runBatchParallel, createTasks, runParallel, type Task } from '../lib/pipeline/execution-controller';
 
 config({ path: resolve(process.cwd(), '.env.local') });
 
@@ -327,14 +326,6 @@ async function main() {
   
   const startTime = Date.now();
   
-  // Create tasks for parallel execution
-  const tasks: Task<EnrichmentResult>[] = movies.map(movie => ({
-    id: movie.id,
-    name: movie.title_en,
-    execute: () => enrichMovie(movie),
-    retryable: true,
-  }));
-  
   // Stats
   const stats = {
     tmdb: 0,
@@ -345,29 +336,42 @@ async function main() {
   };
   
   let enriched = 0;
-  let processed = 0;
+  let failed = 0;
   
   // Run in parallel with progress
   console.log('  Processing...\n');
   
-  const result = await runParallel(tasks, {
-    concurrency,
-    maxRetries: 2,
-    retryDelayMs: 500,
-    onProgress: (completed, total, current) => {
-      processed = completed;
-      const pct = Math.round((completed / total) * 100);
-      const bar = '█'.repeat(Math.floor(pct / 5)) + '░'.repeat(20 - Math.floor(pct / 5));
-      process.stdout.write(`\r  [${bar}] ${pct}% (${completed}/${total}) | Enriched: ${enriched}`);
-    },
-    onTaskComplete: (taskResult) => {
-      const res = taskResult.result as EnrichmentResult;
+  // Process with concurrency control
+  const results: EnrichmentResult[] = [];
+  const batchSize = concurrency;
+  
+  for (let i = 0; i < movies.length; i += batchSize) {
+    const batch = movies.slice(i, Math.min(i + batchSize, movies.length));
+    
+    const batchPromises = batch.map(async (movie) => {
+      try {
+        return await enrichMovie(movie);
+      } catch (error) {
+        failed++;
+        return { movieId: movie.id, poster_url: null, source: 'none', confidence: 0 } as EnrichmentResult;
+      }
+    });
+    
+    const batchResults = await Promise.all(batchPromises);
+    
+    for (const res of batchResults) {
+      results.push(res);
       if (res && res.source) {
         stats[res.source as keyof typeof stats]++;
         if (res.poster_url) enriched++;
       }
-    },
-  });
+    }
+    
+    const completed = Math.min(i + batchSize, movies.length);
+    const pct = Math.round((completed / movies.length) * 100);
+    const bar = '█'.repeat(Math.floor(pct / 5)) + '░'.repeat(20 - Math.floor(pct / 5));
+    process.stdout.write(`\r  [${bar}] ${pct}% (${completed}/${movies.length}) | Enriched: ${enriched}`);
+  }
   
   console.log('\n');
   
@@ -376,36 +380,25 @@ async function main() {
     console.log('  Applying updates to database...');
     
     let updated = 0;
-    const successResults = result.results.filter(r => r.success && r.result?.poster_url);
+    const successResults = results.filter(r => r.poster_url);
     
     // Batch update in chunks of 50
-    const updateChunks = [];
     for (let i = 0; i < successResults.length; i += 50) {
-      updateChunks.push(successResults.slice(i, i + 50));
-    }
-    
-    for (const chunk of updateChunks) {
-      const updates = chunk.map(r => ({
-        id: r.result!.movieId,
-        poster_url: r.result!.poster_url,
-        poster_confidence: r.result!.confidence,
-        poster_visual_type: 'original_poster',
-        archival_source: {
-          source_name: r.result!.source,
-          acquisition_date: new Date().toISOString(),
-        },
-      }));
+      const chunk = successResults.slice(i, i + 50);
       
-      for (const update of updates) {
+      for (const result of chunk) {
         const { error: updateError } = await supabase
           .from('movies')
           .update({
-            poster_url: update.poster_url,
-            poster_confidence: update.poster_confidence,
-            poster_visual_type: update.poster_visual_type,
-            archival_source: update.archival_source,
+            poster_url: result.poster_url,
+            poster_confidence: result.confidence,
+            poster_visual_type: 'original_poster',
+            archival_source: {
+              source_name: result.source,
+              acquisition_date: new Date().toISOString(),
+            },
           })
-          .eq('id', update.id);
+          .eq('id', result.movieId);
         
         if (!updateError) updated++;
       }
@@ -424,7 +417,7 @@ async function main() {
 ═══════════════════════════════════════════════════════════`));
   console.log(`  Processed:    ${movies.length} movies`);
   console.log(`  Enriched:     ${chalk.green(enriched)} movies (${Math.round(enriched/movies.length*100)}%)`);
-  console.log(`  Failed:       ${result.failed} tasks`);
+  console.log(`  Failed:       ${failed} tasks`);
   console.log(`  Duration:     ${duration}s`);
   console.log(`  Speed:        ${chalk.cyan(speed)} movies/sec`);
   console.log(`
